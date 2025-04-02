@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -29,11 +30,13 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { WorkOrder, workOrders } from "@/data/mockData";
-import { AlertCircle, Calendar, Check, ChevronDown, ClipboardCheck, Eye, Filter, MapPin, MoreHorizontal, Plus, Search, UserRound, X } from "lucide-react";
+import { technicians } from "@/data/mockData";
+import { AlertCircle, Calendar, Check, ChevronDown, ClipboardCheck, Eye, Filter, MapPin, MoreHorizontal, MoveHorizontal, Plus, Search, UserRound, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDate } from "@/lib/date-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const WorkOrders = () => {
   const isMobile = useIsMobile();
@@ -129,6 +132,36 @@ const WorkOrders = () => {
       title: "Work Order Completed",
       description: `Work order #${workOrderId} has been marked as completed.`,
     });
+  };
+  
+  const reassignWorkOrder = (workOrderId: string, technicianId: string) => {
+    setLocalWorkOrders(prevOrders => 
+      prevOrders.map(order => {
+        if (order.id === workOrderId) {
+          const tech = technicians.find(t => t.id === technicianId);
+          return { 
+            ...order, 
+            technicianId: technicianId,
+            technicianName: tech ? tech.name : undefined,
+            status: technicianId ? 'scheduled' : 'pending'
+          };
+        }
+        return order;
+      })
+    );
+    
+    const tech = technicians.find(t => t.id === technicianId);
+    if (tech) {
+      toast({
+        title: "Work Order Reassigned",
+        description: `Work order #${workOrderId} has been assigned to ${tech.name}.`,
+      });
+    } else {
+      toast({
+        title: "Work Order Unassigned",
+        description: `Technician has been removed from work order #${workOrderId}.`,
+      });
+    }
   };
   
   return (
@@ -427,6 +460,7 @@ const WorkOrders = () => {
               workOrder={workOrder} 
               onCancel={cancelWorkOrder}
               onComplete={markAsCompleted}
+              onReassign={reassignWorkOrder}
             />
           ))}
         </div>
@@ -452,11 +486,19 @@ interface WorkOrderCardProps {
   workOrder: WorkOrder;
   onCancel: (id: string) => void;
   onComplete: (id: string) => void;
+  onReassign: (id: string, technicianId: string) => void;
 }
 
-const WorkOrderCard = ({ workOrder, onCancel, onComplete }: WorkOrderCardProps) => {
+const WorkOrderCard = ({ workOrder, onCancel, onComplete, onReassign }: WorkOrderCardProps) => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [showReassignDialog, setShowReassignDialog] = useState(false);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | undefined>(workOrder.technicianId);
+
+  const handleReassign = () => {
+    onReassign(workOrder.id, selectedTechnicianId || '');
+    setShowReassignDialog(false);
+  };
 
   return (
     <Card>
@@ -666,6 +708,45 @@ const WorkOrderCard = ({ workOrder, onCancel, onComplete }: WorkOrderCardProps) 
             </DialogContent>
           </Dialog>
           
+          <Dialog open={showReassignDialog} onOpenChange={setShowReassignDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reassign Work Order</DialogTitle>
+                <DialogDescription>
+                  Select a technician to assign work order #{workOrder.id}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="mt-4 space-y-4">
+                <Select 
+                  value={selectedTechnicianId} 
+                  onValueChange={setSelectedTechnicianId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a technician" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">-- Unassign --</SelectItem>
+                    {technicians.map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <DialogFooter className="mt-4">
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleReassign}>
+                  Assign Technician
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
           {workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
             <div className="flex items-center justify-between pt-2">
               {workOrder.technicianName ? (
@@ -678,7 +759,12 @@ const WorkOrderCard = ({ workOrder, onCancel, onComplete }: WorkOrderCardProps) 
                 </span>
               )}
               
-              <Button size="sm" variant="outline">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setShowReassignDialog(true)}
+              >
+                <MoveHorizontal className="mr-1.5 h-3.5 w-3.5" />
                 {workOrder.technicianName ? 'Reassign' : 'Assign'}
               </Button>
             </div>
