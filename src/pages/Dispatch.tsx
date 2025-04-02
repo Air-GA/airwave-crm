@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { useToast } from "@/hooks/use-toast";
+import TechLocationMap from "@/components/schedule/TechLocationMap";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
@@ -47,14 +47,12 @@ const Dispatch = () => {
   const { toast: uiToast } = useToast();
   
   const mouseSensor = useSensor(MouseSensor, {
-    // Reduce the distance to start dragging for easier use
     activationConstraint: {
       distance: 5,
     },
   });
   
   const touchSensor = useSensor(TouchSensor, {
-    // Make touch interactions easier
     activationConstraint: {
       delay: 100,
       tolerance: 5,
@@ -63,20 +61,16 @@ const Dispatch = () => {
   
   const sensors = useSensors(mouseSensor, touchSensor);
   
-  // Get work orders that are pending or scheduled
   const activeWorkOrders = draggedWorkOrders.filter(
     order => order.status === 'pending' || order.status === 'scheduled'
   );
   
-  // Get unassigned work orders
   const unassignedWorkOrders = activeWorkOrders.filter(order => !order.technicianId);
   
-  // Get assigned work orders for the selected technician
   const technicianWorkOrders = selectedTechnicianId
     ? activeWorkOrders.filter(order => order.technicianId === selectedTechnicianId)
     : [];
   
-  // Calculate technician status counts
   const availableTechnicians = technicians.filter(tech => tech.status === 'available').length;
   const busyTechnicians = technicians.filter(tech => tech.status === 'busy').length;
   const offDutyTechnicians = technicians.filter(tech => tech.status === 'off-duty').length;
@@ -96,21 +90,17 @@ const Dispatch = () => {
     const technicianId = over.id as string;
     
     if (workOrderId && technicianId) {
-      // Set up for schedule modal
       setCurrentWorkOrderId(workOrderId);
       setCurrentTechnicianId(technicianId);
       
-      // Get the current work order
       const workOrder = draggedWorkOrders.find(order => order.id === workOrderId);
       
-      // Pre-fill the date and time with today's date if not already scheduled
       if (workOrder) {
         const date = workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : new Date();
         setScheduledDate(date.toISOString().split('T')[0]);
         setScheduledTime(date.toTimeString().substring(0, 5));
       }
       
-      // Open the schedule modal
       setIsScheduleModalOpen(true);
     }
   };
@@ -118,10 +108,8 @@ const Dispatch = () => {
   const handleScheduleConfirm = () => {
     if (!currentWorkOrderId || !currentTechnicianId) return;
     
-    // Create a date object from the scheduled date and time
     const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
     
-    // Update the work order with the new technician and schedule
     const updatedWorkOrders = draggedWorkOrders.map(order => {
       if (order.id === currentWorkOrderId) {
         const tech = technicians.find(t => t.id === currentTechnicianId);
@@ -129,7 +117,7 @@ const Dispatch = () => {
           ...order,
           technicianId: currentTechnicianId,
           technicianName: tech?.name,
-          status: 'scheduled' as const,  // Explicitly tell TypeScript this is a literal type
+          status: 'scheduled' as const,
           scheduledDate: scheduledDateTime.toISOString(),
         };
       }
@@ -139,7 +127,6 @@ const Dispatch = () => {
     setDraggedWorkOrders(updatedWorkOrders);
     setSelectedTechnicianId(currentTechnicianId);
     
-    // Show success notification
     const workOrder = draggedWorkOrders.find(order => order.id === currentWorkOrderId);
     const technician = technicians.find(tech => tech.id === currentTechnicianId);
     
@@ -155,11 +142,9 @@ const Dispatch = () => {
       description: `Work Order #${workOrder?.id} has been assigned to ${technician?.name}`,
     });
     
-    // Close the modal
     setIsScheduleModalOpen(false);
   };
 
-  // Get the current technician and work order for the schedule modal
   const currentTechnician = technicians.find(tech => tech.id === currentTechnicianId);
   const currentWorkOrder = draggedWorkOrders.find(order => order.id === currentWorkOrderId);
   
@@ -173,7 +158,6 @@ const Dispatch = () => {
           </div>
         </div>
         
-        {/* Status summary */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
           <Card>
             <CardContent className="p-4">
@@ -227,10 +211,8 @@ const Dispatch = () => {
                 <TabsTrigger value="map">Map View</TabsTrigger>
               </TabsList>
 
-              {/* List View Tab - New drag-drop interface */}
               <TabsContent value="list" className="pt-4">
                 <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-                  {/* Unassigned work orders list - draggable items */}
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-2">
@@ -261,7 +243,6 @@ const Dispatch = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Technicians Grid - Drop targets */}
                   <div>
                     <h2 className="text-lg font-semibold mb-3">Technicians</h2>
                     <p className="text-sm text-muted-foreground mb-4">
@@ -279,7 +260,6 @@ const Dispatch = () => {
                       ))}
                     </div>
 
-                    {/* Selected Technician Details */}
                     {selectedTechnicianId ? (
                       <Card className="mt-6">
                         <CardHeader className="pb-2">
@@ -328,14 +308,13 @@ const Dispatch = () => {
                                       size="sm" 
                                       variant="outline"
                                       onClick={() => {
-                                        // Remove assignment
                                         const updatedWorkOrders = draggedWorkOrders.map(wo => {
                                           if (wo.id === order.id) {
                                             return {
                                               ...wo,
                                               technicianId: undefined,
                                               technicianName: undefined,
-                                              status: 'pending' as const  // Explicitly tell TypeScript this is a literal type
+                                              status: 'pending' as const
                                             };
                                           }
                                           return wo;
@@ -380,40 +359,12 @@ const Dispatch = () => {
                 </div>
               </TabsContent>
 
-              {/* Map View Tab */}
               <TabsContent value="map" className="pt-4">
-                <Card className="overflow-hidden">
-                  <div className="relative">
-                    <div 
-                      className="h-[500px] bg-cover bg-center" 
-                      style={{ 
-                        backgroundImage: "url('https://maps.googleapis.com/maps/api/staticmap?center=Atlanta,GA&zoom=11&size=1200x500&maptype=roadmap&key=USE_YOUR_API_KEY_HERE')",
-                        backgroundPosition: 'center',
-                        backgroundSize: 'cover',
-                        backgroundColor: '#e5e7eb'
-                      }}
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/60 text-center p-4">
-                        <div>
-                          <MapPin className="h-10 w-10 mx-auto text-primary" />
-                          <h3 className="mt-2 text-lg font-medium">Google Maps Integration</h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            A real Google Maps integration would be displayed here, showing technicians' locations and optimized routes.
-                            <br />This requires a valid Google Maps API key and live data from technicians.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <CardContent className="p-4">
-                    <p className="text-sm text-muted-foreground">Select a technician on the map or from the list below to view their assigned work orders and route.</p>
-                  </CardContent>
-                </Card>
+                <TechLocationMap />
               </TabsContent>
             </Tabs>
           </div>
 
-          {/* Drag Overlay for visual feedback */}
           <DragOverlay>
             {activeOrderId ? (
               <div className="rounded-md border p-3 bg-card shadow-md opacity-90 max-w-xs">
@@ -447,7 +398,6 @@ const Dispatch = () => {
           </DragOverlay>
         </DndContext>
 
-        {/* Enhanced Schedule Modal with Technician Schedule View */}
         <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
           <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
@@ -458,7 +408,6 @@ const Dispatch = () => {
             </DialogHeader>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left column: Work order details */}
               <div>
                 {currentWorkOrder && (
                   <Card>
@@ -547,7 +496,6 @@ const Dispatch = () => {
                 )}
               </div>
               
-              {/* Right column: Technician's schedule */}
               <div>
                 {currentTechnician && scheduledDate && (
                   <TechnicianScheduleView
@@ -574,7 +522,6 @@ const Dispatch = () => {
   );
 };
 
-// Draggable Work Order Component
 interface DraggableWorkOrderProps {
   order: WorkOrder;
   isActive: boolean;
@@ -625,7 +572,6 @@ const DraggableWorkOrder = ({ order, isActive }: DraggableWorkOrderProps) => {
   );
 };
 
-// Technician Drop Target Component
 interface TechnicianDropTargetProps {
   technician: { id: string; name: string; status: string; currentLocation?: any; specialties: string[] };
   isSelected: boolean;
