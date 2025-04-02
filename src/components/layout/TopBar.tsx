@@ -46,7 +46,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
             <img 
               src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
               alt="Air Georgia Logo" 
-              className="h-10 w-auto"
+              className="h-20 w-auto" 
             />
           </div>
         )}
