@@ -6,21 +6,24 @@ import { Calendar, Clock, MapPin, UserRound } from "lucide-react";
 import { Technician, WorkOrder } from "@/types";
 
 interface TechnicianScheduleViewProps {
-  technician: Technician;
+  technician: Technician | null;
   workOrders: WorkOrder[];
   selectedDate: Date;
+  showAllAppointments?: boolean;
 }
 
 const TechnicianScheduleView = ({
   technician,
   workOrders,
   selectedDate,
+  showAllAppointments = false,
 }: TechnicianScheduleViewProps) => {
   // Filter work orders for this technician on the selected date
-  const technicianWorkOrders = workOrders.filter(order => {
+  // If showAllAppointments is true, show all appointments for the date
+  const filteredWorkOrders = workOrders.filter(order => {
     const orderDate = new Date(order.scheduledDate);
     return (
-      order.technicianId === technician.id &&
+      (showAllAppointments || (!technician || order.technicianId === technician.id)) &&
       orderDate.getFullYear() === selectedDate.getFullYear() &&
       orderDate.getMonth() === selectedDate.getMonth() &&
       orderDate.getDate() === selectedDate.getDate()
@@ -28,33 +31,35 @@ const TechnicianScheduleView = ({
   });
 
   // Sort by scheduled time
-  technicianWorkOrders.sort((a, b) => 
+  filteredWorkOrders.sort((a, b) => 
     new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
   );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div
-            className={`h-3 w-3 rounded-full ${
-              technician.status === "available"
-                ? "bg-green-500"
-                : technician.status === "busy"
-                ? "bg-amber-500"
-                : "bg-gray-500"
-            }`}
-          />
-          <h3 className="text-lg font-semibold">{technician.name}'s Schedule</h3>
+      {!showAllAppointments && technician && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div
+              className={`h-3 w-3 rounded-full ${
+                technician.status === "available"
+                  ? "bg-green-500"
+                  : technician.status === "busy"
+                  ? "bg-amber-500"
+                  : "bg-gray-500"
+              }`}
+            />
+            <h3 className="text-lg font-semibold">{technician.name}'s Schedule</h3>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {formatDate(selectedDate)}
+          </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {formatDate(selectedDate)}
-        </div>
-      </div>
+      )}
 
-      {technicianWorkOrders.length > 0 ? (
+      {filteredWorkOrders.length > 0 ? (
         <div className="space-y-3">
-          {technicianWorkOrders.map((order) => (
+          {filteredWorkOrders.map((order) => (
             <Card key={order.id} className="border border-border">
               <CardHeader className="p-3 pb-0">
                 <CardTitle className="text-sm font-medium">
@@ -70,6 +75,12 @@ const TechnicianScheduleView = ({
                     <UserRound className="h-3.5 w-3.5" />
                     {order.customerName}
                   </div>
+                  {order.technicianName && showAllAppointments && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <UserRound className="h-3.5 w-3.5" />
+                      Tech: {order.technicianName}
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
                     {order.address}

@@ -88,6 +88,17 @@ const Schedule = () => {
                       </div>
                     </div>
                   ))}
+                  <div
+                    className={`cursor-pointer p-3 transition-colors hover:bg-muted ${
+                      selectedTechnicianId === null ? "bg-muted" : ""
+                    }`}
+                    onClick={() => setSelectedTechnicianId(null)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                      <p>All Technicians</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -104,56 +115,12 @@ const Schedule = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {selectedTechnician ? (
-                  <TechnicianScheduleView
-                    technician={selectedTechnician}
-                    workOrders={workOrders}
-                    selectedDate={date}
-                  />
-                ) : dateWorkOrders.length > 0 ? (
-                  <div className="space-y-4">
-                    {dateWorkOrders.map((apt) => (
-                      <div key={apt.id} className="rounded-lg border p-4">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <UserRound className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{apt.customerName}</span>
-                            </div>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{formatDate(new Date(apt.scheduledDate), { timeOnly: true })}</span>
-                            </div>
-                            <div className="mt-1 text-sm text-muted-foreground">{apt.address}</div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <div className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                              {apt.type}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Tech: {apt.technicianName || "Unassigned"}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex justify-end gap-2">
-                          <Button variant="outline" size="sm">Reschedule</Button>
-                          <Button variant="default" size="sm">Details</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-8 text-center">
-                    <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium">No appointments scheduled</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      There are no appointments scheduled for this date.
-                    </p>
-                    <Button className="mt-4">
-                      <Plus className="mr-2 h-4 w-4" /> Schedule Appointment
-                    </Button>
-                  </div>
-                )}
+                <TechnicianScheduleView
+                  technician={selectedTechnician}
+                  workOrders={workOrders}
+                  selectedDate={date}
+                  showAllAppointments={!selectedTechnician}
+                />
               </CardContent>
             </Card>
           </div>
