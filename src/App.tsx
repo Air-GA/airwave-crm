@@ -18,6 +18,7 @@ import Timesheets from "./pages/Timesheets";
 import Reports from "./pages/Reports";
 import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/reports" element={<Reports />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
