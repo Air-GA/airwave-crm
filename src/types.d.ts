@@ -21,7 +21,7 @@ export interface WorkOrder {
   priority: 'low' | 'medium' | 'high' | 'emergency';
   status: 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
   scheduledDate: string;
-  createdDate: string;
+  createdAt: string; // Changed from createdDate to match mockData
   completedDate?: string;
   estimatedHours?: number;
   technicianId?: string;
