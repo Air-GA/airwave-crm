@@ -23,6 +23,7 @@ const Customers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [customerType, setCustomerType] = useState<"all" | "residential" | "commercial">("all");
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   
   // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
@@ -103,7 +104,7 @@ const Customers = () => {
             <p className="mt-2 text-sm text-muted-foreground">
               Try adjusting your search or filters, or add a new customer.
             </p>
-            <Button className="mt-4" onClick={() => document.querySelector('[role="dialog"] button')?.click()}>
+            <Button className="mt-4" onClick={() => setShowAddCustomerDialog(true)}>
               <Plus className="mr-2 h-4 w-4" /> Add Customer
             </Button>
           </div>
