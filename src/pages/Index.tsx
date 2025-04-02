@@ -9,9 +9,11 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContai
 import { Calendar, Clipboard, DollarSign, Package, Timer, Users } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDate } from "@/lib/date-utils";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   // Get work orders for today
   const today = new Date().toISOString().split('T')[0];
@@ -26,7 +28,7 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <div className="flex items-center gap-4">
             <Button variant="outline">Download Reports</Button>
-            <Button>+ New Work Order</Button>
+            <Button onClick={() => navigate("/work-orders/create")}>+ New Work Order</Button>
           </div>
         </div>
         

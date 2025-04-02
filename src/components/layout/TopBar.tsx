@@ -3,6 +3,7 @@ import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 
 interface TopBarProps {
   setSidebarOpen: (open: boolean) => void;
@@ -10,6 +11,7 @@ interface TopBarProps {
 
 const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   return (
     <header className="border-b bg-card shadow-sm">
@@ -43,7 +45,11 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           </Button>
           
           {!isMobile && (
-            <Button variant="default" className="ml-2">
+            <Button 
+              variant="default" 
+              className="ml-2"
+              onClick={() => navigate("/work-orders/create")}
+            >
               + New Work Order
             </Button>
           )}
