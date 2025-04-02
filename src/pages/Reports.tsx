@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -55,16 +54,15 @@ import { useAuth } from "@/hooks/useAuth";
 const Reports = () => {
   const { userRole, permissions } = useAuth();
   
-  // Mock data for reports
   const revenueData = [
-    { name: 'Jan', value: 8400 },
-    { name: 'Feb', value: 7800 },
-    { name: 'Mar', value: 9600 },
-    { name: 'Apr', value: 10200 },
-    { name: 'May', value: 12500 },
-    { name: 'Jun', value: 14800 },
-    { name: 'Jul', value: 15200 },
-    { name: 'Aug', value: 14700 },
+    { name: 'Feb', value: 8400 },
+    { name: 'Mar', value: 7800 },
+    { name: 'Apr', value: 9600 },
+    { name: 'May', value: 10200 },
+    { name: 'Jun', value: 12500 },
+    { name: 'Jul', value: 14800 },
+    { name: 'Aug', value: 15200 },
+    { name: 'Sep', value: 14700 },
   ];
   
   const serviceTypeData = [
@@ -116,55 +114,54 @@ const Reports = () => {
   ];
   
   const customerMetricsData = [
-    { name: 'Jan', maintenance: 1, repair: 0 },
-    { name: 'Feb', maintenance: 0, repair: 1 },
-    { name: 'Mar', maintenance: 1, repair: 0 },
-    { name: 'Apr', maintenance: 0, repair: 0 },
-    { name: 'May', maintenance: 1, repair: 1 },
-    { name: 'Jun', maintenance: 0, repair: 0 },
-    { name: 'Jul', maintenance: 1, repair: 0 },
-    { name: 'Aug', maintenance: 0, repair: 0 },
+    { name: 'Feb', maintenance: 1, repair: 0 },
+    { name: 'Mar', maintenance: 0, repair: 1 },
+    { name: 'Apr', maintenance: 1, repair: 0 },
+    { name: 'May', maintenance: 0, repair: 0 },
+    { name: 'Jun', maintenance: 1, repair: 1 },
+    { name: 'Jul', maintenance: 0, repair: 0 },
+    { name: 'Aug', maintenance: 1, repair: 0 },
+    { name: 'Sep', maintenance: 0, repair: 0 },
   ];
   
   const recentReports = [
     { 
-      id: 'REP-2023-001', 
-      name: 'Monthly Revenue Report - August 2023', 
+      id: 'REP-2025-001', 
+      name: 'Monthly Revenue Report - February 2025', 
       type: 'Revenue', 
-      created: '2023-09-01', 
+      created: '2025-03-01', 
       author: 'System'
     },
     { 
-      id: 'REP-2023-002', 
-      name: 'Technician Performance Q3 2023', 
+      id: 'REP-2025-002', 
+      name: 'Technician Performance Q1 2025', 
       type: 'Performance', 
-      created: '2023-08-28', 
+      created: '2025-02-28', 
       author: 'Admin'
     },
     { 
-      id: 'REP-2023-003', 
+      id: 'REP-2025-003', 
       name: 'Customer Satisfaction Survey Results', 
       type: 'Customer', 
-      created: '2023-08-25', 
+      created: '2025-02-25', 
       author: 'System'
     },
     { 
-      id: 'REP-2023-004', 
+      id: 'REP-2025-004', 
       name: 'Inventory Usage Analysis', 
       type: 'Inventory', 
-      created: '2023-08-22', 
+      created: '2025-02-22', 
       author: 'Admin'
     },
     { 
-      id: 'REP-2023-005', 
-      name: 'Service Type Distribution Q3 2023', 
+      id: 'REP-2025-005', 
+      name: 'Service Type Distribution Q1 2025', 
       type: 'Services', 
-      created: '2023-08-20', 
+      created: '2025-02-20', 
       author: 'System'
     },
   ];
   
-  // Render role-specific reports
   const renderRoleSpecificContent = () => {
     switch (userRole) {
       case 'admin':
@@ -178,7 +175,6 @@ const Reports = () => {
               <TabsTrigger value="reports">Saved Reports</TabsTrigger>
             </TabsList>
             
-            {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
@@ -297,7 +293,6 @@ const Reports = () => {
               </Card>
             </TabsContent>
             
-            {/* Revenue Tab */}
             <TabsContent value="revenue" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -330,7 +325,6 @@ const Reports = () => {
               </Card>
             </TabsContent>
             
-            {/* Performance Tab */}
             <TabsContent value="performance" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -395,7 +389,6 @@ const Reports = () => {
               </Card>
             </TabsContent>
             
-            {/* Saved Reports Tab */}
             <TabsContent value="reports" className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
@@ -632,7 +625,7 @@ const Reports = () => {
               <CardFooter className="flex justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Next Maintenance</p>
-                  <p className="text-2xl font-bold">Oct 15, 2023</p>
+                  <p className="text-2xl font-bold">Oct 15, 2025</p>
                 </div>
                 <Button variant="outline">
                   <Calendar className="mr-2 h-4 w-4" /> Schedule Service
@@ -670,7 +663,6 @@ const Reports = () => {
             </p>
           </div>
           
-          {/* Only show these actions to admin and manager */}
           {(userRole === 'admin' || userRole === 'manager') && (
             <div className="flex gap-2">
               <Button>
@@ -682,7 +674,6 @@ const Reports = () => {
             </div>
           )}
           
-          {/* Show export option to other roles */}
           {userRole !== 'admin' && userRole !== 'manager' && (
             <div className="flex gap-2">
               <Button variant="outline">

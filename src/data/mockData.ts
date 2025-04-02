@@ -1,4 +1,3 @@
-
 export interface Customer {
   id: string;
   name: string;
@@ -72,8 +71,8 @@ export const customers: Customer[] = [
     serviceAddress: '123 Main St, Atlanta, GA 30301',
     billAddress: '123 Main St, Atlanta, GA 30301',
     type: 'residential',
-    createdAt: '2023-10-15T14:22:00Z',
-    lastService: '2023-12-10T09:30:00Z'
+    createdAt: '2025-02-15T14:22:00Z',
+    lastService: '2025-03-10T09:30:00Z'
   },
   {
     id: 'c2',
@@ -84,8 +83,8 @@ export const customers: Customer[] = [
     serviceAddress: '225 North Ave NW, Atlanta, GA 30332',
     billAddress: 'PO Box 34578, Atlanta, GA 30332',
     type: 'commercial',
-    createdAt: '2023-08-22T10:15:00Z',
-    lastService: '2024-01-05T13:45:00Z'
+    createdAt: '2025-01-22T10:15:00Z',
+    lastService: '2025-03-05T13:45:00Z'
   },
   {
     id: 'c3',
@@ -96,8 +95,8 @@ export const customers: Customer[] = [
     serviceAddress: '456 Oak Dr, Marietta, GA 30060',
     billAddress: '456 Oak Dr, Marietta, GA 30060',
     type: 'residential',
-    createdAt: '2023-11-05T09:30:00Z',
-    lastService: '2024-02-15T11:20:00Z'
+    createdAt: '2025-02-05T09:30:00Z',
+    lastService: '2025-04-15T11:20:00Z'
   },
   {
     id: 'c4',
@@ -108,8 +107,8 @@ export const customers: Customer[] = [
     serviceAddress: '1100 Peachtree St NE, Atlanta, GA 30309',
     billAddress: '1100 Peachtree St NE, Suite 200, Atlanta, GA 30309',
     type: 'commercial',
-    createdAt: '2023-07-11T08:45:00Z',
-    lastService: '2024-03-01T15:30:00Z'
+    createdAt: '2025-01-11T08:45:00Z',
+    lastService: '2025-05-01T15:30:00Z'
   },
   {
     id: 'c5',
@@ -120,8 +119,8 @@ export const customers: Customer[] = [
     serviceAddress: '789 Elm Street, Roswell, GA 30075',
     billAddress: '789 Elm Street, Roswell, GA 30075',
     type: 'residential',
-    createdAt: '2024-01-20T11:10:00Z',
-    lastService: '2024-03-25T10:15:00Z'
+    createdAt: '2025-02-20T11:10:00Z',
+    lastService: '2025-04-25T10:15:00Z'
   }
 ];
 
@@ -136,10 +135,10 @@ export const workOrders: WorkOrder[] = [
     priority: 'medium',
     type: 'repair',
     description: 'AC not cooling properly, possible refrigerant leak',
-    scheduledDate: '2024-04-18T09:00:00Z',
+    scheduledDate: '2025-04-18T09:00:00Z',
     technicianId: 't1',
     technicianName: 'David Martinez',
-    createdAt: '2024-04-15T13:25:00Z'
+    createdAt: '2025-04-15T13:25:00Z'
   },
   {
     id: 'wo2',
@@ -150,10 +149,10 @@ export const workOrders: WorkOrder[] = [
     priority: 'high',
     type: 'maintenance',
     description: 'Quarterly maintenance for campus HVAC systems - Building A',
-    scheduledDate: '2024-04-17T08:00:00Z',
+    scheduledDate: '2025-04-17T08:00:00Z',
     technicianId: 't2',
     technicianName: 'Lisa Wong',
-    createdAt: '2024-04-10T09:15:00Z'
+    createdAt: '2025-04-10T09:15:00Z'
   },
   {
     id: 'wo3',
@@ -164,8 +163,8 @@ export const workOrders: WorkOrder[] = [
     priority: 'low',
     type: 'inspection',
     description: 'Annual HVAC system inspection',
-    scheduledDate: '2024-04-22T13:30:00Z',
-    createdAt: '2024-04-16T14:20:00Z'
+    scheduledDate: '2025-04-22T13:30:00Z',
+    createdAt: '2025-04-16T14:20:00Z'
   },
   {
     id: 'wo4',
@@ -176,11 +175,11 @@ export const workOrders: WorkOrder[] = [
     priority: 'medium',
     type: 'repair',
     description: 'Fix thermostat issues on 3rd floor',
-    scheduledDate: '2024-04-15T10:00:00Z',
+    scheduledDate: '2025-04-15T10:00:00Z',
     technicianId: 't3',
     technicianName: 'James Wilson',
-    createdAt: '2024-04-12T11:30:00Z',
-    completedAt: '2024-04-15T12:45:00Z',
+    createdAt: '2025-04-12T11:30:00Z',
+    completedAt: '2025-04-15T12:45:00Z',
     partsUsed: [
       {
         id: 'p1',
@@ -205,10 +204,10 @@ export const workOrders: WorkOrder[] = [
     priority: 'emergency',
     type: 'repair',
     description: 'Furnace not working, no heat in house',
-    scheduledDate: '2024-04-17T15:00:00Z',
+    scheduledDate: '2025-04-17T15:00:00Z',
     technicianId: 't4',
     technicianName: 'Robert Johnson',
-    createdAt: '2024-04-16T20:10:00Z'
+    createdAt: '2025-04-16T20:10:00Z'
   }
 ];
 
@@ -283,7 +282,7 @@ export const technicians: Technician[] = [
       lat: 33.7851,
       lng: -84.3856,
       address: '285 Peachtree Center Ave, Atlanta, GA 30303',
-      timestamp: '2024-04-17T08:35:00Z'
+      timestamp: '2025-04-17T08:35:00Z'
     },
     status: 'busy'
   },
@@ -297,7 +296,7 @@ export const technicians: Technician[] = [
       lat: 33.9277,
       lng: -84.3370,
       address: '225 North Ave NW, Atlanta, GA 30332',
-      timestamp: '2024-04-17T08:30:00Z'
+      timestamp: '2025-04-17T08:30:00Z'
     },
     status: 'busy'
   },
@@ -311,7 +310,7 @@ export const technicians: Technician[] = [
       lat: 33.8312,
       lng: -84.3615,
       address: '1380 Atlantic Dr NW, Atlanta, GA 30363',
-      timestamp: '2024-04-17T08:40:00Z'
+      timestamp: '2025-04-17T08:40:00Z'
     },
     status: 'available'
   },
@@ -325,7 +324,7 @@ export const technicians: Technician[] = [
       lat: 33.7490,
       lng: -84.3880,
       address: '125 Auburn Ave NE, Atlanta, GA 30303',
-      timestamp: '2024-04-17T08:25:00Z'
+      timestamp: '2025-04-17T08:25:00Z'
     },
     status: 'available'
   },
@@ -339,7 +338,7 @@ export const technicians: Technician[] = [
       lat: 33.8602,
       lng: -84.4641,
       address: '4400 Ashford Dunwoody Rd, Atlanta, GA 30346',
-      timestamp: '2024-04-17T08:15:00Z'
+      timestamp: '2025-04-17T08:15:00Z'
     },
     status: 'off-duty'
   }
@@ -359,11 +358,11 @@ export const dashboardStats = {
 
 // Performance metrics
 export const performanceMetrics = [
-  { date: '2024-04-11', completedJobs: 7, revenue: 4250.50 },
-  { date: '2024-04-12', completedJobs: 6, revenue: 3920.75 },
-  { date: '2024-04-13', completedJobs: 4, revenue: 2150.25 },
-  { date: '2024-04-14', completedJobs: 2, revenue: 1560.00 },
-  { date: '2024-04-15', completedJobs: 8, revenue: 5430.80 },
-  { date: '2024-04-16', completedJobs: 7, revenue: 4875.50 },
-  { date: '2024-04-17', completedJobs: 5, revenue: 3245.60 }
+  { date: '2025-04-11', completedJobs: 7, revenue: 4250.50 },
+  { date: '2025-04-12', completedJobs: 6, revenue: 3920.75 },
+  { date: '2025-04-13', completedJobs: 4, revenue: 2150.25 },
+  { date: '2025-04-14', completedJobs: 2, revenue: 1560.00 },
+  { date: '2025-04-15', completedJobs: 8, revenue: 5430.80 },
+  { date: '2025-04-16', completedJobs: 7, revenue: 4875.50 },
+  { date: '2025-04-17', completedJobs: 5, revenue: 3245.60 }
 ];
