@@ -36,6 +36,9 @@ import { formatDate } from "@/lib/date-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SyncButton } from '@/components/SyncButton';
+import { syncWorkOrdersFromCRM } from '@/services/crmSyncService';
+import { useQueryClient } from '@tanstack/react-query';
 
 const WorkOrders = () => {
   const isMobile = useIsMobile();
@@ -48,7 +51,8 @@ const WorkOrders = () => {
   const [technicianFilter, setTechnicianFilter] = useState<string>("all");
   const [showUnassignedOnly, setShowUnassignedOnly] = useState<boolean>(false);
   const [localWorkOrders, setLocalWorkOrders] = useState<WorkOrder[]>(workOrders);
-  
+  const queryClient = useQueryClient();
+
   const filteredWorkOrders = localWorkOrders.filter(order => {
     const matchesSearch = !searchQuery || 
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -174,17 +178,27 @@ const WorkOrders = () => {
     }
   };
   
+  const handleSyncWorkOrders = async () => {
+    const syncedOrders = await syncWorkOrdersFromCRM();
+    if (syncedOrders.length > 0) {
+      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+    }
+    return syncedOrders;
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
-            <p className="text-muted-foreground">Manage service requests and job assignments</p>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">Work Orders</h1>
+            <SyncButton onSync={handleSyncWorkOrders} label="Work Orders" />
           </div>
-          <Button onClick={() => navigate("/work-orders/create")}>
-            <Plus className="mr-2 h-4 w-4" /> Create Work Order
-          </Button>
+          <Link to="/work-orders/create">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create Work Order
+            </Button>
+          </Link>
         </div>
         
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
