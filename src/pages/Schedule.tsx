@@ -13,9 +13,19 @@ const Schedule = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   
-  // Filter work orders for the selected date
-  const dateWorkOrders = workOrders.filter(
-    order => new Date(order.scheduledDate).toDateString() === date.toDateString()
+  // Filter work orders for the selected date, but preserve the original time
+  const dateWorkOrders = workOrders.filter(order => {
+    const orderDate = new Date(order.scheduledDate);
+    return (
+      orderDate.getFullYear() === date.getFullYear() &&
+      orderDate.getMonth() === date.getMonth() &&
+      orderDate.getDate() === date.getDate()
+    );
+  });
+  
+  // Sort work orders by time
+  dateWorkOrders.sort((a, b) => 
+    new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
   );
   
   // Get the selected technician
@@ -45,7 +55,7 @@ const Schedule = () => {
                   mode="single"
                   selected={date}
                   onSelect={(date) => date && setDate(date)}
-                  className="rounded-md border"
+                  className="rounded-md border pointer-events-auto"
                 />
               </CardContent>
             </Card>

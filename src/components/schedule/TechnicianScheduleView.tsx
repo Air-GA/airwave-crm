@@ -17,10 +17,15 @@ const TechnicianScheduleView = ({
   selectedDate,
 }: TechnicianScheduleViewProps) => {
   // Filter work orders for this technician on the selected date
-  const technicianWorkOrders = workOrders.filter(order => 
-    order.technicianId === technician.id && 
-    new Date(order.scheduledDate).toDateString() === selectedDate.toDateString()
-  );
+  const technicianWorkOrders = workOrders.filter(order => {
+    const orderDate = new Date(order.scheduledDate);
+    return (
+      order.technicianId === technician.id &&
+      orderDate.getFullYear() === selectedDate.getFullYear() &&
+      orderDate.getMonth() === selectedDate.getMonth() &&
+      orderDate.getDate() === selectedDate.getDate()
+    );
+  });
 
   // Sort by scheduled time
   technicianWorkOrders.sort((a, b) => 
