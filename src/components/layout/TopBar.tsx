@@ -26,6 +26,17 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           <Menu className="h-5 w-5" />
         </Button>
         
+        {/* Mobile Logo */}
+        {isMobile && (
+          <div className="mr-2">
+            <img 
+              src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
+              alt="Air Georgia Logo" 
+              className="h-8 w-auto"
+            />
+          </div>
+        )}
+        
         {/* Search */}
         <div className="flex-1">
           <div className="relative max-w-md">

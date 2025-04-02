@@ -57,10 +57,11 @@ const SideNav = ({ open, setOpen }: SideNavProps) => {
         {/* Logo and close button */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           <Link to="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-            <div className="rounded bg-accent p-1">
-              <span className="text-xl font-bold text-accent-foreground">Air</span>
-            </div>
-            <span className="text-xl font-semibold text-sidebar-foreground">GA</span>
+            <img 
+              src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
+              alt="Air Georgia Logo" 
+              className="h-10 w-auto"
+            />
           </Link>
           <Button 
             variant="ghost" 
