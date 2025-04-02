@@ -10,7 +10,8 @@ import { Calendar, Clipboard, DollarSign, Package, Timer, Users, Download } from
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDate } from "@/lib/date-utils";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 const Dashboard = () => {
   const isMobile = useIsMobile();
