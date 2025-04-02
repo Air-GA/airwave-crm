@@ -43,10 +43,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 const Settings = () => {
-  const [companyName, setCompanyName] = useState("Air-GA HVAC Services");
-  const [companyEmail, setCompanyEmail] = useState("contact@air-ga.com");
-  const [companyPhone, setCompanyPhone] = useState("(404) 555-1234");
-  const [companyAddress, setCompanyAddress] = useState("123 Main St, Atlanta, GA 30303");
+  const [companyName, setCompanyName] = useState("Air Georgia Home Comfort Systems");
+  const [companyEmail, setCompanyEmail] = useState("info@airgeorgia.com");
+  const [companyPhone, setCompanyPhone] = useState("(470) 800-9002");
+  const [companyAddress, setCompanyAddress] = useState("910 E Spring St, Monroe, GA 30565");
   
   return (
     <MainLayout>
@@ -92,7 +92,6 @@ const Settings = () => {
             </TabsList>
             
             <div className="flex-1 sm:ml-4">
-              {/* Account Tab */}
               <TabsContent value="account" className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -193,7 +192,6 @@ const Settings = () => {
                 </Card>
               </TabsContent>
               
-              {/* Company Tab */}
               <TabsContent value="company" className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -203,11 +201,11 @@ const Settings = () => {
                   <CardContent className="space-y-4">
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                       <Avatar className="h-24 w-24">
-                        <AvatarImage src="" />
+                        <AvatarImage src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" />
                         <AvatarFallback className="text-xl">AG</AvatarFallback>
                       </Avatar>
                       <div className="space-y-1 text-center sm:text-left">
-                        <h3 className="font-medium">Air-GA HVAC Services</h3>
+                        <h3 className="font-medium">Air Georgia Home Comfort Systems</h3>
                         <p className="text-sm text-muted-foreground">HVAC Contractor</p>
                         <div className="flex justify-center sm:justify-start space-x-2 mt-2">
                           <Button variant="outline" size="sm">
@@ -266,7 +264,7 @@ const Settings = () => {
                       <Label htmlFor="companyDescription">Business Description</Label>
                       <Textarea 
                         id="companyDescription" 
-                        defaultValue="Air-GA is a leading HVAC service provider in the Atlanta area, offering installation, maintenance, and repair services for residential and commercial customers."
+                        defaultValue="Air Georgia Home Comfort Systems is a leading HVAC service provider in the Monroe area, offering installation, maintenance, and repair services for residential and commercial customers."
                       />
                     </div>
                   </CardContent>
@@ -378,7 +376,6 @@ const Settings = () => {
                 </Card>
               </TabsContent>
               
-              {/* Users Tab */}
               <TabsContent value="users" className="space-y-4">
                 <Card>
                   <CardHeader className="space-y-1">
@@ -531,7 +528,6 @@ const Settings = () => {
                 </Card>
               </TabsContent>
               
-              {/* Other tabs would be similarly structured */}
               <TabsContent value="notifications">
                 <Card>
                   <CardHeader>
