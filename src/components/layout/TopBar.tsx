@@ -40,19 +40,19 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           <Menu className="h-5 w-5" />
         </Button>
         
-        {/* Mobile Logo */}
+        {/* Logo - centered and enlarged for mobile */}
         {isMobile && (
-          <div className="mr-2">
+          <div className="flex-1 flex justify-center">
             <img 
               src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
               alt="Air Georgia Logo" 
-              className="h-8 w-auto"
+              className="h-10 w-auto"
             />
           </div>
         )}
         
-        {/* Search */}
-        <div className="flex-1">
+        {/* Search - hidden on mobile when logo is centered */}
+        <div className={`${isMobile ? "hidden" : "flex-1"}`}>
           <div className="relative max-w-md">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
