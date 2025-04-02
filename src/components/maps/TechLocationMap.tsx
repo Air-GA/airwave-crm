@@ -3,9 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getIntegrationSettings } from "@/utils/settingsStorage";
+import { getIntegrationSettings, saveIntegrationSettings } from "@/utils/settingsStorage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Map } from "lucide-react";
+import { AlertCircle, Map, Info, ExternalLink } from "lucide-react";
 
 interface TechLocation {
   id: string;
@@ -29,6 +29,7 @@ const TechLocationMap = () => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showApiKeyHelp, setShowApiKeyHelp] = useState<boolean>(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
 
@@ -183,7 +184,13 @@ const TechLocationMap = () => {
     if (manualApiKey) {
       cleanupScript();
       setIsLoaded(false);
-      // This will trigger the useEffect to reload the map
+      
+      // Save the API key to settings if it works
+      const settings = getIntegrationSettings();
+      settings.googleMaps.connected = true;
+      settings.googleMaps.apiKey = manualApiKey;
+      saveIntegrationSettings(settings);
+      setGoogleMapsApiKey(manualApiKey);
     }
   };
 
@@ -200,6 +207,31 @@ const TechLocationMap = () => {
               {error || "Please enter a Google Maps API key to display the map. You can also add it in the Integrations settings tab."}
             </AlertDescription>
           </Alert>
+          
+          <button 
+            onClick={() => setShowApiKeyHelp(!showApiKeyHelp)}
+            className="flex items-center text-sm text-primary mb-3 hover:underline"
+          >
+            <Info className="h-4 w-4 mr-1" />
+            {showApiKeyHelp ? "Hide API Key Instructions" : "How to get a Google Maps API Key"}
+          </button>
+          
+          {showApiKeyHelp && (
+            <Alert className="mb-4">
+              <AlertDescription className="text-sm space-y-2">
+                <p>To create a Google Maps API key:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Go to the <a href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center">Google Cloud Console <ExternalLink className="h-3 w-3 ml-1" /></a></li>
+                  <li>Create a new project or select an existing one</li>
+                  <li>Enable the "Maps JavaScript API"</li>
+                  <li>Create an API key in the "Credentials" section</li>
+                  <li>Under API restrictions, restrict the key to "Maps JavaScript API" only</li>
+                  <li>Optionally, restrict the key to your website domain for security</li>
+                </ol>
+                <p className="mt-1">After creating your API key, enter it below or add it in the Settings → Integrations page.</p>
+              </AlertDescription>
+            </Alert>
+          )}
           
           <form onSubmit={handleApiKeySubmit} className="flex flex-col space-y-2">
             <Input
