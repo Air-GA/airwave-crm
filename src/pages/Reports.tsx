@@ -25,13 +25,27 @@ import {
   Clock, 
   Download, 
   FileBarChart, 
-  FileText, 
-  LineChart, 
-  PieChart, 
+  FileText,
+  LineChart as LineChartIcon,
+  PieChart as PieChartIcon,
+  Package,
   Settings, 
   Share2
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { 
+  Bar, 
+  BarChart, 
+  CartesianGrid, 
+  Legend, 
+  Line, 
+  LineChart, 
+  Pie, 
+  PieChart, 
+  ResponsiveContainer, 
+  Tooltip, 
+  XAxis, 
+  YAxis 
+} from "recharts";
 
 const Reports = () => {
   // Mock data for reports
@@ -375,8 +389,8 @@ const Reports = () => {
                         </CardDescription>
                       </div>
                       {report.type === 'Revenue' && <BarChart3 className="h-5 w-5 text-muted-foreground" />}
-                      {report.type === 'Performance' && <LineChart className="h-5 w-5 text-muted-foreground" />}
-                      {report.type === 'Services' && <PieChart className="h-5 w-5 text-muted-foreground" />}
+                      {report.type === 'Performance' && <LineChartIcon className="h-5 w-5 text-muted-foreground" />}
+                      {report.type === 'Services' && <PieChartIcon className="h-5 w-5 text-muted-foreground" />}
                       {report.type === 'Inventory' && <Package className="h-5 w-5 text-muted-foreground" />}
                       {report.type === 'Customer' && <FileText className="h-5 w-5 text-muted-foreground" />}
                     </div>
