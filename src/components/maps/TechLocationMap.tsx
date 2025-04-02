@@ -57,7 +57,6 @@ const TechLocationMap = () => {
     
     return () => {
       document.head.removeChild(script);
-      // @ts-ignore
       delete window.initMap;
     };
   }, [googleMapsApiKey, manualApiKey, isLoaded]);
