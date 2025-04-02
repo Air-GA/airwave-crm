@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SyncButtonProps {
   onSync: () => Promise<any>;
@@ -11,6 +12,10 @@ interface SyncButtonProps {
 
 export function SyncButton({ onSync, label }: SyncButtonProps) {
   const [isSyncing, setIsSyncing] = useState(false);
+  const { userRole, permissions } = useAuth();
+
+  // Only admin and manager can sync data
+  const canSync = userRole === 'admin' || userRole === 'manager' || userRole === 'csr';
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -32,6 +37,10 @@ export function SyncButton({ onSync, label }: SyncButtonProps) {
       setIsSyncing(false);
     }
   };
+
+  if (!canSync) {
+    return null; // Don't show the button if user doesn't have permission
+  }
 
   return (
     <Button 
