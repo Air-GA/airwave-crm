@@ -41,12 +41,21 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
         </Button>
         
         {/* Logo - centered and enlarged for mobile */}
-        {isMobile && (
+        {isMobile ? (
           <div className="flex-1 flex justify-center">
             <img 
               src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
               alt="Air Georgia Logo" 
               className="h-20 w-auto" 
+            />
+          </div>
+        ) : (
+          /* Logo for desktop - added to the left side with larger size */
+          <div className="mr-4">
+            <img 
+              src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
+              alt="Air Georgia Logo" 
+              className="h-12 w-auto" 
             />
           </div>
         )}
