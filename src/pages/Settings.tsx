@@ -34,7 +34,8 @@ import {
   Save,
   Upload,
   Smartphone,
-  Globe
+  Globe,
+  Plus
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
