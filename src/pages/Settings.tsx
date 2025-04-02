@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +21,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import { 
   Settings as SettingsIcon, 
   User, 
@@ -37,20 +37,185 @@ import {
   Smartphone,
   Globe,
   Plus,
-  Clock
+  Clock,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { 
+  getCompanySettings, 
+  saveCompanySettings, 
+  getIntegrationSettings, 
+  saveIntegrationSettings,
+  getUserSettings,
+  saveUserSettings,
+  CompanySettings,
+  IntegrationSettings,
+  UserSettings
+} from "@/utils/settingsStorage";
+import { companyFormSchema, userFormSchema, integrationSchema } from "@/utils/settingsSchema";
 
 const Settings = () => {
-  const [companyName, setCompanyName] = useState("Air Georgia Home Comfort Systems");
-  const [companyEmail, setCompanyEmail] = useState("service@air-ga.net");
-  const [companyPhone, setCompanyPhone] = useState("(470) 800-9002");
-  const [companyAddress, setCompanyAddress] = useState("910 E Spring St, Monroe, GA 30565");
-  const [is24Hours, setIs24Hours] = useState(true);
+  // Load settings from local storage
+  const [companySettings, setCompanySettings] = useState<CompanySettings>(getCompanySettings());
+  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings>(getIntegrationSettings());
+  const [userSettings, setUserSettings] = useState<UserSettings>(getUserSettings());
   
+  // UI State
+  const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({
+    quickbooks: false,
+    googleMaps: false,
+    smsProvider: false
+  });
+
+  // Setup forms with react-hook-form
+  const companyForm = useForm<z.infer<typeof companyFormSchema>>({
+    resolver: zodResolver(companyFormSchema),
+    defaultValues: {
+      companyName: companySettings.companyName,
+      companyEmail: companySettings.companyEmail,
+      companyPhone: companySettings.companyPhone,
+      companyAddress: companySettings.companyAddress,
+      companyDescription: companySettings.companyDescription,
+      is24Hours: companySettings.businessHours.is24Hours,
+      emergency24h: companySettings.preferences.emergency24h,
+    },
+  });
+
+  const userForm = useForm<z.infer<typeof userFormSchema>>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      firstName: userSettings.firstName,
+      lastName: userSettings.lastName,
+      email: userSettings.email,
+      phone: userSettings.phone,
+      timezone: userSettings.timezone,
+    },
+  });
+
+  const integrationForm = useForm<z.infer<typeof integrationSchema>>({
+    resolver: zodResolver(integrationSchema),
+    defaultValues: {
+      quickbooks: {
+        connected: integrationSettings.quickbooks.connected,
+        apiKey: integrationSettings.quickbooks.apiKey || "",
+      },
+      googleMaps: {
+        connected: integrationSettings.googleMaps.connected,
+        apiKey: integrationSettings.googleMaps.apiKey || "",
+      },
+      smsProvider: {
+        connected: integrationSettings.smsProvider.connected,
+        apiKey: integrationSettings.smsProvider.apiKey || "",
+      },
+    },
+  });
+
+  // Save functions
+  const saveCompanyForm = (data: z.infer<typeof companyFormSchema>) => {
+    const updatedSettings = {
+      ...companySettings,
+      companyName: data.companyName,
+      companyEmail: data.companyEmail,
+      companyPhone: data.companyPhone,
+      companyAddress: data.companyAddress,
+      companyDescription: data.companyDescription || "",
+      businessHours: {
+        ...companySettings.businessHours,
+        is24Hours: data.is24Hours,
+      },
+      preferences: {
+        ...companySettings.preferences,
+        emergency24h: data.emergency24h,
+      },
+    };
+    
+    saveCompanySettings(updatedSettings);
+    setCompanySettings(updatedSettings);
+    toast.success("Company settings saved successfully!");
+  };
+
+  const saveUserForm = (data: z.infer<typeof userFormSchema>) => {
+    const updatedSettings = {
+      ...userSettings,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      timezone: data.timezone,
+    };
+    
+    saveUserSettings(updatedSettings);
+    setUserSettings(updatedSettings);
+    toast.success("User settings saved successfully!");
+  };
+
+  const saveIntegrationForm = (data: z.infer<typeof integrationSchema>) => {
+    const updatedSettings = {
+      ...integrationSettings,
+      quickbooks: {
+        connected: data.quickbooks.connected,
+        apiKey: data.quickbooks.apiKey,
+      },
+      googleMaps: {
+        connected: data.googleMaps.connected,
+        apiKey: data.googleMaps.apiKey,
+      },
+      smsProvider: {
+        connected: data.smsProvider.connected,
+        apiKey: data.smsProvider.apiKey,
+      },
+    };
+    
+    saveIntegrationSettings(updatedSettings);
+    setIntegrationSettings(updatedSettings);
+    toast.success("Integration settings saved successfully!");
+  };
+
+  // Preference toggles
+  const handlePreferenceChange = (key: keyof typeof companySettings.preferences, value: boolean) => {
+    const updatedSettings = {
+      ...companySettings,
+      preferences: {
+        ...companySettings.preferences,
+        [key]: value,
+      },
+    };
+    
+    saveCompanySettings(updatedSettings);
+    setCompanySettings(updatedSettings);
+    toast.success(`${key} setting updated`);
+  };
+
+  const toggleShowApiKey = (key: string) => {
+    setShowApiKey({
+      ...showApiKey,
+      [key]: !showApiKey[key]
+    });
+  };
+
+  useEffect(() => {
+    // Load settings from local storage on initial render
+    setCompanySettings(getCompanySettings());
+    setIntegrationSettings(getIntegrationSettings());
+    setUserSettings(getUserSettings());
+  }, []);
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -96,75 +261,127 @@ const Settings = () => {
             
             <div className="flex-1 sm:ml-4">
               <TabsContent value="account" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Your Profile</CardTitle>
-                    <CardDescription>Manage your personal information and preferences</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src="" />
-                        <AvatarFallback className="text-xl">JD</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1 text-center sm:text-left">
-                        <h3 className="font-medium">John Doe</h3>
-                        <p className="text-sm text-muted-foreground">Administrator</p>
-                        <div className="flex justify-center sm:justify-start space-x-2 mt-2">
-                          <Button variant="outline" size="sm">
-                            <Upload className="mr-2 h-3.5 w-3.5" />
-                            Change Photo
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600">
-                            Remove
-                          </Button>
+                <Form {...userForm}>
+                  <form onSubmit={userForm.handleSubmit(saveUserForm)}>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Your Profile</CardTitle>
+                        <CardDescription>Manage your personal information and preferences</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                          <Avatar className="h-24 w-24">
+                            <AvatarImage src="" />
+                            <AvatarFallback className="text-xl">JD</AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-1 text-center sm:text-left">
+                            <h3 className="font-medium">John Doe</h3>
+                            <p className="text-sm text-muted-foreground">Administrator</p>
+                            <div className="flex justify-center sm:justify-start space-x-2 mt-2">
+                              <Button variant="outline" size="sm" type="button">
+                                <Upload className="mr-2 h-3.5 w-3.5" />
+                                Change Photo
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" type="button">
+                                Remove
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" defaultValue="John" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" defaultValue="Doe" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" defaultValue="john.doe@air-ga.com" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" type="tel" defaultValue="(404) 555-5678" />
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="timezone">Timezone</Label>
-                        <Select defaultValue="america_new_york">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a timezone" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="america_new_york">Eastern Time (US & Canada)</SelectItem>
-                            <SelectItem value="america_chicago">Central Time (US & Canada)</SelectItem>
-                            <SelectItem value="america_denver">Mountain Time (US & Canada)</SelectItem>
-                            <SelectItem value="america_los_angeles">Pacific Time (US & Canada)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline">Cancel</Button>
-                    <Button>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </Button>
-                  </CardFooter>
-                </Card>
+                        
+                        <Separator />
+                        
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <FormField
+                            control={userForm.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>First Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Last Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input type="email" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone</FormLabel>
+                                <FormControl>
+                                  <Input type="tel" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="timezone"
+                            render={({ field }) => (
+                              <FormItem className="sm:col-span-2">
+                                <FormLabel>Timezone</FormLabel>
+                                <Select 
+                                  onValueChange={field.onChange} 
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a timezone" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="america_new_york">Eastern Time (US & Canada)</SelectItem>
+                                    <SelectItem value="america_chicago">Central Time (US & Canada)</SelectItem>
+                                    <SelectItem value="america_denver">Mountain Time (US & Canada)</SelectItem>
+                                    <SelectItem value="america_los_angeles">Pacific Time (US & Canada)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex justify-between">
+                        <Button variant="outline" type="button" onClick={() => userForm.reset()}>Cancel</Button>
+                        <Button type="submit">
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </form>
+                </Form>
                 
                 <Card>
                   <CardHeader>
@@ -179,7 +396,10 @@ const Settings = () => {
                           Set the application to use dark color theme
                         </p>
                       </div>
-                      <Switch />
+                      <Switch 
+                        checked={companySettings.preferences.darkMode}
+                        onCheckedChange={(checked) => handlePreferenceChange('darkMode', checked)}
+                      />
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
@@ -189,209 +409,271 @@ const Settings = () => {
                           Show more information with less spacing
                         </p>
                       </div>
-                      <Switch />
+                      <Switch 
+                        checked={companySettings.preferences.compactView}
+                        onCheckedChange={(checked) => handlePreferenceChange('compactView', checked)}
+                      />
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
               
               <TabsContent value="company" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Company Information</CardTitle>
-                    <CardDescription>Manage your company profile details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" />
-                        <AvatarFallback className="text-xl">AG</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1 text-center sm:text-left">
-                        <h3 className="font-medium">Air Georgia Home Comfort Systems</h3>
-                        <p className="text-sm text-muted-foreground">HVAC Contractor</p>
-                        <div className="flex justify-center sm:justify-start space-x-2 mt-2">
-                          <Button variant="outline" size="sm">
-                            <Upload className="mr-2 h-3.5 w-3.5" />
-                            Change Logo
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600">
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Legal Business Name</Label>
-                      <Input 
-                        id="companyName" 
-                        value={companyName} 
-                        onChange={(e) => setCompanyName(e.target.value)} 
-                      />
-                    </div>
-                    
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="companyEmail">Business Email</Label>
-                        <Input 
-                          id="companyEmail" 
-                          type="email" 
-                          value={companyEmail} 
-                          onChange={(e) => setCompanyEmail(e.target.value)} 
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="companyPhone">Business Phone</Label>
-                        <Input 
-                          id="companyPhone" 
-                          type="tel" 
-                          value={companyPhone} 
-                          onChange={(e) => setCompanyPhone(e.target.value)} 
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="companyAddress">Business Address</Label>
-                      <Input 
-                        id="companyAddress" 
-                        value={companyAddress} 
-                        onChange={(e) => setCompanyAddress(e.target.value)} 
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="companyDescription">Business Description</Label>
-                      <Textarea 
-                        id="companyDescription" 
-                        defaultValue="Air Georgia Home Comfort Systems is a leading HVAC service provider in the Monroe area, offering installation, maintenance, and repair services for residential and commercial customers."
-                      />
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline">Cancel</Button>
-                    <Button>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </Button>
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Business Hours</CardTitle>
-                    <CardDescription>Set your company's operating hours</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2 mb-6">
-                      <Switch id="24hours" checked={is24Hours} onCheckedChange={setIs24Hours} />
-                      <Label htmlFor="24hours" className="font-medium">24/7 Operation (Open all hours, every day)</Label>
-                    </div>
-                    
-                    {!is24Hours ? (
-                      <div className="space-y-2">
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
-                          <div key={day} className="flex items-center justify-between">
-                            <Label className="w-24">{day}</Label>
-                            <div className="flex items-center gap-2">
-                              <Select defaultValue="09:00">
-                                <SelectTrigger className="w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="08:00">8:00 AM</SelectItem>
-                                  <SelectItem value="09:00">9:00 AM</SelectItem>
-                                  <SelectItem value="10:00">10:00 AM</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <span>to</span>
-                              <Select defaultValue="17:00">
-                                <SelectTrigger className="w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="17:00">5:00 PM</SelectItem>
-                                  <SelectItem value="18:00">6:00 PM</SelectItem>
-                                  <SelectItem value="19:00">7:00 PM</SelectItem>
-                                </SelectContent>
-                              </Select>
+                <Form {...companyForm}>
+                  <form onSubmit={companyForm.handleSubmit(saveCompanyForm)}>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Company Information</CardTitle>
+                        <CardDescription>Manage your company profile details</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                          <Avatar className="h-24 w-24">
+                            <AvatarImage src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" />
+                            <AvatarFallback className="text-xl">AG</AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-1 text-center sm:text-left">
+                            <h3 className="font-medium">{companySettings.companyName}</h3>
+                            <p className="text-sm text-muted-foreground">HVAC Contractor</p>
+                            <div className="flex justify-center sm:justify-start space-x-2 mt-2">
+                              <Button variant="outline" size="sm" type="button">
+                                <Upload className="mr-2 h-3.5 w-3.5" />
+                                Change Logo
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" type="button">
+                                Remove
+                              </Button>
                             </div>
                           </div>
-                        ))}
-                        <div className="flex items-center justify-between">
-                          <Label className="w-24">Saturday</Label>
-                          <div className="flex items-center gap-2">
-                            <Select defaultValue="10:00">
-                              <SelectTrigger className="w-24">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="closed">Closed</SelectItem>
-                                <SelectItem value="09:00">9:00 AM</SelectItem>
-                                <SelectItem value="10:00">10:00 AM</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <span>to</span>
-                            <Select defaultValue="15:00">
-                              <SelectTrigger className="w-24">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="closed">Closed</SelectItem>
-                                <SelectItem value="15:00">3:00 PM</SelectItem>
-                                <SelectItem value="16:00">4:00 PM</SelectItem>
-                              </SelectContent>
-                            </Select>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <FormField
+                          control={companyForm.control}
+                          name="companyName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Legal Business Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <FormField
+                            control={companyForm.control}
+                            name="companyEmail"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Business Email</FormLabel>
+                                <FormControl>
+                                  <Input type="email" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={companyForm.control}
+                            name="companyPhone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Business Phone</FormLabel>
+                                <FormControl>
+                                  <Input type="tel" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <FormField
+                          control={companyForm.control}
+                          name="companyAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Address</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={companyForm.control}
+                          name="companyDescription"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Business Description</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  {...field}
+                                  defaultValue={companySettings.companyDescription} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                      <CardFooter className="flex justify-between">
+                        <Button variant="outline" type="button" onClick={() => companyForm.reset()}>Cancel</Button>
+                        <Button type="submit">
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                    
+                    <Card className="mt-4">
+                      <CardHeader>
+                        <CardTitle>Business Hours</CardTitle>
+                        <CardDescription>Set your company's operating hours</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <FormField
+                          control={companyForm.control}
+                          name="is24Hours"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2 mb-6">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                  id="24hours" 
+                                />
+                              </FormControl>
+                              <FormLabel className="font-medium" htmlFor="24hours">
+                                24/7 Operation (Open all hours, every day)
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {!companyForm.watch("is24Hours") ? (
+                          <div className="space-y-2">
+                            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
+                              <div key={day} className="flex items-center justify-between">
+                                <Label className="w-24">{day}</Label>
+                                <div className="flex items-center gap-2">
+                                  <Select defaultValue="09:00">
+                                    <SelectTrigger className="w-24">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="08:00">8:00 AM</SelectItem>
+                                      <SelectItem value="09:00">9:00 AM</SelectItem>
+                                      <SelectItem value="10:00">10:00 AM</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <span>to</span>
+                                  <Select defaultValue="17:00">
+                                    <SelectTrigger className="w-24">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="17:00">5:00 PM</SelectItem>
+                                      <SelectItem value="18:00">6:00 PM</SelectItem>
+                                      <SelectItem value="19:00">7:00 PM</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            ))}
+                            <div className="flex items-center justify-between">
+                              <Label className="w-24">Saturday</Label>
+                              <div className="flex items-center gap-2">
+                                <Select defaultValue="10:00">
+                                  <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="closed">Closed</SelectItem>
+                                    <SelectItem value="09:00">9:00 AM</SelectItem>
+                                    <SelectItem value="10:00">10:00 AM</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <span>to</span>
+                                <Select defaultValue="15:00">
+                                  <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="closed">Closed</SelectItem>
+                                    <SelectItem value="15:00">3:00 PM</SelectItem>
+                                    <SelectItem value="16:00">4:00 PM</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label className="w-24">Sunday</Label>
+                              <div className="flex items-center gap-2">
+                                <Select defaultValue="closed">
+                                  <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="closed">Closed</SelectItem>
+                                    <SelectItem value="10:00">10:00 AM</SelectItem>
+                                    <SelectItem value="11:00">11:00 AM</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <span>to</span>
+                                <Select defaultValue="closed">
+                                  <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="closed">Closed</SelectItem>
+                                    <SelectItem value="14:00">2:00 PM</SelectItem>
+                                    <SelectItem value="15:00">3:00 PM</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Label className="w-24">Sunday</Label>
-                          <div className="flex items-center gap-2">
-                            <Select defaultValue="closed">
-                              <SelectTrigger className="w-24">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="closed">Closed</SelectItem>
-                                <SelectItem value="10:00">10:00 AM</SelectItem>
-                                <SelectItem value="11:00">11:00 AM</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <span>to</span>
-                            <Select defaultValue="closed">
-                              <SelectTrigger className="w-24">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="closed">Closed</SelectItem>
-                                <SelectItem value="14:00">2:00 PM</SelectItem>
-                                <SelectItem value="15:00">3:00 PM</SelectItem>
-                              </SelectContent>
-                            </Select>
+                        ) : (
+                          <div className="rounded-lg border p-4 bg-muted/50 flex items-center">
+                            <Clock className="h-5 w-5 mr-2 text-primary" />
+                            <div>
+                              <h3 className="font-medium">Always Open</h3>
+                              <p className="text-sm text-muted-foreground">Your business is set to operate 24 hours a day, 7 days a week.</p>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg border p-4 bg-muted/50 flex items-center">
-                        <Clock className="h-5 w-5 mr-2 text-primary" />
-                        <div>
-                          <h3 className="font-medium">Always Open</h3>
-                          <p className="text-sm text-muted-foreground">Your business is set to operate 24 hours a day, 7 days a week.</p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Switch id="emergency" defaultChecked={true} />
-                      <Label htmlFor="emergency">24/7 Emergency Service Available</Label>
-                    </div>
-                    <Button>Save Changes</Button>
-                  </CardFooter>
-                </Card>
+                        )}
+                      </CardContent>
+                      <CardFooter className="flex justify-between">
+                        <FormField
+                          control={companyForm.control}
+                          name="emergency24h"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Switch 
+                                  checked={field.value} 
+                                  onCheckedChange={field.onChange} 
+                                  id="emergency" 
+                                />
+                              </FormControl>
+                              <FormLabel htmlFor="emergency">
+                                24/7 Emergency Service Available
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="submit">Save Changes</Button>
+                      </CardFooter>
+                    </Card>
+                  </form>
+                </Form>
               </TabsContent>
               
               <TabsContent value="users" className="space-y-4">
@@ -613,213 +895,3 @@ const Settings = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Security Settings</CardTitle>
-                    <CardDescription>Manage your account security preferences</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-1">
-                      <Label htmlFor="current-password">Current Password</Label>
-                      <Input id="current-password" type="password" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="new-password">New Password</Label>
-                      <Input id="new-password" type="password" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="confirm-password">Confirm Password</Label>
-                      <Input id="confirm-password" type="password" />
-                    </div>
-                    
-                    <Alert>
-                      <Lock className="h-4 w-4" />
-                      <AlertTitle>Password requirements</AlertTitle>
-                      <AlertDescription>
-                        Password must be at least 12 characters long, include uppercase and lowercase letters, a number, and a special character.
-                      </AlertDescription>
-                    </Alert>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Two-Factor Authentication</h3>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Enable 2FA</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Add an extra layer of security to your account
-                          </p>
-                        </div>
-                        <Switch />
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline">Cancel</Button>
-                    <Button>Update Password</Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="billing">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Billing & Subscription</CardTitle>
-                    <CardDescription>Manage your billing information and subscription</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium">Professional Plan</h3>
-                          <p className="text-sm text-muted-foreground">
-                            $99/month, billed monthly
-                          </p>
-                        </div>
-                        <Badge>Active</Badge>
-                      </div>
-                      <div className="mt-4 text-sm text-muted-foreground">
-                        <p>Your next bill is on October 12, 2023</p>
-                      </div>
-                    </div>
-                    
-                    <div className="rounded-lg border p-4">
-                      <h3 className="font-medium">Payment Method</h3>
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="rounded-md bg-muted p-2">
-                          <CreditCard className="h-4 w-4" />
-                        </div>
-                        <div className="text-sm">
-                          <p>Visa ending in 4242</p>
-                          <p className="text-muted-foreground">Expires 09/24</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Billing History</h3>
-                      <div className="rounded-lg border">
-                        <div className="grid grid-cols-3 gap-4 p-4 font-medium">
-                          <div>Date</div>
-                          <div>Amount</div>
-                          <div>Status</div>
-                        </div>
-                        <div className="divide-y">
-                          <div className="grid grid-cols-3 gap-4 p-4">
-                            <div className="text-sm">Sept 12, 2023</div>
-                            <div className="text-sm">$99.00</div>
-                            <div className="text-sm">
-                              <Badge variant="outline" className="bg-green-50 text-green-700">
-                                Paid
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 p-4">
-                            <div className="text-sm">Aug 12, 2023</div>
-                            <div className="text-sm">$99.00</div>
-                            <div className="text-sm">
-                              <Badge variant="outline" className="bg-green-50 text-green-700">
-                                Paid
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 p-4">
-                            <div className="text-sm">Jul 12, 2023</div>
-                            <div className="text-sm">$99.00</div>
-                            <div className="text-sm">
-                              <Badge variant="outline" className="bg-green-50 text-green-700">
-                                Paid
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline">Update Payment Method</Button>
-                    <Button>View All Invoices</Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="integrations">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Integrations</CardTitle>
-                    <CardDescription>Connect with other services and APIs</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="rounded bg-[#2CA01C] p-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><circle cx="12" cy="12" r="10"/><path d="M16 8h-8v8h8v-8z"/></svg>
-                          </div>
-                          <div>
-                            <h3 className="font-medium">QuickBooks</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Import/export invoices and financial data
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-green-700">Connected</Badge>
-                          <Button variant="outline" size="sm">Configure</Button>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="rounded bg-[#4285F4] p-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-                          </div>
-                          <div>
-                            <h3 className="font-medium">Google Maps</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Display technician locations and optimize routes
-                            </p>
-                          </div>
-                        </div>
-                        <div>
-                          <Button variant="outline" size="sm">Connect</Button>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="rounded bg-[#1DA1F2] p-1">
-                            <Smartphone className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">SMS Provider</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Send text notifications to customers and staff
-                            </p>
-                          </div>
-                        </div>
-                        <div>
-                          <Button variant="outline" size="sm">Connect</Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Integration
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-            </div>
-          </div>
-        </Tabs>
-      </div>
-    </MainLayout>
-  );
-};
-
-export default Settings;
