@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -26,24 +25,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { WorkOrder, workOrders } from "@/data/mockData";
 import { AlertCircle, Calendar, Check, ChevronDown, ClipboardCheck, Eye, Filter, MapPin, MoreHorizontal, Plus, Search, UserRound, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDate } from "@/lib/date-utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 
 const WorkOrders = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [technicianFilter, setTechnicianFilter] = useState<string>("all");
   const [showUnassignedOnly, setShowUnassignedOnly] = useState<boolean>(false);
+  const [localWorkOrders, setLocalWorkOrders] = useState<WorkOrder[]>(workOrders);
   
-  const filteredWorkOrders = workOrders.filter(order => {
+  const filteredWorkOrders = localWorkOrders.filter(order => {
     const matchesSearch = !searchQuery || 
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -53,7 +57,6 @@ const WorkOrders = () => {
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter;
     
-    // Date filtering
     let matchesDate = true;
     const orderDate = new Date(order.scheduledDate);
     const today = new Date();
@@ -66,9 +69,9 @@ const WorkOrders = () => {
       matchesDate = orderDate.toDateString() === tomorrow.toDateString();
     } else if (dateFilter === "this-week") {
       const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+      weekStart.setDate(today.getDate() - today.getDay());
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+      weekEnd.setDate(weekStart.getDate() + 6);
       matchesDate = orderDate >= weekStart && orderDate <= weekEnd;
     } else if (dateFilter === "this-month") {
       matchesDate = 
@@ -76,20 +79,17 @@ const WorkOrders = () => {
         orderDate.getFullYear() === today.getFullYear();
     }
     
-    // Technician filtering
     const matchesTechnician = technicianFilter === "all" || 
       (order.technicianName && order.technicianName.toLowerCase() === technicianFilter.toLowerCase());
     
-    // Filter for unassigned work orders
     const matchesUnassigned = !showUnassignedOnly || !order.technicianName;
     
     return matchesSearch && matchesStatus && matchesPriority && matchesDate && matchesTechnician && matchesUnassigned;
   });
   
-  // Get unique technicians from the data
   const technicians = Array.from(
     new Set(
-      workOrders
+      localWorkOrders
         .filter(order => order.technicianName)
         .map(order => order.technicianName) as string[]
     )
@@ -101,6 +101,34 @@ const WorkOrders = () => {
     setDateFilter("all");
     setTechnicianFilter("all");
     setShowUnassignedOnly(false);
+  };
+
+  const cancelWorkOrder = (workOrderId: string) => {
+    setLocalWorkOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === workOrderId 
+          ? { ...order, status: 'cancelled' } 
+          : order
+      )
+    );
+    toast({
+      title: "Work Order Cancelled",
+      description: `Work order #${workOrderId} has been cancelled.`,
+    });
+  };
+
+  const markAsCompleted = (workOrderId: string) => {
+    setLocalWorkOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === workOrderId 
+          ? { ...order, status: 'completed', completedDate: new Date().toISOString() } 
+          : order
+      )
+    );
+    toast({
+      title: "Work Order Completed",
+      description: `Work order #${workOrderId} has been marked as completed.`,
+    });
   };
   
   return (
@@ -319,7 +347,6 @@ const WorkOrders = () => {
           </div>
         </div>
         
-        {/* Active filters display */}
         {(statusFilter !== "all" || priorityFilter !== "all" || dateFilter !== "all" || technicianFilter !== "all" || showUnassignedOnly) && (
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-sm font-medium">Active filters:</span>
@@ -395,7 +422,12 @@ const WorkOrders = () => {
         
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredWorkOrders.map(workOrder => (
-            <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
+            <WorkOrderCard 
+              key={workOrder.id} 
+              workOrder={workOrder} 
+              onCancel={cancelWorkOrder}
+              onComplete={markAsCompleted}
+            />
           ))}
         </div>
         
@@ -418,9 +450,14 @@ const WorkOrders = () => {
 
 interface WorkOrderCardProps {
   workOrder: WorkOrder;
+  onCancel: (id: string) => void;
+  onComplete: (id: string) => void;
 }
 
-const WorkOrderCard = ({ workOrder }: WorkOrderCardProps) => {
+const WorkOrderCard = ({ workOrder, onCancel, onComplete }: WorkOrderCardProps) => {
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -466,8 +503,12 @@ const WorkOrderCard = ({ workOrder }: WorkOrderCardProps) => {
               <DropdownMenuItem>Edit Work Order</DropdownMenuItem>
               <DropdownMenuItem>Assign Technician</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Mark as Completed</DropdownMenuItem>
-              <DropdownMenuItem>Cancel Work Order</DropdownMenuItem>
+              {workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
+                <>
+                  <DropdownMenuItem onClick={() => setShowCompleteDialog(true)}>Mark as Completed</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowCancelDialog(true)}>Cancel Work Order</DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -568,11 +609,60 @@ const WorkOrderCard = ({ workOrder }: WorkOrderCardProps) => {
                 
                 {workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
                   <div className="flex justify-between pt-4">
-                    <Button variant="outline">Cancel Work Order</Button>
-                    <Button>Mark as Completed</Button>
+                    <Button variant="outline" onClick={() => setShowCancelDialog(true)}>Cancel Work Order</Button>
+                    <Button onClick={() => setShowCompleteDialog(true)}>Mark as Completed</Button>
                   </div>
                 )}
               </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Cancel Work Order</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to cancel work order #{workOrder.id}? This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">No, Keep It</Button>
+                </DialogClose>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    onCancel(workOrder.id);
+                    setShowCancelDialog(false);
+                  }}
+                >
+                  Yes, Cancel Work Order
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Complete Work Order</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to mark work order #{workOrder.id} as completed?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">No, Not Yet</Button>
+                </DialogClose>
+                <Button 
+                  onClick={() => {
+                    onComplete(workOrder.id);
+                    setShowCompleteDialog(false);
+                  }}
+                >
+                  Yes, Mark as Completed
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
           
