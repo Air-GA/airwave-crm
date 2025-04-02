@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -11,6 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,9 +28,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { WorkOrder, workOrders } from "@/data/mockData";
-import { AlertCircle, Calendar, ChevronDown, ClipboardCheck, Eye, Filter, MapPin, MoreHorizontal, Plus, Search, UserRound } from "lucide-react";
+import { AlertCircle, Calendar, Check, ChevronDown, ClipboardCheck, Eye, Filter, MapPin, MoreHorizontal, Plus, Search, UserRound, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDate } from "@/lib/date-utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const WorkOrders = () => {
   const isMobile = useIsMobile();
@@ -32,6 +39,9 @@ const WorkOrders = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [technicianFilter, setTechnicianFilter] = useState<string>("all");
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState<boolean>(false);
   
   const filteredWorkOrders = workOrders.filter(order => {
     const matchesSearch = !searchQuery || 
@@ -43,8 +53,55 @@ const WorkOrders = () => {
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter;
     
-    return matchesSearch && matchesStatus && matchesPriority;
+    // Date filtering
+    let matchesDate = true;
+    const orderDate = new Date(order.scheduledDate);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (dateFilter === "today") {
+      matchesDate = orderDate.toDateString() === today.toDateString();
+    } else if (dateFilter === "tomorrow") {
+      matchesDate = orderDate.toDateString() === tomorrow.toDateString();
+    } else if (dateFilter === "this-week") {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
+      matchesDate = orderDate >= weekStart && orderDate <= weekEnd;
+    } else if (dateFilter === "this-month") {
+      matchesDate = 
+        orderDate.getMonth() === today.getMonth() && 
+        orderDate.getFullYear() === today.getFullYear();
+    }
+    
+    // Technician filtering
+    const matchesTechnician = technicianFilter === "all" || 
+      (order.technicianName && order.technicianName.toLowerCase() === technicianFilter.toLowerCase());
+    
+    // Filter for unassigned work orders
+    const matchesUnassigned = !showUnassignedOnly || !order.technicianName;
+    
+    return matchesSearch && matchesStatus && matchesPriority && matchesDate && matchesTechnician && matchesUnassigned;
   });
+  
+  // Get unique technicians from the data
+  const technicians = Array.from(
+    new Set(
+      workOrders
+        .filter(order => order.technicianName)
+        .map(order => order.technicianName) as string[]
+    )
+  );
+  
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setPriorityFilter("all");
+    setDateFilter("all");
+    setTechnicianFilter("all");
+    setShowUnassignedOnly(false);
+  };
   
   return (
     <MainLayout>
@@ -80,21 +137,27 @@ const WorkOrders = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                  {statusFilter === "all" && <Check className="mr-2 h-4 w-4" />}
                   All Statuses
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("pending")}>
+                  {statusFilter === "pending" && <Check className="mr-2 h-4 w-4" />}
                   Pending
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("scheduled")}>
+                  {statusFilter === "scheduled" && <Check className="mr-2 h-4 w-4" />}
                   Scheduled
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("in-progress")}>
+                  {statusFilter === "in-progress" && <Check className="mr-2 h-4 w-4" />}
                   In Progress
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("completed")}>
+                  {statusFilter === "completed" && <Check className="mr-2 h-4 w-4" />}
                   Completed
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("cancelled")}>
+                  {statusFilter === "cancelled" && <Check className="mr-2 h-4 w-4" />}
                   Cancelled
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -108,32 +171,227 @@ const WorkOrders = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => setPriorityFilter("all")}>
+                  {priorityFilter === "all" && <Check className="mr-2 h-4 w-4" />}
                   All Priorities
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPriorityFilter("low")}>
+                  {priorityFilter === "low" && <Check className="mr-2 h-4 w-4" />}
                   Low
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPriorityFilter("medium")}>
+                  {priorityFilter === "medium" && <Check className="mr-2 h-4 w-4" />}
                   Medium
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPriorityFilter("high")}>
+                  {priorityFilter === "high" && <Check className="mr-2 h-4 w-4" />}
                   High
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPriorityFilter("emergency")}>
+                  {priorityFilter === "emergency" && <Check className="mr-2 h-4 w-4" />}
                   Emergency
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
-            <Button variant="outline" size={isMobile ? "sm" : "default"}>
-              <Filter className="mr-1 h-4 w-4" /> More Filters
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size={isMobile ? "sm" : "default"}>
+                  <Filter className="mr-1 h-4 w-4" /> More Filters
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Date</h4>
+                    <div className="space-y-1">
+                      <Button 
+                        variant={dateFilter === "all" ? "default" : "outline"} 
+                        size="sm" 
+                        className="mr-1 mb-1"
+                        onClick={() => setDateFilter("all")}
+                      >
+                        All
+                      </Button>
+                      <Button 
+                        variant={dateFilter === "today" ? "default" : "outline"} 
+                        size="sm"
+                        className="mr-1 mb-1" 
+                        onClick={() => setDateFilter("today")}
+                      >
+                        Today
+                      </Button>
+                      <Button 
+                        variant={dateFilter === "tomorrow" ? "default" : "outline"} 
+                        size="sm" 
+                        className="mr-1 mb-1"
+                        onClick={() => setDateFilter("tomorrow")}
+                      >
+                        Tomorrow
+                      </Button>
+                      <Button 
+                        variant={dateFilter === "this-week" ? "default" : "outline"} 
+                        size="sm" 
+                        className="mr-1 mb-1"
+                        onClick={() => setDateFilter("this-week")}
+                      >
+                        This Week
+                      </Button>
+                      <Button 
+                        variant={dateFilter === "this-month" ? "default" : "outline"} 
+                        size="sm"
+                        onClick={() => setDateFilter("this-month")}
+                      >
+                        This Month
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Technician</h4>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      <div 
+                        key="all" 
+                        className="flex items-center space-x-2 rounded-md p-1 hover:bg-accent cursor-pointer"
+                        onClick={() => setTechnicianFilter("all")}
+                      >
+                        <Checkbox 
+                          checked={technicianFilter === "all"} 
+                          onCheckedChange={() => setTechnicianFilter("all")}
+                        />
+                        <label className="text-sm cursor-pointer flex-1">All Technicians</label>
+                      </div>
+                      {technicians.map((technician) => (
+                        <div 
+                          key={technician} 
+                          className="flex items-center space-x-2 rounded-md p-1 hover:bg-accent cursor-pointer"
+                          onClick={() => setTechnicianFilter(technician)}
+                        >
+                          <Checkbox 
+                            checked={technicianFilter === technician} 
+                            onCheckedChange={() => setTechnicianFilter(technician)}
+                          />
+                          <label className="text-sm cursor-pointer flex-1">{technician}</label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 rounded-md p-1 hover:bg-accent cursor-pointer">
+                    <Checkbox 
+                      checked={showUnassignedOnly} 
+                      onCheckedChange={(checked) => {
+                        if (typeof checked === 'boolean') {
+                          setShowUnassignedOnly(checked);
+                        }
+                      }}
+                      id="unassigned"
+                    />
+                    <label 
+                      htmlFor="unassigned" 
+                      className="text-sm font-medium cursor-pointer flex-1"
+                    >
+                      Show Unassigned Only
+                    </label>
+                  </div>
+
+                  <div className="flex justify-between pt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearFilters}
+                    >
+                      Clear All
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => document.body.click()}
+                    >
+                      Apply Filters
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto">
             <span>{filteredWorkOrders.length} work orders</span>
           </div>
         </div>
+        
+        {/* Active filters display */}
+        {(statusFilter !== "all" || priorityFilter !== "all" || dateFilter !== "all" || technicianFilter !== "all" || showUnassignedOnly) && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm font-medium">Active filters:</span>
+            {statusFilter !== "all" && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                <button 
+                  onClick={() => setStatusFilter("all")}
+                  className="ml-1 rounded-full hover:bg-accent p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {priorityFilter !== "all" && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                Priority: {priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1)}
+                <button 
+                  onClick={() => setPriorityFilter("all")}
+                  className="ml-1 rounded-full hover:bg-accent p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {dateFilter !== "all" && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                Date: {
+                  dateFilter === "today" ? "Today" :
+                  dateFilter === "tomorrow" ? "Tomorrow" :
+                  dateFilter === "this-week" ? "This Week" : "This Month"
+                }
+                <button 
+                  onClick={() => setDateFilter("all")}
+                  className="ml-1 rounded-full hover:bg-accent p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {technicianFilter !== "all" && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                Technician: {technicianFilter}
+                <button 
+                  onClick={() => setTechnicianFilter("all")}
+                  className="ml-1 rounded-full hover:bg-accent p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {showUnassignedOnly && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                Unassigned Only
+                <button 
+                  onClick={() => setShowUnassignedOnly(false)}
+                  className="ml-1 rounded-full hover:bg-accent p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-7" 
+              onClick={clearFilters}
+            >
+              Clear All
+            </Button>
+          </div>
+        )}
         
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredWorkOrders.map(workOrder => (
