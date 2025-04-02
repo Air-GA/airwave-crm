@@ -11,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +23,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, UserRound, Building2 } from "lucide-react";
+import { UserRound, Building2 } from "lucide-react";
 
 const customerFormSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -38,11 +37,12 @@ const customerFormSchema = z.object({
 type CustomerFormValues = z.infer<typeof customerFormSchema>;
 
 interface AddCustomerDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onCustomerAdded: (customer: any) => void;
 }
 
-export function AddCustomerDialog({ onCustomerAdded }: AddCustomerDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCustomerDialogProps) {
   const [customerType, setCustomerType] = useState<"residential" | "commercial">("residential");
   
   const form = useForm<CustomerFormValues>({
@@ -66,18 +66,12 @@ export function AddCustomerDialog({ onCustomerAdded }: AddCustomerDialogProps) {
     };
     
     onCustomerAdded(newCustomer);
-    toast.success("Customer added successfully!");
-    setOpen(false);
+    onOpenChange(false);
     form.reset();
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Add Customer
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Add New Customer</DialogTitle>
@@ -180,7 +174,7 @@ export function AddCustomerDialog({ onCustomerAdded }: AddCustomerDialogProps) {
             />
             
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit">Save Customer</Button>

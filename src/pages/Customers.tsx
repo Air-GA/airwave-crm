@@ -28,6 +28,7 @@ const Customers = () => {
   // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
     setCustomers(prevCustomers => [newCustomer, ...prevCustomers]);
+    toast.success("Customer added successfully!");
   };
   
   // Filter customers based on search query and type
@@ -50,7 +51,14 @@ const Customers = () => {
             <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
             <p className="text-muted-foreground">Manage your residential and commercial customers</p>
           </div>
-          <AddCustomerDialog onCustomerAdded={handleAddCustomer} />
+          <Button onClick={() => setShowAddCustomerDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Customer
+          </Button>
+          <AddCustomerDialog 
+            open={showAddCustomerDialog} 
+            onOpenChange={setShowAddCustomerDialog} 
+            onCustomerAdded={handleAddCustomer} 
+          />
         </div>
         
         {/* Search and filters */}
