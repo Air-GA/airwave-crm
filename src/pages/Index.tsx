@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { dashboardStats, performanceMetrics, workOrders } from "@/data/mockData";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Calendar, Clipboard, DollarSign, Package, Timer, Users } from "lucide-react";
+import { Calendar, Clipboard, DollarSign, Package, Timer, Users, Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatDate } from "@/lib/date-utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui/sonner";
 
 const Dashboard = () => {
   const isMobile = useIsMobile();
@@ -21,13 +22,31 @@ const Dashboard = () => {
     order => order.scheduledDate.startsWith(today)
   );
   
+  const handleDownloadReports = () => {
+    toast.success("Generating reports", {
+      description: "Your reports will be ready for download shortly."
+    });
+    // In a real app, this would trigger an API call to generate reports
+    setTimeout(() => {
+      toast.success("Reports ready", {
+        description: "Reports have been generated and are ready for download.",
+        action: {
+          label: "Download",
+          onClick: () => navigate("/reports")
+        }
+      });
+    }, 2000);
+  };
+  
   return (
     <MainLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <div className="flex items-center gap-4">
-            <Button variant="outline">Download Reports</Button>
+            <Button variant="outline" onClick={handleDownloadReports}>
+              <Download className="mr-2 h-4 w-4" /> Download Reports
+            </Button>
             <Button onClick={() => navigate("/work-orders/create")}>+ New Work Order</Button>
           </div>
         </div>
@@ -307,7 +326,16 @@ const Dashboard = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">Current quantity: 8, Reorder level: 5</p>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        toast.success("Reorder initiated", { 
+                          description: "Purchase order for Refrigerant R-410A has been created." 
+                        });
+                        navigate("/inventory");
+                      }}
+                    >
                       Reorder
                     </Button>
                   </div>
@@ -325,7 +353,16 @@ const Dashboard = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">Current quantity: 7, Reorder level: 5</p>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        toast.success("Reorder initiated", { 
+                          description: "Purchase order for Condensing Fan Motor has been created." 
+                        });
+                        navigate("/inventory");
+                      }}
+                    >
                       Reorder
                     </Button>
                   </div>
@@ -343,7 +380,15 @@ const Dashboard = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">Current quantity: 3, Reorder level: 15</p>
                     </div>
-                    <Button size="sm">
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        toast.success("Emergency reorder initiated", { 
+                          description: "Priority purchase order for Capacitor 45/5 MFD has been created." 
+                        });
+                        navigate("/inventory");
+                      }}
+                    >
                       Reorder Now
                     </Button>
                   </div>
