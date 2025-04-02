@@ -44,7 +44,7 @@ import { Separator } from "@/components/ui/separator";
 
 const Settings = () => {
   const [companyName, setCompanyName] = useState("Air Georgia Home Comfort Systems");
-  const [companyEmail, setCompanyEmail] = useState("info@airgeorgia.com");
+  const [companyEmail, setCompanyEmail] = useState("service@air-ga.net");
   const [companyPhone, setCompanyPhone] = useState("(470) 800-9002");
   const [companyAddress, setCompanyAddress] = useState("910 E Spring St, Monroe, GA 30565");
   
