@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { technicians, workOrders } from "@/data/mockData";
 import { Calendar, Clock, MapPin, User, Briefcase, X } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { 
@@ -20,7 +19,7 @@ import {
   useDroppable 
 } from "@dnd-kit/core";
 import { toast } from "sonner";
-import { WorkOrder } from "@/types";
+import { WorkOrder, Technician } from "@/types";
 import { 
   Dialog,
   DialogContent,
@@ -34,17 +33,46 @@ import { Label } from "@/components/ui/label";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { useToast } from "@/hooks/use-toast";
 import TechLocationMap from "@/components/maps/TechLocationMap";
+import { fetchTechnicians } from "@/services/technicianService";
+import { fetchWorkOrders, assignWorkOrder, unassignWorkOrder } from "@/services/workOrderService";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
-  const [draggedWorkOrders, setDraggedWorkOrders] = useState(workOrders);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [currentWorkOrderId, setCurrentWorkOrderId] = useState<string | null>(null);
   const [currentTechnicianId, setCurrentTechnicianId] = useState<string | null>(null);
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast: uiToast } = useToast();
+  
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [techs, orders] = await Promise.all([
+          fetchTechnicians(),
+          fetchWorkOrders()
+        ]);
+        setTechnicians(techs);
+        setWorkOrders(orders);
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        uiToast({
+          title: "Error",
+          description: "Failed to load dispatch data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [uiToast]);
   
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
@@ -61,7 +89,7 @@ const Dispatch = () => {
   
   const sensors = useSensors(mouseSensor, touchSensor);
   
-  const activeWorkOrders = draggedWorkOrders.filter(
+  const activeWorkOrders = workOrders.filter(
     order => order.status === 'pending' || order.status === 'scheduled'
   );
   
@@ -93,7 +121,7 @@ const Dispatch = () => {
       setCurrentWorkOrderId(workOrderId);
       setCurrentTechnicianId(technicianId);
       
-      const workOrder = draggedWorkOrders.find(order => order.id === workOrderId);
+      const workOrder = workOrders.find(order => order.id === workOrderId);
       
       if (workOrder) {
         const date = workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : new Date();
@@ -105,48 +133,89 @@ const Dispatch = () => {
     }
   };
   
-  const handleScheduleConfirm = () => {
+  const handleScheduleConfirm = async () => {
     if (!currentWorkOrderId || !currentTechnicianId) return;
     
     const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
     
-    const updatedWorkOrders = draggedWorkOrders.map(order => {
-      if (order.id === currentWorkOrderId) {
-        const tech = technicians.find(t => t.id === currentTechnicianId);
-        return {
-          ...order,
-          technicianId: currentTechnicianId,
-          technicianName: tech?.name,
-          status: 'scheduled' as const,
-          scheduledDate: scheduledDateTime.toISOString(),
-        };
-      }
-      return order;
-    });
-    
-    setDraggedWorkOrders(updatedWorkOrders);
-    setSelectedTechnicianId(currentTechnicianId);
-    
-    const workOrder = draggedWorkOrders.find(order => order.id === currentWorkOrderId);
-    const technician = technicians.find(tech => tech.id === currentTechnicianId);
-    
-    toast.success(
-      `Work Order #${workOrder?.id} assigned to ${technician?.name}`,
-      {
-        description: `${workOrder?.type} at ${workOrder?.address} - Scheduled for ${formatDate(scheduledDateTime)}`
-      }
-    );
-    
-    uiToast({
-      title: "Assignment Successful",
-      description: `Work Order #${workOrder?.id} has been assigned to ${technician?.name}`,
-    });
-    
-    setIsScheduleModalOpen(false);
+    try {
+      const technician = technicians.find(t => t.id === currentTechnicianId);
+      if (!technician) return;
+      
+      const updatedOrder = await assignWorkOrder(
+        currentWorkOrderId,
+        currentTechnicianId,
+        technician.name,
+        scheduledDateTime.toISOString()
+      );
+      
+      setWorkOrders(workOrders.map(order => 
+        order.id === updatedOrder.id ? updatedOrder : order
+      ));
+      
+      setSelectedTechnicianId(currentTechnicianId);
+      
+      toast.success(
+        `Work Order #${updatedOrder.id} assigned to ${technician.name}`,
+        {
+          description: `${updatedOrder.type} at ${updatedOrder.address} - Scheduled for ${formatDate(scheduledDateTime)}`
+        }
+      );
+      
+      uiToast({
+        title: "Assignment Successful",
+        description: `Work Order #${updatedOrder.id} has been assigned to ${technician.name}`,
+      });
+    } catch (error) {
+      console.error("Failed to assign work order:", error);
+      uiToast({
+        title: "Error",
+        description: "Failed to assign work order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScheduleModalOpen(false);
+    }
+  };
+
+  const handleUnassignWorkOrder = async (orderId: string) => {
+    try {
+      const updatedOrder = await unassignWorkOrder(orderId);
+      
+      setWorkOrders(workOrders.map(order => 
+        order.id === updatedOrder.id ? updatedOrder : order
+      ));
+      
+      toast.info(`Work Order #${orderId} unassigned`);
+    } catch (error) {
+      console.error("Failed to unassign work order:", error);
+      uiToast({
+        title: "Error",
+        description: "Failed to unassign work order. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const currentTechnician = technicians.find(tech => tech.id === currentTechnicianId);
-  const currentWorkOrder = draggedWorkOrders.find(order => order.id === currentWorkOrderId);
+  const currentWorkOrder = workOrders.find(order => order.id === currentWorkOrderId);
+  
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">Dispatch</h1>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-muted-foreground">Loading dispatch data...</p>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
   
   return (
     <MainLayout>
@@ -255,7 +324,7 @@ const Dispatch = () => {
                           technician={technician}
                           isSelected={selectedTechnicianId === technician.id}
                           onClick={() => setSelectedTechnicianId(technician.id)}
-                          assignedCount={draggedWorkOrders.filter(order => order.technicianId === technician.id).length}
+                          assignedCount={workOrders.filter(order => order.technicianId === technician.id).length}
                         />
                       ))}
                     </div>
@@ -307,21 +376,7 @@ const Dispatch = () => {
                                     <Button 
                                       size="sm" 
                                       variant="outline"
-                                      onClick={() => {
-                                        const updatedWorkOrders = draggedWorkOrders.map(wo => {
-                                          if (wo.id === order.id) {
-                                            return {
-                                              ...wo,
-                                              technicianId: undefined,
-                                              technicianName: undefined,
-                                              status: 'pending' as const
-                                            };
-                                          }
-                                          return wo;
-                                        });
-                                        setDraggedWorkOrders(updatedWorkOrders);
-                                        toast.info(`Work Order #${order.id} unassigned`);
-                                      }}
+                                      onClick={() => handleUnassignWorkOrder(order.id)}
                                     >
                                       Unassign
                                     </Button>
@@ -369,7 +424,7 @@ const Dispatch = () => {
             {activeOrderId ? (
               <div className="rounded-md border p-3 bg-card shadow-md opacity-90 max-w-xs">
                 {(() => {
-                  const order = draggedWorkOrders.find(o => o.id === activeOrderId);
+                  const order = workOrders.find(o => o.id === activeOrderId);
                   if (!order) return null;
                   return (
                     <>
@@ -500,7 +555,7 @@ const Dispatch = () => {
                 {currentTechnician && scheduledDate && (
                   <TechnicianScheduleView
                     technician={currentTechnician}
-                    workOrders={draggedWorkOrders}
+                    workOrders={workOrders}
                     selectedDate={new Date(`${scheduledDate}T00:00:00`)}
                   />
                 )}
@@ -573,7 +628,7 @@ const DraggableWorkOrder = ({ order, isActive }: DraggableWorkOrderProps) => {
 };
 
 interface TechnicianDropTargetProps {
-  technician: { id: string; name: string; status: string; currentLocation?: any; specialties: string[] };
+  technician: Technician;
   isSelected: boolean;
   onClick: () => void;
   assignedCount: number;
