@@ -6,25 +6,41 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { technicians, workOrders } from "@/data/mockData";
-import { Calendar, Clock, MapPin, User, Briefcase } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Briefcase, X } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { DndContext, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { toast } from "sonner";
+import { WorkOrder } from "@/types";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   const [draggedWorkOrders, setDraggedWorkOrders] = useState(workOrders);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [currentWorkOrderId, setCurrentWorkOrderId] = useState<string | null>(null);
+  const [currentTechnicianId, setCurrentTechnicianId] = useState<string | null>(null);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
   
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
-      distance: 8, // 8px movement required to activate drag
+      distance: 8,
     },
   });
   
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: {
-      delay: 200, // wait 200ms to activate
-      tolerance: 5, // 5px tolerance
+      delay: 200,
+      tolerance: 5,
     },
   });
   
@@ -57,34 +73,62 @@ const Dispatch = () => {
     const technicianId = over.id as string;
     
     if (workOrderId && technicianId) {
-      // Update the work order with the new technician
-      const updatedWorkOrders = draggedWorkOrders.map(order => {
-        if (order.id === workOrderId) {
-          const tech = technicians.find(t => t.id === technicianId);
-          return {
-            ...order,
-            technicianId,
-            technicianName: tech?.name,
-            status: 'scheduled'
-          };
-        }
-        return order;
-      });
+      // Set up for schedule modal
+      setCurrentWorkOrderId(workOrderId);
+      setCurrentTechnicianId(technicianId);
       
-      setDraggedWorkOrders(updatedWorkOrders);
-      setSelectedTechnicianId(technicianId);
-      
-      // Show success notification
+      // Get the current work order
       const workOrder = draggedWorkOrders.find(order => order.id === workOrderId);
-      const technician = technicians.find(tech => tech.id === technicianId);
       
-      toast.success(
-        `Work Order #${workOrder?.id} assigned to ${technician?.name}`,
-        {
-          description: `${workOrder?.type} at ${workOrder?.address}`
-        }
-      );
+      // Pre-fill the date and time
+      if (workOrder) {
+        const date = new Date(workOrder.scheduledDate);
+        setScheduledDate(date.toISOString().split('T')[0]);
+        setScheduledTime(date.toTimeString().substring(0, 5));
+      }
+      
+      // Open the schedule modal
+      setIsScheduleModalOpen(true);
     }
+  };
+  
+  const handleScheduleConfirm = () => {
+    if (!currentWorkOrderId || !currentTechnicianId) return;
+    
+    // Create a date object from the scheduled date and time
+    const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
+    
+    // Update the work order with the new technician and schedule
+    const updatedWorkOrders = draggedWorkOrders.map(order => {
+      if (order.id === currentWorkOrderId) {
+        const tech = technicians.find(t => t.id === currentTechnicianId);
+        return {
+          ...order,
+          technicianId: currentTechnicianId,
+          technicianName: tech?.name,
+          status: 'scheduled' as const,  // Explicitly tell TypeScript this is a literal type
+          scheduledDate: scheduledDateTime.toISOString(),
+        };
+      }
+      return order;
+    });
+    
+    setDraggedWorkOrders(updatedWorkOrders);
+    setSelectedTechnicianId(currentTechnicianId);
+    
+    // Show success notification
+    const workOrder = draggedWorkOrders.find(order => order.id === currentWorkOrderId);
+    const technician = technicians.find(tech => tech.id === currentTechnicianId);
+    
+    toast.success(
+      `Work Order #${workOrder?.id} assigned to ${technician?.name}`,
+      {
+        description: `${workOrder?.type} at ${workOrder?.address} - Scheduled for ${formatDate(scheduledDateTime)}`
+      }
+    );
+    
+    // Close the modal
+    setIsScheduleModalOpen(false);
   };
   
   return (
@@ -140,115 +184,85 @@ const Dispatch = () => {
         </div>
         
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="grid gap-6 md:grid-cols-5">
-            {/* Unassigned work orders list - draggable items */}
-            <div className="md:col-span-2">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="h-5 w-5" />
-                    Unassigned Work Orders
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="max-h-[500px] overflow-y-auto p-0">
-                  {unassignedWorkOrders.length > 0 ? (
-                    <div className="space-y-3 p-4">
-                      {unassignedWorkOrders.map((order) => (
-                        <div 
-                          key={order.id} 
-                          className="rounded-md border p-3 bg-card hover:border-primary cursor-grab active:cursor-grabbing"
-                          draggable="true"
-                          data-job-id={order.id}
-                          id={order.id}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-medium">#{order.id} - {order.type}</p>
-                            <Badge
-                              variant="outline"
-                              className={`
-                                ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
-                                ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
-                                ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
-                                ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
-                              `}
+          <div className="grid gap-6">
+            <Tabs defaultValue="list">
+              <TabsList>
+                <TabsTrigger value="list">List View</TabsTrigger>
+                <TabsTrigger value="map">Map View</TabsTrigger>
+              </TabsList>
+
+              {/* List View Tab - New drag-drop interface */}
+              <TabsContent value="list" className="pt-4">
+                <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+                  {/* Unassigned work orders list - draggable items */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5" />
+                        Unassigned Work Orders
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="max-h-[700px] overflow-y-auto p-0">
+                      {unassignedWorkOrders.length > 0 ? (
+                        <div className="space-y-3 p-4">
+                          {unassignedWorkOrders.map((order) => (
+                            <div 
+                              key={order.id} 
+                              className="rounded-md border p-3 bg-card hover:border-primary cursor-grab active:cursor-grabbing"
+                              draggable="true"
+                              data-job-id={order.id}
+                              id={order.id}
                             >
-                              {order.priority}
-                            </Badge>
-                          </div>
-                          <div className="space-y-1.5 text-sm">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span>{order.customerName}</span>
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="font-medium">#{order.id} - {order.type}</p>
+                                <Badge
+                                  variant="outline"
+                                  className={`
+                                    ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
+                                    ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
+                                    ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
+                                    ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
+                                  `}
+                                >
+                                  {order.priority}
+                                </Badge>
+                              </div>
+                              <div className="space-y-1.5 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <span>{order.customerName}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                                  <span className="truncate">{order.address}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <span>{formatDate(new Date(order.scheduledDate))}</span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              <span className="truncate">{order.address}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span>{formatDate(new Date(order.scheduledDate))}</span>
-                            </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Briefcase className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <h3 className="mt-3 text-lg font-medium">No Unassigned Work Orders</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        All work orders have been assigned to technicians.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tabs for scheduling */}
-            <div className="md:col-span-3">
-              <Tabs defaultValue="map">
-                <TabsList>
-                  <TabsTrigger value="map">Map View</TabsTrigger>
-                  <TabsTrigger value="list">List View</TabsTrigger>
-                </TabsList>
-
-                {/* Map View Tab */}
-                <TabsContent value="map" className="pt-4">
-                  <Card className="overflow-hidden">
-                    <div className="relative">
-                      <div 
-                        className="h-[500px] bg-cover bg-center" 
-                        style={{ 
-                          backgroundImage: "url('https://maps.googleapis.com/maps/api/staticmap?center=Atlanta,GA&zoom=11&size=1200x500&maptype=roadmap&key=USE_YOUR_API_KEY_HERE')",
-                          backgroundPosition: 'center',
-                          backgroundSize: 'cover',
-                          backgroundColor: '#e5e7eb'
-                        }}
-                      >
-                        <div className="absolute inset-0 flex items-center justify-center bg-background/60 text-center p-4">
-                          <div>
-                            <MapPin className="h-10 w-10 mx-auto text-primary" />
-                            <h3 className="mt-2 text-lg font-medium">Google Maps Integration</h3>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              A real Google Maps integration would be displayed here, showing technicians' locations and optimized routes.
-                              <br />This requires a valid Google Maps API key and live data from technicians.
-                            </p>
-                          </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <Briefcase className="mx-auto h-8 w-8 text-muted-foreground" />
+                          <h3 className="mt-3 text-lg font-medium">No Unassigned Work Orders</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            All work orders have been assigned to technicians.
+                          </p>
                         </div>
-                      </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <p className="text-sm text-muted-foreground">Select a technician on the map or from the list below to view their assigned work orders and route.</p>
+                      )}
                     </CardContent>
                   </Card>
-                </TabsContent>
 
-                {/* List View Tab */}
-                <TabsContent value="list" className="pt-4">
-                  <div className="grid gap-4">
-                    {/* Technicians List - Drop targets */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {/* Technicians Grid - Drop targets */}
+                  <div>
+                    <h2 className="text-lg font-semibold mb-3">Technicians</h2>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Drag work orders onto technicians to assign them. Click on a technician to view their scheduled work.
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {technicians.map((technician) => (
                         <div 
                           key={technician.id}
@@ -301,7 +315,7 @@ const Dispatch = () => {
 
                     {/* Selected Technician Details */}
                     {selectedTechnicianId ? (
-                      <Card>
+                      <Card className="mt-6">
                         <CardHeader className="pb-2">
                           <CardTitle>
                             {technicians.find(tech => tech.id === selectedTechnicianId)?.name}'s Work Orders
@@ -355,7 +369,7 @@ const Dispatch = () => {
                                               ...wo,
                                               technicianId: undefined,
                                               technicianName: undefined,
-                                              status: 'pending'
+                                              status: 'pending' as const  // Explicitly tell TypeScript this is a literal type
                                             };
                                           }
                                           return wo;
@@ -384,7 +398,7 @@ const Dispatch = () => {
                         </CardContent>
                       </Card>
                     ) : (
-                      <Card>
+                      <Card className="mt-6">
                         <CardContent className="p-8 text-center">
                           <User className="mx-auto h-12 w-12 text-muted-foreground" />
                           <h3 className="mt-4 text-lg font-medium">No Technician Selected</h3>
@@ -397,11 +411,88 @@ const Dispatch = () => {
                       </Card>
                     )}
                   </div>
-                </TabsContent>
-              </Tabs>
-            </div>
+                </div>
+              </TabsContent>
+
+              {/* Map View Tab */}
+              <TabsContent value="map" className="pt-4">
+                <Card className="overflow-hidden">
+                  <div className="relative">
+                    <div 
+                      className="h-[500px] bg-cover bg-center" 
+                      style={{ 
+                        backgroundImage: "url('https://maps.googleapis.com/maps/api/staticmap?center=Atlanta,GA&zoom=11&size=1200x500&maptype=roadmap&key=USE_YOUR_API_KEY_HERE')",
+                        backgroundPosition: 'center',
+                        backgroundSize: 'cover',
+                        backgroundColor: '#e5e7eb'
+                      }}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/60 text-center p-4">
+                        <div>
+                          <MapPin className="h-10 w-10 mx-auto text-primary" />
+                          <h3 className="mt-2 text-lg font-medium">Google Maps Integration</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            A real Google Maps integration would be displayed here, showing technicians' locations and optimized routes.
+                            <br />This requires a valid Google Maps API key and live data from technicians.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Select a technician on the map or from the list below to view their assigned work orders and route.</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </DndContext>
+
+        {/* Schedule Modal */}
+        <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Schedule Work Order</DialogTitle>
+              <DialogDescription>
+                Set the date and time for this work order assignment
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date" className="text-right">
+                  Date
+                </Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="time" className="text-right">
+                  Time
+                </Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setIsScheduleModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleScheduleConfirm}>
+                Schedule
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
