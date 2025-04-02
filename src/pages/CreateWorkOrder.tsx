@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -40,10 +39,9 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Plus, Trash, X } from "lucide-react";
+import { CalendarIcon, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 
 // Define form schema using Zod
 const workOrderSchema = z.object({
@@ -400,7 +398,7 @@ const CreateWorkOrder = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Unassigned</SelectItem>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
                               <SelectItem value="tech1">Mike Johnson</SelectItem>
                               <SelectItem value="tech2">David Chen</SelectItem>
                               <SelectItem value="tech3">Sarah Williams</SelectItem>
