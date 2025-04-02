@@ -27,7 +27,7 @@ const SideNav = ({ open, setOpen }: SideNavProps) => {
     { name: "Inventory", icon: Package, href: "/inventory", roles: ["admin", "manager"] },
     { name: "Invoices", icon: FileText, href: "/invoices", roles: ["admin", "manager", "customer"] },
     { name: "Timesheets", icon: Clock, href: "/timesheets", roles: ["admin", "manager", "hr", "tech"] },
-    { name: "Reports", icon: BarChart3, href: "/reports", roles: ["admin", "manager"] },
+    { name: "Reports", icon: BarChart3, href: "/reports", roles: ["admin", "manager", "csr", "sales", "hr", "tech", "customer"] },
     { name: "Messages", icon: MessageSquare, href: "/messages", roles: ["admin", "manager", "csr", "sales", "tech", "customer"] },
     { name: "Settings", icon: Settings, href: "/settings", roles: ["admin"] }
   ];

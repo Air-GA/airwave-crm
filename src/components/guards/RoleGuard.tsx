@@ -23,7 +23,8 @@ export function RoleGuard({
   }
   
   if (!userRole || !allowedRoles.includes(userRole)) {
-    return <Navigate to={fallbackPath} replace />;
+    // Pass the allowed roles as state to the unauthorized page
+    return <Navigate to={fallbackPath} replace state={{ allowedRoles }} />;
   }
 
   return <>{children}</>;
