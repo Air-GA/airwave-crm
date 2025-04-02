@@ -12,14 +12,22 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Customer, customers } from "@/data/mockData";
+import { Customer, customers as initialCustomers } from "@/data/mockData";
 import { Building2, ChevronDown, FileEdit, MoreHorizontal, Phone, Plus, Search, UserRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
+import { toast } from "sonner";
 
 const Customers = () => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [customerType, setCustomerType] = useState<"all" | "residential" | "commercial">("all");
+  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  
+  // Add a new customer to the list
+  const handleAddCustomer = (newCustomer: Customer) => {
+    setCustomers(prevCustomers => [newCustomer, ...prevCustomers]);
+  };
   
   // Filter customers based on search query and type
   const filteredCustomers = customers.filter(customer => {
@@ -41,9 +49,7 @@ const Customers = () => {
             <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
             <p className="text-muted-foreground">Manage your residential and commercial customers</p>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Customer
-          </Button>
+          <AddCustomerDialog onCustomerAdded={handleAddCustomer} />
         </div>
         
         {/* Search and filters */}
@@ -97,7 +103,7 @@ const Customers = () => {
             <p className="mt-2 text-sm text-muted-foreground">
               Try adjusting your search or filters, or add a new customer.
             </p>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={() => document.querySelector('[role="dialog"] button')?.click()}>
               <Plus className="mr-2 h-4 w-4" /> Add Customer
             </Button>
           </div>
