@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -895,3 +896,399 @@ const Settings = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Security Settings</CardTitle>
+                    <CardDescription>Manage your account security preferences</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Password</h3>
+                      <div className="space-y-2">
+                        <div className="grid gap-2">
+                          <Label htmlFor="current-password">Current Password</Label>
+                          <Input id="current-password" type="password" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="new-password">New Password</Label>
+                          <Input id="new-password" type="password" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="confirm-password">Confirm Password</Label>
+                          <Input id="confirm-password" type="password" />
+                        </div>
+                        <Button className="mt-2" size="sm">
+                          <Lock className="mr-2 h-4 w-4" />
+                          Update Password
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Two-Factor Authentication</h3>
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <p>Protect your account with 2FA</p>
+                          <p className="text-sm text-muted-foreground">
+                            Add an extra layer of security to your account
+                          </p>
+                        </div>
+                        <Button variant="outline">Setup 2FA</Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Account Activity</h3>
+                      <div className="rounded-lg border">
+                        <div className="p-4 border-b">
+                          <div className="flex justify-between">
+                            <div>
+                              <p className="font-medium">Login from new device</p>
+                              <p className="text-sm text-muted-foreground">Windows PC - Chrome Browser</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground">2 days ago</p>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex justify-between">
+                            <div>
+                              <p className="font-medium">Password changed</p>
+                              <p className="text-sm text-muted-foreground">Security update</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground">1 week ago</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="outline">View Full Activity Log</Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="billing">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Billing Information</CardTitle>
+                    <CardDescription>Manage your subscription and payment methods</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="font-medium mb-2">Current Plan</h3>
+                      <div className="rounded-lg border p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <Badge className="mb-2">Professional</Badge>
+                            <p className="font-medium text-lg">$49.99/month</p>
+                            <p className="text-sm text-muted-foreground">Billed monthly</p>
+                          </div>
+                          <div>
+                            <Button variant="outline">Change Plan</Button>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t">
+                          <p className="text-sm">Your next billing date is <strong>May 15, 2023</strong></p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-medium mb-2">Payment Methods</h3>
+                      <div className="space-y-2">
+                        <div className="rounded-lg border p-4">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                              <CreditCard className="h-5 w-5 mr-4" />
+                              <div>
+                                <p className="font-medium">Visa ending in 4242</p>
+                                <p className="text-sm text-muted-foreground">Expires 12/2025</p>
+                              </div>
+                            </div>
+                            <Badge>Default</Badge>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" className="mt-2">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Payment Method
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-medium mb-2">Billing History</h3>
+                      <div className="rounded-lg border">
+                        <div className="p-4 border-b">
+                          <div className="flex justify-between">
+                            <div>
+                              <p className="font-medium">Invoice #12345</p>
+                              <p className="text-sm text-muted-foreground">Professional Plan - Monthly</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">$49.99</p>
+                              <p className="text-sm text-muted-foreground">Apr 15, 2023</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex justify-between">
+                            <div>
+                              <p className="font-medium">Invoice #12344</p>
+                              <p className="text-sm text-muted-foreground">Professional Plan - Monthly</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">$49.99</p>
+                              <p className="text-sm text-muted-foreground">Mar 15, 2023</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="outline">Download All Invoices</Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="integrations">
+                <Form {...integrationForm}>
+                  <form onSubmit={integrationForm.handleSubmit(saveIntegrationForm)}>
+                    <Card className="mb-4">
+                      <CardHeader>
+                        <CardTitle>QuickBooks Integration</CardTitle>
+                        <CardDescription>Connect your QuickBooks account for accounting and invoice sync</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Connection Status</p>
+                            <p className="text-sm text-muted-foreground">QuickBooks Online</p>
+                          </div>
+                          <FormField
+                            control={integrationForm.control}
+                            name="quickbooks.connected"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Switch 
+                                    checked={field.value} 
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="!mt-0">
+                                  {field.value ? 'Connected' : 'Disconnected'}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        {integrationForm.watch('quickbooks.connected') && (
+                          <FormField
+                            control={integrationForm.control}
+                            name="quickbooks.apiKey"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>API Key</FormLabel>
+                                <div className="flex">
+                                  <FormControl>
+                                    <div className="relative w-full">
+                                      <Input
+                                        type={showApiKey.quickbooks ? "text" : "password"}
+                                        {...field}
+                                        className="pr-10"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3"
+                                        onClick={() => toggleShowApiKey('quickbooks')}
+                                      >
+                                        {showApiKey.quickbooks ? (
+                                          <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                          <Eye className="h-4 w-4" />
+                                        )}
+                                        <span className="sr-only">
+                                          {showApiKey.quickbooks ? "Hide" : "Show"} API Key
+                                        </span>
+                                      </Button>
+                                    </div>
+                                  </FormControl>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="mb-4">
+                      <CardHeader>
+                        <CardTitle>Google Maps Integration</CardTitle>
+                        <CardDescription>Enable tech location tracking and route optimization</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Connection Status</p>
+                            <p className="text-sm text-muted-foreground">Google Maps Platform</p>
+                          </div>
+                          <FormField
+                            control={integrationForm.control}
+                            name="googleMaps.connected"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Switch 
+                                    checked={field.value} 
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="!mt-0">
+                                  {field.value ? 'Connected' : 'Disconnected'}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        {integrationForm.watch('googleMaps.connected') && (
+                          <FormField
+                            control={integrationForm.control}
+                            name="googleMaps.apiKey"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>API Key</FormLabel>
+                                <div className="flex">
+                                  <FormControl>
+                                    <div className="relative w-full">
+                                      <Input
+                                        type={showApiKey.googleMaps ? "text" : "password"}
+                                        {...field}
+                                        className="pr-10"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3"
+                                        onClick={() => toggleShowApiKey('googleMaps')}
+                                      >
+                                        {showApiKey.googleMaps ? (
+                                          <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                          <Eye className="h-4 w-4" />
+                                        )}
+                                        <span className="sr-only">
+                                          {showApiKey.googleMaps ? "Hide" : "Show"} API Key
+                                        </span>
+                                      </Button>
+                                    </div>
+                                  </FormControl>
+                                </div>
+                                <FormDescription>
+                                  Enter your Google Maps API key with Maps JavaScript API and Directions API enabled.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="mb-4">
+                      <CardHeader>
+                        <CardTitle>SMS Provider Integration</CardTitle>
+                        <CardDescription>Send automated text messages for appointment reminders and updates</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Connection Status</p>
+                            <p className="text-sm text-muted-foreground">Twilio SMS Services</p>
+                          </div>
+                          <FormField
+                            control={integrationForm.control}
+                            name="smsProvider.connected"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Switch 
+                                    checked={field.value} 
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="!mt-0">
+                                  {field.value ? 'Connected' : 'Disconnected'}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        {integrationForm.watch('smsProvider.connected') && (
+                          <FormField
+                            control={integrationForm.control}
+                            name="smsProvider.apiKey"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>API Key</FormLabel>
+                                <div className="flex">
+                                  <FormControl>
+                                    <div className="relative w-full">
+                                      <Input
+                                        type={showApiKey.smsProvider ? "text" : "password"}
+                                        {...field}
+                                        className="pr-10"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3"
+                                        onClick={() => toggleShowApiKey('smsProvider')}
+                                      >
+                                        {showApiKey.smsProvider ? (
+                                          <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                          <Eye className="h-4 w-4" />
+                                        )}
+                                        <span className="sr-only">
+                                          {showApiKey.smsProvider ? "Hide" : "Show"} API Key
+                                        </span>
+                                      </Button>
+                                    </div>
+                                  </FormControl>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <div className="flex justify-end">
+                      <Button type="submit">
+                        <Save className="mr-2 h-4 w-4" />
+                        Save All Integration Settings
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </TabsContent>
+            </div>
+          </div>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default Settings;
