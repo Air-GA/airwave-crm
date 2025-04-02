@@ -6,37 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, Clock, Plus, UserRound } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { formatDate } from "@/lib/date-utils";
+import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
+import { technicians, workOrders } from "@/data/mockData";
 
 const Schedule = () => {
   const [date, setDate] = useState<Date>(new Date());
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   
-  // Mock data for scheduling
-  const appointments = [
-    {
-      id: "apt-001",
-      customerName: "John Smith",
-      address: "123 Main St, Atlanta, GA",
-      time: "09:00 AM - 11:00 AM",
-      type: "Maintenance",
-      technicianName: "Mike Johnson"
-    },
-    {
-      id: "apt-002",
-      customerName: "Sarah Wilson",
-      address: "456 Oak Ave, Marietta, GA",
-      time: "12:30 PM - 02:30 PM",
-      type: "Repair",
-      technicianName: "David Chen"
-    },
-    {
-      id: "apt-003",
-      customerName: "Robert Brown",
-      address: "789 Pine Rd, Decatur, GA",
-      time: "03:00 PM - 05:00 PM",
-      type: "Installation",
-      technicianName: "Mike Johnson"
-    }
-  ];
+  // Filter work orders for the selected date
+  const dateWorkOrders = workOrders.filter(
+    order => new Date(order.scheduledDate).toDateString() === date.toDateString()
+  );
+  
+  // Get the selected technician
+  const selectedTechnician = technicians.find(tech => tech.id === selectedTechnicianId);
   
   return (
     <MainLayout>
@@ -52,29 +35,74 @@ const Schedule = () => {
         </div>
         
         <div className="grid gap-6 md:grid-cols-[300px_1fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(date) => date && setDate(date)}
-                className="rounded-md border"
-              />
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Calendar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(date) => date && setDate(date)}
+                  className="rounded-md border"
+                />
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Technicians</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {technicians.map((technician) => (
+                    <div
+                      key={technician.id}
+                      className={`cursor-pointer p-3 transition-colors hover:bg-muted ${
+                        technician.id === selectedTechnicianId ? "bg-muted" : ""
+                      }`}
+                      onClick={() => setSelectedTechnicianId(technician.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`h-2 w-2 rounded-full ${
+                            technician.status === "available"
+                              ? "bg-green-500"
+                              : technician.status === "busy"
+                              ? "bg-amber-500"
+                              : "bg-gray-500"
+                          }`}
+                        />
+                        <p>{technician.name}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
           
           <div className="space-y-6">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle>Appointments for {formatDate(date)}</CardTitle>
+                <CardTitle>
+                  {selectedTechnician 
+                    ? `${selectedTechnician.name}'s Schedule - ${formatDate(date)}`
+                    : `All Appointments - ${formatDate(date)}`
+                  }
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {appointments.length > 0 ? (
+                {selectedTechnician ? (
+                  <TechnicianScheduleView
+                    technician={selectedTechnician}
+                    workOrders={workOrders}
+                    selectedDate={date}
+                  />
+                ) : dateWorkOrders.length > 0 ? (
                   <div className="space-y-4">
-                    {appointments.map((apt) => (
+                    {dateWorkOrders.map((apt) => (
                       <div key={apt.id} className="rounded-lg border p-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                           <div>
@@ -84,7 +112,7 @@ const Schedule = () => {
                             </div>
                             <div className="mt-2 flex items-center gap-2">
                               <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{apt.time}</span>
+                              <span className="text-sm">{formatDate(new Date(apt.scheduledDate), { timeOnly: true })}</span>
                             </div>
                             <div className="mt-1 text-sm text-muted-foreground">{apt.address}</div>
                           </div>
@@ -93,7 +121,7 @@ const Schedule = () => {
                               {apt.type}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              Tech: {apt.technicianName}
+                              Tech: {apt.technicianName || "Unassigned"}
                             </div>
                           </div>
                         </div>

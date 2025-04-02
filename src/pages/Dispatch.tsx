@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
@@ -80,9 +81,9 @@ const Dispatch = () => {
       // Get the current work order
       const workOrder = draggedWorkOrders.find(order => order.id === workOrderId);
       
-      // Pre-fill the date and time
+      // Pre-fill the date and time with today's date if not already scheduled
       if (workOrder) {
-        const date = new Date(workOrder.scheduledDate);
+        const date = workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : new Date();
         setScheduledDate(date.toISOString().split('T')[0]);
         setScheduledTime(date.toTimeString().substring(0, 5));
       }
@@ -130,6 +131,10 @@ const Dispatch = () => {
     // Close the modal
     setIsScheduleModalOpen(false);
   };
+
+  // Get the current technician and work order for the schedule modal
+  const currentTechnician = technicians.find(tech => tech.id === currentTechnicianId);
+  const currentWorkOrder = draggedWorkOrders.find(order => order.id === currentWorkOrderId);
   
   return (
     <MainLayout>
@@ -448,42 +453,119 @@ const Dispatch = () => {
           </div>
         </DndContext>
 
-        {/* Schedule Modal */}
+        {/* Enhanced Schedule Modal with Technician Schedule View */}
         <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
               <DialogTitle>Schedule Work Order</DialogTitle>
               <DialogDescription>
                 Set the date and time for this work order assignment
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="date" className="text-right">
-                  Date
-                </Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  className="col-span-3"
-                />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left column: Work order details */}
+              <div>
+                {currentWorkOrder && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Work Order Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold">#{currentWorkOrder.id} - {currentWorkOrder.type}</h4>
+                        <Badge
+                          className={`mt-1
+                            ${currentWorkOrder.priority === 'low' ? 'bg-gray-100 text-gray-800' : ''}
+                            ${currentWorkOrder.priority === 'medium' ? 'bg-blue-100 text-blue-800' : ''}
+                            ${currentWorkOrder.priority === 'high' ? 'bg-amber-100 text-amber-800' : ''}
+                            ${currentWorkOrder.priority === 'emergency' ? 'bg-red-100 text-red-800' : ''}
+                          `}
+                        >
+                          {currentWorkOrder.priority}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{currentWorkOrder.customerName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{currentWorkOrder.address}</span>
+                        </div>
+                        <p className="mt-2 text-muted-foreground">{currentWorkOrder.description}</p>
+                      </div>
+                      
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="date">Date</Label>
+                            <Input
+                              id="date"
+                              type="date"
+                              value={scheduledDate}
+                              onChange={(e) => setScheduledDate(e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="time">Time</Label>
+                            <Input
+                              id="time"
+                              type="time"
+                              value={scheduledTime}
+                              onChange={(e) => setScheduledTime(e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                        
+                        {currentTechnician && (
+                          <div>
+                            <Label>Assigned To</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div
+                                className={`h-2.5 w-2.5 rounded-full
+                                  ${currentTechnician.status === "available" ? "bg-green-500" : ""}
+                                  ${currentTechnician.status === "busy" ? "bg-amber-500" : ""}
+                                  ${currentTechnician.status === "off-duty" ? "bg-gray-500" : ""}
+                                `}
+                              />
+                              <span>{currentTechnician.name}</span>
+                              <Badge
+                                variant="outline"
+                                className={`ml-auto
+                                  ${currentTechnician.status === 'available' ? 'bg-green-50 text-green-700' : ''}
+                                  ${currentTechnician.status === 'busy' ? 'bg-amber-50 text-amber-700' : ''}
+                                  ${currentTechnician.status === 'off-duty' ? 'bg-gray-50 text-gray-700' : ''}
+                                `}
+                              >
+                                {currentTechnician.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="time" className="text-right">
-                  Time
-                </Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="col-span-3"
-                />
+              
+              {/* Right column: Technician's schedule */}
+              <div>
+                {currentTechnician && scheduledDate && (
+                  <TechnicianScheduleView
+                    technician={currentTechnician}
+                    workOrders={draggedWorkOrders}
+                    selectedDate={new Date(`${scheduledDate}T00:00:00`)}
+                  />
+                )}
               </div>
             </div>
-            <DialogFooter>
+            
+            <DialogFooter className="mt-4">
               <Button type="button" variant="secondary" onClick={() => setIsScheduleModalOpen(false)}>
                 Cancel
               </Button>
