@@ -6,6 +6,9 @@ import type { Database } from '../types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Declare the supabase client variable
+let supabaseClient: ReturnType<typeof createClient<Database>>;
+
 // Validate that the required environment variables are defined
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error(
@@ -17,14 +20,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   const fallbackKey = 'placeholder-key';
   
   // Create a client with fallback values (will fail gracefully)
-  export const supabase = createClient<Database>(
+  supabaseClient = createClient<Database>(
     supabaseUrl || fallbackUrl,
     supabaseAnonKey || fallbackKey
   );
 } else {
   // Create a single supabase client for interacting with your database
-  export const supabase = createClient<Database>(
+  supabaseClient = createClient<Database>(
     supabaseUrl,
     supabaseAnonKey
   );
 }
+
+// Export the initialized client
+export const supabase = supabaseClient;
