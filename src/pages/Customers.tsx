@@ -9,11 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Customer, customers as initialCustomers } from "@/data/mockData";
-import { Building2, ChevronDown, FileEdit, MoreHorizontal, Phone, Plus, Search, UserRound } from "lucide-react";
+import { ChevronDown, FileEdit, MoreHorizontal, Phone, Plus, Search, UserRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { toast } from "sonner";
@@ -21,7 +20,6 @@ import { toast } from "sonner";
 const Customers = () => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
-  const [customerType, setCustomerType] = useState<"all" | "residential" | "commercial">("all");
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   
@@ -31,16 +29,14 @@ const Customers = () => {
     toast.success("Customer added successfully!");
   };
   
-  // Filter customers based on search query and type
+  // Filter customers based on search query
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = !searchQuery || 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.phone.includes(searchQuery);
     
-    const matchesType = customerType === "all" || customer.type === customerType;
-    
-    return matchesSearch && matchesType;
+    return matchesSearch;
   });
   
   return (
@@ -49,7 +45,7 @@ const Customers = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-            <p className="text-muted-foreground">Manage your residential and commercial customers</p>
+            <p className="text-muted-foreground">Manage your residential customers</p>
           </div>
           <Button onClick={() => setShowAddCustomerDialog(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Customer
@@ -61,7 +57,7 @@ const Customers = () => {
           />
         </div>
         
-        {/* Search and filters */}
+        {/* Search */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -74,26 +70,7 @@ const Customers = () => {
             />
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Customer Type <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setCustomerType("all")}>
-                All Customers
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCustomerType("residential")}>
-                Residential
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCustomerType("commercial")}>
-                Commercial
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto">
             <span>{filteredCustomers.length} customers</span>
           </div>
         </div>
@@ -110,7 +87,7 @@ const Customers = () => {
             <UserRound className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">No customers found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Try adjusting your search or filters, or add a new customer.
+              Try adjusting your search, or add a new customer.
             </p>
             <Button className="mt-4" onClick={() => setShowAddCustomerDialog(true)}>
               <Plus className="mr-2 h-4 w-4" /> Add Customer
@@ -134,11 +111,8 @@ const CustomerCard = ({ customer }: CustomerCardProps) => {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <div className={`rounded-full p-1.5 ${customer.type === 'residential' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-              {customer.type === 'residential' ? 
-                <UserRound className="h-4 w-4" /> : 
-                <Building2 className="h-4 w-4" />
-              }
+            <div className="rounded-full p-1.5 bg-blue-100 text-blue-600">
+              <UserRound className="h-4 w-4" />
             </div>
             <CardTitle className="text-lg font-medium">{customer.name}</CardTitle>
           </div>
@@ -156,17 +130,6 @@ const CustomerCard = ({ customer }: CustomerCardProps) => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
-        <Badge 
-          variant="outline"
-          className={`mt-1 ${
-            customer.type === 'residential' 
-              ? 'bg-blue-50 text-blue-700 hover:bg-blue-50' 
-              : 'bg-purple-50 text-purple-700 hover:bg-purple-50'
-          }`}
-        >
-          {customer.type === 'residential' ? 'Residential' : 'Commercial'}
-        </Badge>
       </CardHeader>
       
       <CardContent>

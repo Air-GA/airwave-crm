@@ -22,12 +22,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserRound, Building2 } from "lucide-react";
+import { UserRound } from "lucide-react";
 
 const customerFormSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
-  type: z.enum(["residential", "commercial"]),
   email: z.string().email({ message: "Invalid email address" }),
   phone: z.string().min(10, { message: "Phone number must be at least 10 digits" }),
   serviceAddress: z.string().min(1, { message: "Service address is required" }),
@@ -43,13 +41,10 @@ interface AddCustomerDialogProps {
 }
 
 export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCustomerDialogProps) {
-  const [customerType, setCustomerType] = useState<"residential" | "commercial">("residential");
-  
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
       name: "",
-      type: "residential",
       email: "",
       phone: "",
       serviceAddress: "",
@@ -62,6 +57,7 @@ export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCu
     const newCustomer = {
       id: Math.floor(Math.random() * 10000).toString(),
       ...data,
+      type: "residential", // Always set type as residential
       createdAt: new Date().toISOString()
     };
     
@@ -82,24 +78,10 @@ export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCu
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <Tabs 
-              defaultValue="residential" 
-              value={customerType} 
-              onValueChange={(value) => {
-                setCustomerType(value as "residential" | "commercial");
-                form.setValue("type", value as "residential" | "commercial");
-              }}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="residential">
-                  <UserRound className="mr-2 h-4 w-4" /> Residential
-                </TabsTrigger>
-                <TabsTrigger value="commercial">
-                  <Building2 className="mr-2 h-4 w-4" /> Commercial
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-2 mb-4">
+              <UserRound className="h-5 w-5 text-blue-600" />
+              <h3 className="font-medium">Residential Customer</h3>
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -109,7 +91,7 @@ export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCu
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder={customerType === "residential" ? "Customer name" : "Business name"} {...field} />
+                      <Input placeholder="Customer name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
