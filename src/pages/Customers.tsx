@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -42,7 +41,7 @@ const Customers = () => {
   
   // Handle creating a new work order for a customer
   const handleCreateWorkOrder = (customer: Customer) => {
-    navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}`);
+    navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone)}&customerEmail=${encodeURIComponent(customer.email)}&customerAddress=${encodeURIComponent(customer.serviceAddress)}`);
   };
   
   // Handle viewing customer details

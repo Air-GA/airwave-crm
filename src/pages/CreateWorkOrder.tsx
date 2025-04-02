@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -72,18 +73,53 @@ const defaultValues: Partial<WorkOrderFormValues> = {
 };
 
 const CreateWorkOrder = () => {
+  // Function to parse URL query parameters
+  function useQuery() {
+    return new URLSearchParams(useLocation().search);
+  }
+  
   const { toast } = useToast();
   const navigate = useNavigate();
+  const query = useQuery();
   const [parts, setParts] = useState<{ id: string; name: string; quantity: number; price: number }[]>([]);
   const [partName, setPartName] = useState("");
   const [partQuantity, setPartQuantity] = useState(1);
   const [partPrice, setPartPrice] = useState(0);
   
-  // Initialize form with React Hook Form and Zod validation
+  // Get customer data from URL parameters
+  const customerId = query.get("customerId");
+  const customerName = query.get("customerName");
+  const customerPhone = query.get("customerPhone");
+  const customerEmail = query.get("customerEmail");
+  const customerAddress = query.get("customerAddress");
+  
+  // Initialize form with React Hook Form and Zod validation, with URL parameters as default values
   const form = useForm<WorkOrderFormValues>({
     resolver: zodResolver(workOrderSchema),
-    defaultValues,
+    defaultValues: {
+      ...defaultValues,
+      customerName: customerName || defaultValues.customerName || "",
+      phoneNumber: customerPhone || defaultValues.phoneNumber || "",
+      email: customerEmail || defaultValues.email || "",
+      address: customerAddress || defaultValues.address || "",
+    },
   });
+  
+  // Set form values when URL params change
+  useEffect(() => {
+    if (customerName) {
+      form.setValue("customerName", customerName);
+    }
+    if (customerPhone) {
+      form.setValue("phoneNumber", customerPhone);
+    }
+    if (customerEmail) {
+      form.setValue("email", customerEmail);
+    }
+    if (customerAddress) {
+      form.setValue("address", customerAddress);
+    }
+  }, [customerId, customerName, customerPhone, customerEmail, customerAddress, form]);
   
   const onSubmit = (data: WorkOrderFormValues) => {
     // Calculate the total cost based on parts
@@ -94,6 +130,7 @@ const CreateWorkOrder = () => {
       ...data,
       id: `WO${Math.floor(Math.random() * 1000)}`, // Generate a simple ID (in a real app this would come from backend)
       status: "pending",
+      customerId: customerId || undefined, // Include customer ID if available
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       partsUsed: parts,
@@ -166,7 +203,9 @@ const CreateWorkOrder = () => {
                   <CardHeader>
                     <CardTitle>Customer Information</CardTitle>
                     <CardDescription>
-                      Enter the customer's contact information for this work order
+                      {customerId 
+                        ? "Customer information has been pre-filled. You can make changes if needed." 
+                        : "Enter the customer's contact information for this work order"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
