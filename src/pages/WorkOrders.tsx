@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +28,11 @@ import { formatDate } from "@/lib/date-utils";
 
 const WorkOrders = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   
-  // Filter work orders based on search query and filters
   const filteredWorkOrders = workOrders.filter(order => {
     const matchesSearch = !searchQuery || 
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -54,12 +54,11 @@ const WorkOrders = () => {
             <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
             <p className="text-muted-foreground">Manage service requests and job assignments</p>
           </div>
-          <Button>
+          <Button onClick={() => navigate("/work-orders/create")}>
             <Plus className="mr-2 h-4 w-4" /> Create Work Order
           </Button>
         </div>
         
-        {/* Search and filters */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -136,7 +135,6 @@ const WorkOrders = () => {
           </div>
         </div>
         
-        {/* Work order list */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredWorkOrders.map(workOrder => (
             <WorkOrderCard key={workOrder.id} workOrder={workOrder} />
@@ -150,7 +148,7 @@ const WorkOrders = () => {
             <p className="mt-2 text-sm text-muted-foreground">
               Try adjusting your search or filters, or create a new work order.
             </p>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={() => navigate("/work-orders/create")}>
               <Plus className="mr-2 h-4 w-4" /> Create Work Order
             </Button>
           </div>

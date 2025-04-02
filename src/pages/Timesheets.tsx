@@ -3,122 +3,116 @@ import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
-import { 
-  Calendar, 
-  Check, 
-  Clock, 
-  Download, 
-  Filter, 
-  Plus, 
-  Search, 
-  UserRound, 
-  X 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
+  PlusCircle,
+  Upload,
+  User,
 } from "lucide-react";
-import { formatDate } from "@/lib/date-utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge";
+
+// Define types for our timesheet data
+interface TimesheetStats {
+  hours: number;
+  entries: number;
+  approved: number;
+  pending: number;
+}
 
 const Timesheets = () => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const isMobile = useIsMobile();
   const [selectedWeek, setSelectedWeek] = useState("current");
   
-  // Mock data for timesheets
-  const currentWeekEntries = [
+  // Mock timesheet data
+  const timesheetStats: TimesheetStats = {
+    hours: 37.5,
+    entries: 15,
+    approved: 12,
+    pending: 3
+  };
+  
+  const timesheetEntries = [
     {
-      id: "TS-2023-001",
-      technicianName: "Mike Johnson",
-      date: "2023-08-21",
-      startTime: "08:00 AM",
-      endTime: "05:00 PM",
-      totalHours: 8,
-      workOrderIds: ["WO-23-1547", "WO-23-1550"],
+      id: "TS1001",
+      date: "2023-09-04",
+      technician: "Mike Johnson",
+      jobNumber: "JOB4532",
+      customer: "Peachtree Office Center",
+      hours: 8,
       status: "approved"
     },
     {
-      id: "TS-2023-002",
-      technicianName: "David Chen",
-      date: "2023-08-21",
-      startTime: "09:00 AM",
-      endTime: "06:00 PM",
-      totalHours: 8,
-      workOrderIds: ["WO-23-1548"],
-      status: "pending"
-    },
-    {
-      id: "TS-2023-003",
-      technicianName: "Sarah Williams",
-      date: "2023-08-21",
-      startTime: "08:30 AM",
-      endTime: "04:30 PM",
-      totalHours: 7,
-      workOrderIds: ["WO-23-1549", "WO-23-1551"],
+      id: "TS1002",
+      date: "2023-09-05",
+      technician: "Mike Johnson",
+      jobNumber: "JOB4533",
+      customer: "Downtown Residences",
+      hours: 7.5,
       status: "approved"
     },
     {
-      id: "TS-2023-004",
-      technicianName: "Mike Johnson",
-      date: "2023-08-22",
-      startTime: "08:00 AM",
-      endTime: "05:00 PM",
-      totalHours: 8,
-      workOrderIds: ["WO-23-1552"],
+      id: "TS1003",
+      date: "2023-09-06",
+      technician: "Mike Johnson",
+      jobNumber: "JOB4536",
+      customer: "Riverfront Hotel",
+      hours: 6,
       status: "approved"
     },
     {
-      id: "TS-2023-005",
-      technicianName: "David Chen",
-      date: "2023-08-22",
-      startTime: "09:00 AM",
-      endTime: "06:00 PM",
-      totalHours: 8,
-      workOrderIds: ["WO-23-1553", "WO-23-1554"],
-      status: "pending"
+      id: "TS1004",
+      date: "2023-09-07",
+      technician: "Mike Johnson",
+      jobNumber: "JOB4538",
+      customer: "Westside Apartments",
+      hours: 8,
+      status: "approved"
+    },
+    {
+      id: "TS1005",
+      date: "2023-09-08",
+      technician: "Mike Johnson",
+      jobNumber: "JOB4541",
+      customer: "North Hills Mall",
+      hours: 8,
+      status: "approved"
     },
   ];
-  
-  // Filter timesheet entries
-  const filteredEntries = currentWeekEntries.filter(entry => 
-    entry.technicianName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    entry.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    entry.workOrderIds.some(wo => wo.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-  
-  // Calculate weekly totals
-  const weeklyTotals = filteredEntries.reduce((acc, entry) => {
-    if (!acc[entry.technicianName]) {
-      acc[entry.technicianName] = {
-        hours: 0,
-        entries: 0,
-        approved: 0,
-        pending: 0
-      };
-    }
-    
-    acc[entry.technicianName].hours += entry.totalHours;
-    acc[entry.technicianName].entries += 1;
-    
-    if (entry.status === 'approved') {
-      acc[entry.technicianName].approved += 1;
-    } else if (entry.status === 'pending') {
-      acc[entry.technicianName].pending += 1;
-    }
-    
-    return acc;
-  }, {});
   
   return (
     <MainLayout>
@@ -126,192 +120,227 @@ const Timesheets = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Timesheets</h1>
-            <p className="text-muted-foreground">Track technician hours and job times</p>
+            <p className="text-muted-foreground">Track and manage work hours</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button>
-              <Plus className="mr-2 h-4 w-4" /> Add Time Entry
+              <PlusCircle className="mr-2 h-4 w-4" /> New Timesheet
             </Button>
             <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" /> Export
+              <Upload className="mr-2 h-4 w-4" /> Export
             </Button>
           </div>
         </div>
         
-        {/* Week selection */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{timesheetStats.hours} hrs</div>
+              <p className="text-xs text-muted-foreground">This week</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Timesheet Entries</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{timesheetStats.entries}</div>
+              <p className="text-xs text-muted-foreground">This week</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Approved Hours</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{timesheetStats.approved}</div>
+              <p className="text-xs text-green-500">Ready for payroll</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{timesheetStats.pending}</div>
+              <p className="text-xs text-amber-500">Awaiting review</p>
+            </CardContent>
+          </Card>
+        </div>
+        
         <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>Weekly Timesheet</CardTitle>
+          <CardHeader>
+            <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+              <div>
+                <CardTitle>Weekly Timesheet</CardTitle>
+                <CardDescription>September 4 - September 8, 2023</CardDescription>
+              </div>
               <div className="flex gap-2">
-                <Button variant={selectedWeek === "previous" ? "default" : "outline"} size="sm" onClick={() => setSelectedWeek("previous")}>
-                  Previous Week
-                </Button>
-                <Button variant={selectedWeek === "current" ? "default" : "outline"} size="sm" onClick={() => setSelectedWeek("current")}>
-                  Current Week
-                </Button>
-                <Button variant={selectedWeek === "next" ? "default" : "outline"} size="sm" onClick={() => setSelectedWeek("next")}>
-                  Next Week
+                <Select defaultValue={selectedWeek} onValueChange={setSelectedWeek}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select Week" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="current">Current Week</SelectItem>
+                    <SelectItem value="previous">Previous Week</SelectItem>
+                    <SelectItem value="two-weeks-ago">Two Weeks Ago</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon">
+                  <Calendar className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <CardDescription className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" /> August 21 - August 27, 2023
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <div className="flex items-center justify-between border-b bg-muted/40 p-4">
+                <div className="font-medium">
+                  Total Hours: {timesheetStats.hours}
+                </div>
+                <div className="font-medium">
+                  Entries: {timesheetStats.entries}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <span className="flex items-center gap-1 text-sm">
+                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                    {timesheetStats.approved} Approved
+                  </span>
+                  <span className="flex items-center gap-1 text-sm">
+                    <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                    {timesheetStats.pending} Pending
+                  </span>
+                </div>
+              </div>
+              
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    {!isMobile && <TableHead>Timesheet ID</TableHead>}
+                    {!isMobile && <TableHead>Technician</TableHead>}
+                    <TableHead>Job/Customer</TableHead>
+                    <TableHead className="text-right">Hours</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {timesheetEntries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell>
+                        {new Date(entry.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </TableCell>
+                      {!isMobile && <TableCell>{entry.id}</TableCell>}
+                      {!isMobile && <TableCell>{entry.technician}</TableCell>}
+                      <TableCell>
+                        <div className="font-medium">{entry.jobNumber}</div>
+                        <div className="text-xs text-muted-foreground">{entry.customer}</div>
+                      </TableCell>
+                      <TableCell className="text-right">{entry.hours}</TableCell>
+                      <TableCell>
+                        {entry.status === "approved" ? (
+                          <Badge variant="outline" className="bg-green-50 text-green-700">
+                            Approved
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700">
+                            Pending
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline">
+              <Clock className="mr-2 h-4 w-4" /> View Time Details
+            </Button>
+            <Button variant="outline">
+              <FileText className="mr-2 h-4 w-4" /> Generate Report
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Submit New Hours</CardTitle>
+            <CardDescription>
+              Log your work hours for a specific job
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="rounded-lg border p-3">
-                <div className="text-sm font-medium text-muted-foreground">Total Hours</div>
-                <div className="mt-2 text-2xl font-bold">
-                  {Object.values(weeklyTotals).reduce((sum, tech) => sum + tech.hours, 0)}
+            <Tabs defaultValue="daily">
+              <TabsList>
+                <TabsTrigger value="daily">Daily Entry</TabsTrigger>
+                <TabsTrigger value="weekly">Weekly Entry</TabsTrigger>
+              </TabsList>
+              <TabsContent value="daily" className="space-y-4 pt-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Date</Label>
+                    <Input id="date" type="date" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="technician">Technician</Label>
+                    <Select defaultValue="mike">
+                      <SelectTrigger id="technician">
+                        <SelectValue placeholder="Select Technician" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mike">Mike Johnson</SelectItem>
+                        <SelectItem value="david">David Chen</SelectItem>
+                        <SelectItem value="sarah">Sarah Williams</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="job">Job Number</Label>
+                    <Select>
+                      <SelectTrigger id="job">
+                        <SelectValue placeholder="Select Job" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="job4541">JOB4541 - North Hills Mall</SelectItem>
+                        <SelectItem value="job4542">JOB4542 - Eastside Offices</SelectItem>
+                        <SelectItem value="job4543">JOB4543 - Downtown Hotel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hours">Hours Worked</Label>
+                    <Input id="hours" type="number" min="0" step="0.5" placeholder="8.0" />
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-lg border p-3">
-                <div className="text-sm font-medium text-muted-foreground">Time Entries</div>
-                <div className="mt-2 text-2xl font-bold">
-                  {filteredEntries.length}
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes (Optional)</Label>
+                  <Input id="notes" placeholder="Any notes about the work performed" />
                 </div>
-              </div>
-              <div className="rounded-lg border p-3">
-                <div className="text-sm font-medium text-muted-foreground">Approved</div>
-                <div className="mt-2 text-2xl font-bold text-green-500">
-                  {Object.values(weeklyTotals).reduce((sum, tech) => sum + tech.approved, 0)}
+              </TabsContent>
+              <TabsContent value="weekly" className="pt-4">
+                <div className="text-center text-muted-foreground">
+                  Weekly timesheet entry coming soon.
                 </div>
-              </div>
-              <div className="rounded-lg border p-3">
-                <div className="text-sm font-medium text-muted-foreground">Pending Approval</div>
-                <div className="mt-2 text-2xl font-bold text-amber-500">
-                  {Object.values(weeklyTotals).reduce((sum, tech) => sum + tech.pending, 0)}
-                </div>
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
-        </Card>
-        
-        {/* Search bar */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search technicians or work orders..."
-              className="pl-8 w-full md:max-w-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <Button variant="outline">
-            <Filter className="mr-1 h-4 w-4" /> Filters
-          </Button>
-        </div>
-        
-        {/* Technician summary */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {Object.entries(weeklyTotals).map(([technicianName, data]) => (
-            <Card key={technicianName}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <UserRound className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-lg">{technicianName}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Hours</div>
-                    <div className="text-xl font-semibold">{data.hours}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Entries</div>
-                    <div className="text-xl font-semibold">{data.entries}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Approved</div>
-                    <div className="flex items-center gap-1 text-green-500">
-                      <Check className="h-4 w-4" /> {data.approved}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Pending</div>
-                    <div className="flex items-center gap-1 text-amber-500">
-                      <Clock className="h-4 w-4" /> {data.pending}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        {/* Time entries table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Time Entries</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Technician</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead>Work Orders</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEntries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>{entry.technicianName}</TableCell>
-                    <TableCell>{formatDate(new Date(entry.date))}</TableCell>
-                    <TableCell>{entry.startTime} - {entry.endTime}</TableCell>
-                    <TableCell>{entry.totalHours}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {entry.workOrderIds.map(id => (
-                          <Badge key={id} variant="outline" className="text-xs">
-                            {id}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge
-                        variant="outline"
-                        className={
-                          entry.status === 'approved' 
-                            ? 'bg-green-50 text-green-700' 
-                            : 'bg-amber-50 text-amber-700'
-                        }
-                      >
-                        {entry.status === 'approved' ? 'Approved' : 'Pending'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {entry.status === 'pending' ? (
-                        <div className="flex justify-end gap-2">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-green-500">
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500">
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button size="sm" variant="outline">
-                          View
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+          <CardFooter>
+            <Button className="ml-auto">
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Submit Hours
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     </MainLayout>
