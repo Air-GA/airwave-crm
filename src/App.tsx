@@ -10,6 +10,13 @@ import NotFound from "./pages/NotFound";
 import Customers from "./pages/Customers";
 import WorkOrders from "./pages/WorkOrders";
 import Dispatch from "./pages/Dispatch";
+import Schedule from "./pages/Schedule";
+import Inventory from "./pages/Inventory";
+import Invoices from "./pages/Invoices";
+import Timesheets from "./pages/Timesheets";
+import Reports from "./pages/Reports";
+import Messages from "./pages/Messages";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +32,13 @@ const App = () => (
             <Route path="/customers" element={<Customers />} />
             <Route path="/work-orders" element={<WorkOrders />} />
             <Route path="/dispatch" element={<Dispatch />} />
+            <Route path="/schedule" element={<Schedule />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/timesheets" element={<Timesheets />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
