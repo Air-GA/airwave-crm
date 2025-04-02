@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,8 @@ import {
   Upload,
   Smartphone,
   Globe,
-  Plus
+  Plus,
+  Clock
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +49,7 @@ const Settings = () => {
   const [companyEmail, setCompanyEmail] = useState("service@air-ga.net");
   const [companyPhone, setCompanyPhone] = useState("(470) 800-9002");
   const [companyAddress, setCompanyAddress] = useState("910 E Spring St, Monroe, GA 30565");
+  const [is24Hours, setIs24Hours] = useState(true);
   
   return (
     <MainLayout>
@@ -283,92 +286,107 @@ const Settings = () => {
                     <CardDescription>Set your company's operating hours</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
-                        <div key={day} className="flex items-center justify-between">
-                          <Label className="w-24">{day}</Label>
+                    <div className="flex items-center space-x-2 mb-6">
+                      <Switch id="24hours" checked={is24Hours} onCheckedChange={setIs24Hours} />
+                      <Label htmlFor="24hours" className="font-medium">24/7 Operation (Open all hours, every day)</Label>
+                    </div>
+                    
+                    {!is24Hours ? (
+                      <div className="space-y-2">
+                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
+                          <div key={day} className="flex items-center justify-between">
+                            <Label className="w-24">{day}</Label>
+                            <div className="flex items-center gap-2">
+                              <Select defaultValue="09:00">
+                                <SelectTrigger className="w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="08:00">8:00 AM</SelectItem>
+                                  <SelectItem value="09:00">9:00 AM</SelectItem>
+                                  <SelectItem value="10:00">10:00 AM</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <span>to</span>
+                              <Select defaultValue="17:00">
+                                <SelectTrigger className="w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="17:00">5:00 PM</SelectItem>
+                                  <SelectItem value="18:00">6:00 PM</SelectItem>
+                                  <SelectItem value="19:00">7:00 PM</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between">
+                          <Label className="w-24">Saturday</Label>
                           <div className="flex items-center gap-2">
-                            <Select defaultValue="09:00">
+                            <Select defaultValue="10:00">
                               <SelectTrigger className="w-24">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="08:00">8:00 AM</SelectItem>
+                                <SelectItem value="closed">Closed</SelectItem>
                                 <SelectItem value="09:00">9:00 AM</SelectItem>
                                 <SelectItem value="10:00">10:00 AM</SelectItem>
                               </SelectContent>
                             </Select>
                             <span>to</span>
-                            <Select defaultValue="17:00">
+                            <Select defaultValue="15:00">
                               <SelectTrigger className="w-24">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="17:00">5:00 PM</SelectItem>
-                                <SelectItem value="18:00">6:00 PM</SelectItem>
-                                <SelectItem value="19:00">7:00 PM</SelectItem>
+                                <SelectItem value="closed">Closed</SelectItem>
+                                <SelectItem value="15:00">3:00 PM</SelectItem>
+                                <SelectItem value="16:00">4:00 PM</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
-                      ))}
-                      <div className="flex items-center justify-between">
-                        <Label className="w-24">Saturday</Label>
-                        <div className="flex items-center gap-2">
-                          <Select defaultValue="10:00">
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="closed">Closed</SelectItem>
-                              <SelectItem value="09:00">9:00 AM</SelectItem>
-                              <SelectItem value="10:00">10:00 AM</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <span>to</span>
-                          <Select defaultValue="15:00">
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="closed">Closed</SelectItem>
-                              <SelectItem value="15:00">3:00 PM</SelectItem>
-                              <SelectItem value="16:00">4:00 PM</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="flex items-center justify-between">
+                          <Label className="w-24">Sunday</Label>
+                          <div className="flex items-center gap-2">
+                            <Select defaultValue="closed">
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="closed">Closed</SelectItem>
+                                <SelectItem value="10:00">10:00 AM</SelectItem>
+                                <SelectItem value="11:00">11:00 AM</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <span>to</span>
+                            <Select defaultValue="closed">
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="closed">Closed</SelectItem>
+                                <SelectItem value="14:00">2:00 PM</SelectItem>
+                                <SelectItem value="15:00">3:00 PM</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <Label className="w-24">Sunday</Label>
-                        <div className="flex items-center gap-2">
-                          <Select defaultValue="closed">
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="closed">Closed</SelectItem>
-                              <SelectItem value="10:00">10:00 AM</SelectItem>
-                              <SelectItem value="11:00">11:00 AM</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <span>to</span>
-                          <Select defaultValue="closed">
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="closed">Closed</SelectItem>
-                              <SelectItem value="14:00">2:00 PM</SelectItem>
-                              <SelectItem value="15:00">3:00 PM</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    ) : (
+                      <div className="rounded-lg border p-4 bg-muted/50 flex items-center">
+                        <Clock className="h-5 w-5 mr-2 text-primary" />
+                        <div>
+                          <h3 className="font-medium">Always Open</h3>
+                          <p className="text-sm text-muted-foreground">Your business is set to operate 24 hours a day, 7 days a week.</p>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                   <CardFooter className="flex justify-between">
                     <div className="flex items-center space-x-2">
-                      <Switch id="emergency" />
+                      <Switch id="emergency" defaultChecked={true} />
                       <Label htmlFor="emergency">24/7 Emergency Service Available</Label>
                     </div>
                     <Button>Save Changes</Button>
