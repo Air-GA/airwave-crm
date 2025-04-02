@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -90,7 +89,7 @@ const WorkOrders = () => {
     return matchesSearch && matchesStatus && matchesPriority && matchesDate && matchesTechnician && matchesUnassigned;
   });
   
-  const technicians = Array.from(
+  const availableTechnicians = Array.from(
     new Set(
       localWorkOrders
         .filter(order => order.technicianName)
@@ -134,28 +133,39 @@ const WorkOrders = () => {
     });
   };
   
-  const reassignWorkOrder = (workOrderId: string, technicianId: string) => {
+  const reassignWorkOrder = (workOrderId: string, technicianId: string | null) => {
     setLocalWorkOrders(prevOrders => 
       prevOrders.map(order => {
         if (order.id === workOrderId) {
-          const tech = technicians.find(t => t.id === technicianId);
-          return { 
-            ...order, 
-            technicianId: technicianId,
-            technicianName: tech ? tech.name : undefined,
-            status: technicianId ? 'scheduled' : 'pending'
-          };
+          if (technicianId) {
+            const tech = technicians.find(t => t.id === technicianId);
+            return { 
+              ...order, 
+              technicianId: technicianId,
+              technicianName: tech ? tech.name : undefined,
+              status: technicianId ? 'scheduled' : 'pending'
+            };
+          } else {
+            return {
+              ...order,
+              technicianId: undefined,
+              technicianName: undefined,
+              status: 'pending'
+            };
+          }
         }
         return order;
       })
     );
     
-    const tech = technicians.find(t => t.id === technicianId);
-    if (tech) {
-      toast({
-        title: "Work Order Reassigned",
-        description: `Work order #${workOrderId} has been assigned to ${tech.name}.`,
-      });
+    if (technicianId) {
+      const tech = technicians.find(t => t.id === technicianId);
+      if (tech) {
+        toast({
+          title: "Work Order Reassigned",
+          description: `Work order #${workOrderId} has been assigned to ${tech.name}.`,
+        });
+      }
     } else {
       toast({
         title: "Work Order Unassigned",
@@ -321,7 +331,7 @@ const WorkOrders = () => {
                         />
                         <label className="text-sm cursor-pointer flex-1">All Technicians</label>
                       </div>
-                      {technicians.map((technician) => (
+                      {availableTechnicians.map((technician) => (
                         <div 
                           key={technician} 
                           className="flex items-center space-x-2 rounded-md p-1 hover:bg-accent cursor-pointer"
@@ -486,17 +496,17 @@ interface WorkOrderCardProps {
   workOrder: WorkOrder;
   onCancel: (id: string) => void;
   onComplete: (id: string) => void;
-  onReassign: (id: string, technicianId: string) => void;
+  onReassign: (id: string, technicianId: string | null) => void;
 }
 
 const WorkOrderCard = ({ workOrder, onCancel, onComplete, onReassign }: WorkOrderCardProps) => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showReassignDialog, setShowReassignDialog] = useState(false);
-  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | undefined>(workOrder.technicianId);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(workOrder.technicianId || null);
 
   const handleReassign = () => {
-    onReassign(workOrder.id, selectedTechnicianId || '');
+    onReassign(workOrder.id, selectedTechnicianId);
     setShowReassignDialog(false);
   };
 
@@ -719,14 +729,14 @@ const WorkOrderCard = ({ workOrder, onCancel, onComplete, onReassign }: WorkOrde
               
               <div className="mt-4 space-y-4">
                 <Select 
-                  value={selectedTechnicianId} 
-                  onValueChange={setSelectedTechnicianId}
+                  value={selectedTechnicianId || undefined} 
+                  onValueChange={(value) => setSelectedTechnicianId(value || null)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a technician" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">-- Unassign --</SelectItem>
+                    <SelectItem value="unassign">-- Unassign --</SelectItem>
                     {technicians.map((tech) => (
                       <SelectItem key={tech.id} value={tech.id}>
                         {tech.name}
