@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { useToast } from "@/hooks/use-toast";
-import TechLocationMap from "@/components/schedule/TechLocationMap";
+import TechLocationMap from "@/components/maps/TechLocationMap";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
