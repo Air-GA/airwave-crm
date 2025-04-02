@@ -28,7 +28,9 @@ const TechLocationMap = () => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+  const scriptRef = useRef<HTMLScriptElement | null>(null);
 
   // Load API key from settings
   useEffect(() => {
@@ -38,15 +40,43 @@ const TechLocationMap = () => {
     }
   }, []);
 
+  // Clean up previous script if exists
+  const cleanupScript = () => {
+    if (scriptRef.current && document.head.contains(scriptRef.current)) {
+      document.head.removeChild(scriptRef.current);
+      scriptRef.current = null;
+    }
+    if (window.initMap) {
+      delete window.initMap;
+    }
+  };
+
   // Load Google Maps script
   useEffect(() => {
     const apiKey = googleMapsApiKey || manualApiKey;
-    if (!apiKey || isLoaded) return;
+    if (!apiKey) return;
 
+    // Reset state
+    setIsLoaded(false);
+    setError(null);
+    setMap(null);
+    markers.forEach(marker => marker.setMap(null));
+    setMarkers([]);
+    
+    // Clean up any existing script
+    cleanupScript();
+    
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
     script.async = true;
     script.defer = true;
+    scriptRef.current = script;
+    
+    // Define error handling
+    script.onerror = () => {
+      setError("Failed to load Google Maps API. Please check your API key.");
+      setIsLoaded(false);
+    };
     
     // Define the callback function
     window.initMap = () => {
@@ -56,10 +86,9 @@ const TechLocationMap = () => {
     document.head.appendChild(script);
     
     return () => {
-      document.head.removeChild(script);
-      delete window.initMap;
+      cleanupScript();
     };
-  }, [googleMapsApiKey, manualApiKey, isLoaded]);
+  }, [googleMapsApiKey, manualApiKey]);
 
   // Initialize map
   useEffect(() => {
@@ -119,8 +148,10 @@ const TechLocationMap = () => {
       });
 
       setMarkers(mapMarkers);
+      setError(null);
     } catch (error) {
       console.error("Error initializing Google Maps:", error);
+      setError("Error initializing map. Please check console for details.");
     }
   }, [isLoaded]);
 
@@ -131,9 +162,26 @@ const TechLocationMap = () => {
     };
   }, [markers]);
 
+  // Handle Google Maps API errors
+  useEffect(() => {
+    const handleMapError = (event: ErrorEvent) => {
+      if (event.message && event.message.includes('Google Maps JavaScript API error')) {
+        setError("Google Maps API error: Invalid or restricted API key. Please check your API key settings.");
+        setIsLoaded(false);
+      }
+    };
+
+    window.addEventListener('error', handleMapError);
+    
+    return () => {
+      window.removeEventListener('error', handleMapError);
+    };
+  }, []);
+
   const handleApiKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualApiKey) {
+      cleanupScript();
       setIsLoaded(false);
       // This will trigger the useEffect to reload the map
     }
@@ -141,13 +189,15 @@ const TechLocationMap = () => {
 
   return (
     <Card className="overflow-hidden">
-      {!googleMapsApiKey && !manualApiKey ? (
+      {((!googleMapsApiKey && !manualApiKey) || error) ? (
         <div className="p-4">
-          <Alert className="mb-4">
+          <Alert className="mb-4" variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Google Maps API Key Required</AlertTitle>
+            <AlertTitle>
+              {error ? "Map Error" : "Google Maps API Key Required"}
+            </AlertTitle>
             <AlertDescription>
-              Please enter a Google Maps API key to display the map. You can also add it in the Integrations settings tab.
+              {error || "Please enter a Google Maps API key to display the map. You can also add it in the Integrations settings tab."}
             </AlertDescription>
           </Alert>
           
