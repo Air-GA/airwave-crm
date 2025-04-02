@@ -8,7 +8,18 @@ import { Button } from "@/components/ui/button";
 import { technicians, workOrders } from "@/data/mockData";
 import { Calendar, Clock, MapPin, User, Briefcase, X } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
-import { DndContext, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { 
+  DndContext, 
+  DragEndEvent, 
+  MouseSensor, 
+  TouchSensor,
+  useSensor, 
+  useSensors, 
+  DragStartEvent,
+  DragOverlay,
+  useDraggable,
+  useDroppable 
+} from "@dnd-kit/core";
 import { toast } from "sonner";
 import { WorkOrder } from "@/types";
 import { 
@@ -22,6 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
+import { useToast } from "@/hooks/use-toast";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
@@ -31,16 +43,20 @@ const Dispatch = () => {
   const [currentTechnicianId, setCurrentTechnicianId] = useState<string | null>(null);
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const { toast: uiToast } = useToast();
   
   const mouseSensor = useSensor(MouseSensor, {
+    // Reduce the distance to start dragging for easier use
     activationConstraint: {
-      distance: 8,
+      distance: 5,
     },
   });
   
   const touchSensor = useSensor(TouchSensor, {
+    // Make touch interactions easier
     activationConstraint: {
-      delay: 200,
+      delay: 100,
       tolerance: 5,
     },
   });
@@ -65,8 +81,14 @@ const Dispatch = () => {
   const busyTechnicians = technicians.filter(tech => tech.status === 'busy').length;
   const offDutyTechnicians = technicians.filter(tech => tech.status === 'off-duty').length;
   
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveOrderId(active.id as string);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveOrderId(null);
     
     if (!over) return;
     
@@ -128,6 +150,11 @@ const Dispatch = () => {
       }
     );
     
+    uiToast({
+      title: "Assignment Successful",
+      description: `Work Order #${workOrder?.id} has been assigned to ${technician?.name}`,
+    });
+    
     // Close the modal
     setIsScheduleModalOpen(false);
   };
@@ -188,7 +215,11 @@ const Dispatch = () => {
           </Card>
         </div>
         
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <DndContext 
+          sensors={sensors} 
+          onDragEnd={handleDragEnd}
+          onDragStart={handleDragStart}
+        >
           <div className="grid gap-6">
             <Tabs defaultValue="list">
               <TabsList>
@@ -211,42 +242,11 @@ const Dispatch = () => {
                       {unassignedWorkOrders.length > 0 ? (
                         <div className="space-y-3 p-4">
                           {unassignedWorkOrders.map((order) => (
-                            <div 
+                            <DraggableWorkOrder 
                               key={order.id} 
-                              className="rounded-md border p-3 bg-card hover:border-primary cursor-grab active:cursor-grabbing"
-                              draggable="true"
-                              data-job-id={order.id}
-                              id={order.id}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <p className="font-medium">#{order.id} - {order.type}</p>
-                                <Badge
-                                  variant="outline"
-                                  className={`
-                                    ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
-                                    ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
-                                    ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
-                                    ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
-                                  `}
-                                >
-                                  {order.priority}
-                                </Badge>
-                              </div>
-                              <div className="space-y-1.5 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4 text-muted-foreground" />
-                                  <span>{order.customerName}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                                  <span className="truncate">{order.address}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  <span>{formatDate(new Date(order.scheduledDate))}</span>
-                                </div>
-                              </div>
-                            </div>
+                              order={order} 
+                              isActive={activeOrderId === order.id}
+                            />
                           ))}
                         </div>
                       ) : (
@@ -269,52 +269,13 @@ const Dispatch = () => {
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {technicians.map((technician) => (
-                        <div 
+                        <TechnicianDropTarget
                           key={technician.id}
-                          id={technician.id}
-                          className={`
-                            rounded-lg border p-3 cursor-pointer
-                            ${selectedTechnicianId === technician.id ? 'border-primary bg-primary/5' : ''}
-                            hover:border-primary hover:bg-primary/5
-                          `}
+                          technician={technician}
+                          isSelected={selectedTechnicianId === technician.id}
                           onClick={() => setSelectedTechnicianId(technician.id)}
-                        >
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-3">
-                              <div className={`
-                                h-2 w-2 rounded-full
-                                ${technician.status === 'available' ? 'bg-green-500' : ''}
-                                ${technician.status === 'busy' ? 'bg-amber-500' : ''}
-                                ${technician.status === 'off-duty' ? 'bg-gray-500' : ''}
-                              `} />
-                              <p className="font-medium">{technician.name}</p>
-                              <Badge
-                                variant="outline"
-                                className={`ml-auto
-                                  ${technician.status === 'available' ? 'bg-green-50 text-green-700 hover:bg-green-50' : ''}
-                                  ${technician.status === 'busy' ? 'bg-amber-50 text-amber-700 hover:bg-amber-50' : ''}
-                                  ${technician.status === 'off-duty' ? 'bg-gray-50 text-gray-700 hover:bg-gray-50' : ''}
-                                `}
-                              >
-                                {technician.status}
-                              </Badge>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {technician.specialties.join(', ')}
-                            </div>
-                            <div className="text-xs">
-                              <span className="font-medium">Assigned:</span> {
-                                draggedWorkOrders.filter(order => order.technicianId === technician.id).length
-                              } work orders
-                            </div>
-                            {technician.currentLocation && (
-                              <div className="text-xs truncate">
-                                <MapPin className="inline-block h-3 w-3 mr-1" />
-                                {technician.currentLocation.address}
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                          assignedCount={draggedWorkOrders.filter(order => order.technicianId === technician.id).length}
+                        />
                       ))}
                     </div>
 
@@ -451,6 +412,39 @@ const Dispatch = () => {
               </TabsContent>
             </Tabs>
           </div>
+
+          {/* Drag Overlay for visual feedback */}
+          <DragOverlay>
+            {activeOrderId ? (
+              <div className="rounded-md border p-3 bg-card shadow-md opacity-90 max-w-xs">
+                {(() => {
+                  const order = draggedWorkOrders.find(o => o.id === activeOrderId);
+                  if (!order) return null;
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium">#{order.id} - {order.type}</p>
+                        <Badge
+                          variant="outline"
+                          className={`
+                            ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
+                            ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
+                            ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
+                            ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
+                          `}
+                        >
+                          {order.priority}
+                        </Badge>
+                      </div>
+                      <div className="text-sm">
+                        {order.customerName}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
 
         {/* Enhanced Schedule Modal with Technician Schedule View */}
@@ -577,6 +571,118 @@ const Dispatch = () => {
         </Dialog>
       </div>
     </MainLayout>
+  );
+};
+
+// Draggable Work Order Component
+interface DraggableWorkOrderProps {
+  order: WorkOrder;
+  isActive: boolean;
+}
+
+const DraggableWorkOrder = ({ order, isActive }: DraggableWorkOrderProps) => {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: order.id,
+  });
+  
+  return (
+    <div 
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`rounded-md border p-3 bg-card hover:border-primary ${isActive ? 'opacity-50' : ''} cursor-grab active:cursor-grabbing`}
+      style={{ touchAction: 'none' }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="font-medium">#{order.id} - {order.type}</p>
+        <Badge
+          variant="outline"
+          className={`
+            ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
+            ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
+            ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
+            ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
+          `}
+        >
+          {order.priority}
+        </Badge>
+      </div>
+      <div className="space-y-1.5 text-sm">
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span>{order.customerName}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <span className="truncate">{order.address}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span>{formatDate(new Date(order.scheduledDate))}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Technician Drop Target Component
+interface TechnicianDropTargetProps {
+  technician: { id: string; name: string; status: string; currentLocation?: any; specialties: string[] };
+  isSelected: boolean;
+  onClick: () => void;
+  assignedCount: number;
+}
+
+const TechnicianDropTarget = ({ technician, isSelected, onClick, assignedCount }: TechnicianDropTargetProps) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: technician.id,
+  });
+  
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`
+        rounded-lg border p-3 cursor-pointer
+        ${isSelected ? 'border-primary bg-primary/5' : ''}
+        ${isOver ? 'border-primary border-dashed bg-primary/5' : ''}
+        hover:border-primary hover:bg-primary/5
+      `}
+      onClick={onClick}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className={`
+            h-2 w-2 rounded-full
+            ${technician.status === 'available' ? 'bg-green-500' : ''}
+            ${technician.status === 'busy' ? 'bg-amber-500' : ''}
+            ${technician.status === 'off-duty' ? 'bg-gray-500' : ''}
+          `} />
+          <p className="font-medium">{technician.name}</p>
+          <Badge
+            variant="outline"
+            className={`ml-auto
+              ${technician.status === 'available' ? 'bg-green-50 text-green-700 hover:bg-green-50' : ''}
+              ${technician.status === 'busy' ? 'bg-amber-50 text-amber-700 hover:bg-amber-50' : ''}
+              ${technician.status === 'off-duty' ? 'bg-gray-50 text-gray-700 hover:bg-gray-50' : ''}
+            `}
+          >
+            {technician.status}
+          </Badge>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {technician.specialties.join(', ')}
+        </div>
+        <div className="text-xs">
+          <span className="font-medium">Assigned:</span> {assignedCount} work orders
+        </div>
+        {technician.currentLocation && (
+          <div className="text-xs truncate">
+            <MapPin className="inline-block h-3 w-3 mr-1" />
+            {technician.currentLocation.address}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
