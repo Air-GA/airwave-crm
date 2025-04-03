@@ -21,15 +21,53 @@ if (!supabaseUrl || !supabaseAnonKey) {
   // Create a client with fallback values (will fail gracefully)
   supabaseClient = createClient<Database>(
     fallbackUrl,
-    fallbackKey
+    fallbackKey,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+      global: {
+        fetch: (...args) => fetch(...args),
+      },
+    }
   );
 } else {
   // Create a single supabase client for interacting with your database
   supabaseClient = createClient<Database>(
     supabaseUrl,
-    supabaseAnonKey
+    supabaseAnonKey,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+      global: {
+        fetch: (...args) => fetch(...args),
+      },
+    }
   );
 }
 
+// Add extended helper methods
+const supabase = {
+  ...supabaseClient,
+  
+  // Helper to convert customer data to DB format
+  formatCustomerForDb: (customer: any) => {
+    return {
+      id: customer.id,
+      name: customer.name,
+      email: customer.email || null,
+      phone: customer.phone || null,
+      address: customer.address || null,
+      service_address: customer.serviceAddress || null,
+      bill_address: customer.billAddress || null,
+      type: customer.type || 'residential',
+      created_at: customer.createdAt || new Date().toISOString()
+    };
+  }
+};
+
 // Export the initialized client
-export const supabase = supabaseClient;
+export { supabase };

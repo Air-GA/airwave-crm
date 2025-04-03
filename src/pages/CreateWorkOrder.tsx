@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
@@ -134,6 +133,8 @@ const CreateWorkOrder = () => {
       status: "pending",
       customerId: customerId || undefined,
       customerName: data.customerName,
+      phoneNumber: data.phoneNumber,
+      email: data.email,
       address: data.address,
       type: workOrderType,
       description: data.description,

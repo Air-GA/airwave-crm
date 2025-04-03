@@ -1,6 +1,6 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { WorkOrder } from "@/types";
+import { WorkOrder, Customer } from "@/types";
 import { create } from "zustand";
 import { supabase } from '@/lib/supabase';
 import { 
@@ -10,6 +10,7 @@ import {
   completeMockWorkOrder, 
   markWorkOrderPendingCompletion
 } from "./mockService";
+import { customers as mockCustomers } from "@/data/mockData";
 
 // Store for Work Order state management
 interface WorkOrderState {
@@ -28,6 +29,27 @@ export const useWorkOrderStore = create<WorkOrderState>((set) => ({
   updateWorkOrder: (workOrder) => set((state) => ({
     workOrders: state.workOrders.map(wo => 
       wo.id === workOrder.id ? workOrder : wo
+    )
+  }))
+}));
+
+// Customer store for managing customers
+interface CustomerState {
+  customers: Customer[];
+  setCustomers: (customers: Customer[]) => void;
+  addCustomer: (customer: Customer) => void;
+  updateCustomer: (customer: Customer) => void;
+}
+
+export const useCustomerStore = create<CustomerState>((set) => ({
+  customers: mockCustomers,
+  setCustomers: (customers) => set({ customers }),
+  addCustomer: (customer) => set((state) => ({
+    customers: [...state.customers, customer]
+  })),
+  updateCustomer: (customer) => set((state) => ({
+    customers: state.customers.map(c => 
+      c.id === customer.id ? customer : c
     )
   }))
 }));
@@ -149,7 +171,56 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
   };
   
   try {
-    // Try to save to Supabase first
+    // Check if this is a new customer
+    const { customers } = useCustomerStore.getState();
+    let existingCustomer = customers.find(c => c.id === workOrderData.customerId);
+    
+    // If customerId exists but we couldn't find the customer, or if no customerId is provided
+    // but we have customer information, create a new customer
+    if ((!existingCustomer && workOrderData.customerId) || 
+        (!workOrderData.customerId && workOrderData.customerName)) {
+      
+      // Create new customer with data from work order
+      const newCustomerId = workOrderData.customerId || uuidv4();
+      
+      const newCustomer: Customer = {
+        id: newCustomerId,
+        name: workOrderData.customerName || "Unknown Customer",
+        email: workOrderData.email || "",
+        phone: workOrderData.phoneNumber || "",
+        address: workOrderData.address || "",
+        serviceAddress: workOrderData.address || "",
+        billAddress: workOrderData.address || "",
+        createdAt: createdAt,
+        type: "residential" // Default
+      };
+      
+      // Update customerId in the work order
+      newWorkOrder.customerId = newCustomerId;
+      
+      // Add to customer store
+      useCustomerStore.getState().addCustomer(newCustomer);
+      
+      // Try to save to Supabase if possible
+      try {
+        await supabase.from('customers').insert({
+          id: newCustomer.id,
+          name: newCustomer.name,
+          email: newCustomer.email,
+          phone: newCustomer.phone,
+          address: newCustomer.address,
+          service_address: newCustomer.serviceAddress,
+          bill_address: newCustomer.billAddress,
+          created_at: newCustomer.createdAt,
+          type: newCustomer.type
+        }).throwOnError();
+      } catch (error) {
+        console.error("Error saving new customer to Supabase:", error);
+        // Fall back silently - we already saved to local store
+      }
+    }
+    
+    // Try to save work order to Supabase first
     try {
       const dbRecord = transformWorkOrderToDb(newWorkOrder);
       // Use type assertion to bypass strict TypeScript checking
