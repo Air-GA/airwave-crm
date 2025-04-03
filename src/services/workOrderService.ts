@@ -1,9 +1,26 @@
-
 import { WorkOrder, Customer } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
 import { customers as mockCustomers, workOrders as mockWorkOrders } from '@/data/mockData';
 import { completeMockWorkOrder, markWorkOrderPendingCompletion } from './mockService';
+import { create } from 'zustand';
+
+// Create a work order store for state management
+interface WorkOrderStore {
+  workOrders: WorkOrder[];
+  setWorkOrders: (workOrders: WorkOrder[]) => void;
+  updateWorkOrder: (updatedOrder: WorkOrder) => void;
+}
+
+export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
+  workOrders: [],
+  setWorkOrders: (workOrders) => set({ workOrders }),
+  updateWorkOrder: (updatedOrder) => set((state) => ({
+    workOrders: state.workOrders.map((order) => 
+      order.id === updatedOrder.id ? updatedOrder : order
+    ),
+  })),
+}));
 
 // Function to create a customer from work order data
 export async function createCustomerFromWorkOrder(workOrder: Partial<WorkOrder>): Promise<Customer> {
@@ -90,6 +107,8 @@ export async function getWorkOrders(): Promise<WorkOrder[]> {
   // Fall back to mock data or localStorage
   return JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
 }
+
+export const fetchWorkOrders = getWorkOrders;
 
 export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<WorkOrder> {
   const newWorkOrder: WorkOrder = {
@@ -365,4 +384,59 @@ export async function markOrderPendingCompletion(workOrderId: string, pendingRea
     console.error("Error marking work order as pending completion in mock service:", err);
     return null;
   }
+}
+
+/**
+ * Assign a work order to a technician
+ * @param workOrderId The ID of the work order
+ * @param technicianId The ID of the technician
+ * @param technicianName The name of the technician
+ * @param scheduledDate The date the work order is scheduled for
+ * @returns The updated work order
+ */
+export async function assignWorkOrder(
+  workOrderId: string, 
+  technicianId: string, 
+  technicianName: string, 
+  scheduledDate: string
+): Promise<WorkOrder> {
+  const updatedOrder = await updateWorkOrder(workOrderId, {
+    technicianId,
+    technicianName,
+    scheduledDate,
+    status: 'scheduled'
+  });
+  
+  if (!updatedOrder) {
+    throw new Error(`Failed to assign work order ${workOrderId} to technician ${technicianId}`);
+  }
+  
+  // Update the store
+  const store = useWorkOrderStore.getState();
+  store.updateWorkOrder(updatedOrder);
+  
+  return updatedOrder;
+}
+
+/**
+ * Unassign a work order from a technician
+ * @param workOrderId The ID of the work order
+ * @returns The updated work order
+ */
+export async function unassignWorkOrder(workOrderId: string): Promise<WorkOrder> {
+  const updatedOrder = await updateWorkOrder(workOrderId, {
+    technicianId: undefined,
+    technicianName: undefined,
+    status: 'pending'
+  });
+  
+  if (!updatedOrder) {
+    throw new Error(`Failed to unassign work order ${workOrderId}`);
+  }
+  
+  // Update the store
+  const store = useWorkOrderStore.getState();
+  store.updateWorkOrder(updatedOrder);
+  
+  return updatedOrder;
 }

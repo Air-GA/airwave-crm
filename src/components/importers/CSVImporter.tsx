@@ -1,400 +1,214 @@
-import { useState, useRef, useCallback } from "react";
-import Papa from 'papaparse';
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Upload, FileWarning, Table as TableIcon, CheckCircle } from "lucide-react";
-import { Customer } from "@/types";
-import { processCustomerImport } from "@/services/importService";
+import { Card } from "@/components/ui/card";
+import { Upload } from "lucide-react";
+import Papa from "papaparse";
+import { Customer, WorkOrder } from "@/types";
+import { v4 as uuidv4 } from 'uuid';
+import { importCustomers, importWorkOrders } from "@/services/importService";
+import { useToast } from "@/hooks/use-toast";
 
 interface CSVImporterProps {
-  type: "customers" | "workorders" | "inventory";
-  onImportStart: () => void;
-  onImportProgress: (current: number, total: number) => void;
-  onImportComplete: (count: number) => void;
+  type: "customers" | "work-orders" | "inventory";
+  onComplete: (items: any[], type: string) => void;
 }
 
-const formSchema = z.object({
-  file: z.instanceof(File),
-  columnMappings: z.record(z.string()),
-});
-
-type FormData = z.infer<typeof formSchema>;
-
-const CSVImporter = ({ 
-  type, 
-  onImportStart, 
-  onImportProgress,
-  onImportComplete 
-}: CSVImporterProps) => {
-  const [csvData, setCsvData] = useState<Array<Record<string, string>>>([]);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [fileSelected, setFileSelected] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const CSVImporter = ({ type, onComplete }: CSVImporterProps) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
   
-  const requiredFields = {
-    customers: ['name', 'phone', 'email', 'address', 'city', 'state', 'zip'],
-    workorders: ['customer', 'description', 'type', 'priority', 'status'],
-    inventory: ['name', 'sku', 'category', 'unit_price', 'quantity']
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      columnMappings: {},
-    },
-  });
   
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setFileError(null);
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+  
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
     
-    if (!file) {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFile(files[0]);
+    }
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFile(files[0]);
+    }
+  };
+  
+  const handleFile = (file: File) => {
+    if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
+      toast({
+        title: "Invalid file format",
+        description: "Please upload a CSV file",
+        variant: "destructive",
+      });
       return;
     }
     
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setFileError("Please select a CSV file.");
-      return;
-    }
-    
-    setFileSelected(file);
+    setIsProcessing(true);
     
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        if (results.data.length === 0) {
-          setFileError("The CSV file appears to be empty.");
-          return;
-        }
-        
-        if (results.errors.length > 0) {
-          setFileError("Error parsing CSV file. Please check the format.");
-          console.error("CSV parsing errors:", results.errors);
-          return;
-        }
-        
-        const headers = Object.keys(results.data[0] as object);
-        const data = results.data as Array<Record<string, string>>;
-        
-        setHeaders(headers);
-        setCsvData(data);
-        
-        form.setValue("file", file);
-        
-        setPreviewMode(true);
-        
-        const initialMappings: Record<string, string> = {};
-        
-        const requiredForType = requiredFields[type];
-        
-        requiredForType.forEach(field => {
-          const matchingHeader = headers.find(h => 
-            h.toLowerCase().includes(field) || 
-            field.includes(h.toLowerCase())
-          );
-          
-          if (matchingHeader) {
-            initialMappings[field] = matchingHeader;
-          }
-        });
-        
-        form.setValue("columnMappings", initialMappings);
+        processData(results.data);
+        setIsProcessing(false);
       },
       error: (error) => {
-        setFileError(`Error reading the CSV file: ${error.message}`);
-        console.error("CSV parsing error:", error);
+        console.error("Error parsing CSV:", error);
+        toast({
+          title: "Error parsing file",
+          description: "There was an error parsing the CSV file. Please check the format and try again.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
       }
     });
   };
   
-  const handleImport = useCallback(async (data: FormData) => {
-    const { columnMappings } = data;
-    
-    const requiredForType = requiredFields[type];
-    const missingFields = requiredForType.filter(field => !columnMappings[field]);
-    
-    if (missingFields.length > 0) {
-      setFileError(`Please map all required fields. Missing: ${missingFields.join(', ')}`);
+  const processData = async (data: any[]) => {
+    if (data.length === 0) {
+      toast({
+        title: "Empty file",
+        description: "The uploaded file doesn't contain any valid data.",
+        variant: "destructive",
+      });
       return;
     }
     
     try {
-      onImportStart();
-      
-      const processCustomerData = (customersData: any[]): Customer[] => {
-        return customersData.map(customer => ({
-          ...customer,
-          serviceAddresses: [
-            {
-              id: crypto.randomUUID(),
-              address: customer.serviceAddress || customer.address || '',
-              isPrimary: true
-            }
-          ]
-        }));
-      };
-      
       if (type === "customers") {
-        const customers = csvData.map(row => {
-          return {
-            id: crypto.randomUUID(),
-            name: row[columnMappings.name] || '',
-            email: row[columnMappings.email] || '',
-            phone: row[columnMappings.phone] || '',
-            serviceAddress: `${row[columnMappings.address] || ''}, ${row[columnMappings.city] || ''}, ${row[columnMappings.state] || ''} ${row[columnMappings.zip] || ''}`,
-            billAddress: row[columnMappings.billAddress] ? 
-              `${row[columnMappings.billAddress]}, ${row[columnMappings.billCity] || ''}, ${row[columnMappings.billState] || ''} ${row[columnMappings.billZip] || ''}` :
-              `${row[columnMappings.address] || ''}, ${row[columnMappings.city] || ''}, ${row[columnMappings.state] || ''} ${row[columnMappings.zip] || ''}`,
-            notes: row[columnMappings.notes] || '',
-            location: columnMappings.latitude && columnMappings.longitude ? {
-              lat: parseFloat(row[columnMappings.latitude]),
-              lng: parseFloat(row[columnMappings.longitude])
-            } : undefined
-          };
+        const processedCustomers = processCustomers(data);
+        const result = await importCustomers(processedCustomers);
+        onComplete(result, "customers");
+        
+        toast({
+          title: "Import successful",
+          description: `${result.length} customers have been imported successfully.`,
         });
+      } 
+      else if (type === "work-orders") {
+        const processedWorkOrders = processWorkOrders(data);
+        const result = await importWorkOrders(processedWorkOrders);
+        onComplete(result, "work-orders");
         
-        const batchSize = 50;
-        let imported = 0;
-        
-        for (let i = 0; i < customers.length; i += batchSize) {
-          const batch = customers.slice(i, i + batchSize);
-          await processCustomerImport(batch);
-          
-          imported += batch.length;
-          onImportProgress(imported, customers.length);
-          
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        onImportComplete(processCustomerData(customers));
-      } else if (type === "workorders") {
-        onImportComplete(csvData.length);
-      } else if (type === "inventory") {
-        onImportComplete(csvData.length);
+        toast({
+          title: "Import successful",
+          description: `${result.length} work orders have been imported successfully.`,
+        });
+      }
+      else {
+        // Handle other import types
+        toast({
+          title: "Import type not supported",
+          description: `Import of "${type}" is not yet supported.`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error(`Error during ${type} import:`, error);
-      setFileError(`Error importing data: ${(error as Error).message}`);
-      onImportComplete(0);
+      console.error("Import error:", error);
+      toast({
+        title: "Import failed",
+        description: "There was an error importing the data. Please check the console for details.",
+        variant: "destructive",
+      });
     }
-  }, [csvData, type, onImportStart, onImportProgress, onImportComplete]);
+  };
+  
+  const processCustomers = (data: any[]): Customer[] => {
+    return data.map(item => {
+      // Generate random coordinates near Georgia for the map view
+      const lat = 33.7490 + (Math.random() - 0.5) * 2;
+      const lng = -84.3880 + (Math.random() - 0.5) * 2;
+      
+      return {
+        id: uuidv4(),
+        name: item.name || item.Name || item.customer_name || item.CustomerName || "",
+        email: item.email || item.Email || "",
+        phone: item.phone || item.Phone || item.phone_number || item.PhoneNumber || "",
+        address: item.address || item.Address || "",
+        serviceAddress: item.serviceAddress || item.service_address || item.ServiceAddress || item.address || item.Address || "",
+        billAddress: item.billAddress || item.billing_address || item.BillingAddress || item.address || item.Address || "",
+        type: item.type || item.Type || item.customer_type || item.CustomerType || "residential",
+        createdAt: new Date().toISOString(),
+        serviceAddresses: [
+          {
+            id: uuidv4(),
+            address: item.serviceAddress || item.service_address || item.ServiceAddress || item.address || item.Address || "",
+            isPrimary: true
+          }
+        ],
+        notes: item.notes || item.Notes || "",
+        location: {
+          lat,
+          lng
+        }
+      };
+    });
+  };
+  
+  const processWorkOrders = (data: any[]): WorkOrder[] => {
+    return data.map(item => ({
+      id: item.id || uuidv4(),
+      customerId: item.customerId || item.customer_id || item.CustomerId || "",
+      customerName: item.customerName || item.customer_name || item.CustomerName || "",
+      address: item.address || item.Address || "",
+      status: item.status || item.Status || "pending",
+      priority: item.priority || item.Priority || "medium",
+      type: item.type || item.Type || "repair",
+      description: item.description || item.Description || "",
+      scheduledDate: item.scheduledDate || item.scheduled_date || item.ScheduledDate || new Date().toISOString(),
+      createdAt: item.createdAt || item.created_at || item.CreatedAt || new Date().toISOString(),
+      technicianId: item.technicianId || item.technician_id || item.TechnicianId || undefined,
+      technicianName: item.technicianName || item.technician_name || item.TechnicianName || undefined,
+      completedAt: item.completedAt || item.completed_at || item.CompletedAt || undefined,
+      notes: item.notes || item.Notes || []
+    }));
+  };
   
   return (
-    <div className="space-y-4">
-      {!previewMode ? (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-          <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-2 text-lg font-medium">Upload a CSV file</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Your CSV file should include columns for all required {type} data
-          </p>
-          
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".csv"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-          
-          <Button 
-            onClick={() => fileInputRef.current?.click()} 
-            variant="outline"
-            className="mt-4"
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            Select CSV File
-          </Button>
-          
-          {fileError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 flex items-center">
-              <FileWarning className="h-5 w-5 mr-2" />
-              {fileError}
-            </div>
-          )}
+    <Card
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`border-dashed border-2 p-6 text-center ${
+        isDragging ? "border-primary bg-primary/5" : ""
+      } transition-colors duration-200`}
+    >
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="rounded-full bg-primary/10 p-3">
+          <Upload className="h-8 w-8 text-primary" />
         </div>
-      ) : (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleImport)} className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium">Map CSV Columns</h3>
-                <p className="text-sm text-muted-foreground">
-                  Match your CSV columns to the required fields
-                </p>
-              </div>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={() => {
-                  setPreviewMode(false);
-                  setFileSelected(null);
-                  setCsvData([]);
-                  setHeaders([]);
-                }}
-              >
-                Change File
-              </Button>
-            </div>
-            
-            <div className="grid gap-4 md:grid-cols-2">
-              {requiredFields[type].map((field) => (
-                <FormField
-                  key={field}
-                  control={form.control}
-                  name={`columnMappings.${field}`}
-                  render={({ field: formField }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {field.charAt(0).toUpperCase() + field.slice(1).replace('_', ' ')}
-                        {requiredFields[type].includes(field) && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
-                      </FormLabel>
-                      <Select 
-                        onValueChange={formField.onChange}
-                        value={formField.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={`Select column for ${field}`} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {headers.map((header) => (
-                            <SelectItem key={header} value={header}>
-                              {header}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-            </div>
-            
-            {type === "customers" && (
-              <div>
-                <h4 className="text-sm font-medium mb-2">Optional Fields</h4>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {['notes', 'latitude', 'longitude'].map((field) => (
-                    <FormField
-                      key={field}
-                      control={form.control}
-                      name={`columnMappings.${field}`}
-                      render={({ field: formField }) => (
-                        <FormItem>
-                          <FormLabel>{field.charAt(0).toUpperCase() + field.slice(1)}</FormLabel>
-                          <Select 
-                            onValueChange={formField.onChange}
-                            value={formField.value || ""}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder={`Select column for ${field} (optional)`} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="">Not mapped</SelectItem>
-                              {headers.map((header) => (
-                                <SelectItem key={header} value={header}>
-                                  {header}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {fileError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 flex items-center">
-                <FileWarning className="h-5 w-5 mr-2" />
-                {fileError}
-              </div>
-            )}
-            
-            <div className="border rounded-lg">
-              <div className="p-3 bg-muted flex items-center">
-                <TableIcon className="h-4 w-4 mr-2" />
-                <h4 className="text-sm font-medium">CSV Preview</h4>
-              </div>
-              <div className="overflow-auto max-h-64">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {headers.slice(0, 5).map((header, index) => (
-                        <TableHead key={index}>{header}</TableHead>
-                      ))}
-                      {headers.length > 5 && (
-                        <TableHead>+{headers.length - 5} more columns</TableHead>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {csvData.slice(0, 5).map((row, rowIndex) => (
-                      <TableRow key={rowIndex}>
-                        {headers.slice(0, 5).map((header, colIndex) => (
-                          <TableCell key={colIndex}>{row[header]}</TableCell>
-                        ))}
-                        {headers.length > 5 && (
-                          <TableCell>...</TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <div className="p-3 border-t text-xs text-muted-foreground">
-                Showing {Math.min(5, csvData.length)} of {csvData.length} rows
-              </div>
-            </div>
-            
-            <div className="flex justify-end">
-              <Button type="submit" className="flex items-center">
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Import {csvData.length} {type}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      )}
-    </div>
+        <div>
+          <h3 className="text-lg font-semibold">Upload {type} CSV File</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Drag and drop your CSV file here, or click to select a file
+          </p>
+        </div>
+        <input
+          type="file"
+          id="csv-upload"
+          className="hidden"
+          accept=".csv"
+          onChange={handleFileChange}
+        />
+        <label htmlFor="csv-upload">
+          <Button variant="outline" disabled={isProcessing} asChild>
+            <span>Select CSV File</span>
+          </Button>
+        </label>
+      </div>
+    </Card>
   );
 };
 
