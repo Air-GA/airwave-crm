@@ -1,4 +1,3 @@
-
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +12,17 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { WorkOrder } from "@/types";
 import { fetchWorkOrders } from "@/services/workOrderService";
+import WorkOrderDetailsPanel from "@/components/workorders/WorkOrderDetailsPanel";
 
 interface TopBarProps {
   setSidebarOpen: (open: boolean) => void;
@@ -31,6 +37,7 @@ interface Notification {
   timestamp: string;
   isNew: boolean;
   requiredPermission: string;
+  relatedId?: string; // Add relatedId to track related work order or entity
 }
 
 const TopBar = ({ setSidebarOpen }: TopBarProps) => {
@@ -40,6 +47,8 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Fetch work orders and generate notifications
   useEffect(() => {
@@ -66,7 +75,8 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
               link: "/work-orders",
               timestamp: new Date().toISOString(),
               isNew: true,
-              requiredPermission: "canViewAllWorkOrders"
+              requiredPermission: "canViewAllWorkOrders",
+              relatedId: order.id // Add related work order ID
             }));
             
             setNotifications(prev => [...newNotifications, ...prev].slice(0, 10));
@@ -88,7 +98,8 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
               link: "/schedule",
               timestamp: new Date().toISOString(),
               isNew: true,
-              requiredPermission: "canDispatchTechnicians"
+              requiredPermission: "canDispatchTechnicians",
+              relatedId: order.id // Add related work order ID
             }));
             
             setNotifications(prev => [...scheduleNotifications, ...prev].slice(0, 10));
@@ -134,7 +145,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
     });
   };
 
-  const handleNotificationClick = (path: string, notificationId: string | number) => {
+  const handleNotificationClick = (path: string, notificationId: string | number, type: string, relatedId?: string) => {
     // Mark notification as read
     setNotifications(prev => 
       prev.map(notification => 
@@ -144,9 +155,45 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
       )
     );
     
-    // Navigate to the page
+    // For work order notifications, show details dialog instead of just navigating
+    if (type === "workorder" && relatedId) {
+      const workOrder = workOrders.find(wo => wo.id === relatedId);
+      if (workOrder) {
+        setSelectedWorkOrder(workOrder);
+        setIsDialogOpen(true);
+        return;
+      }
+    }
+    
+    // For schedule notifications, navigate to the schedule page on the specific date
+    if (type === "schedule" && relatedId) {
+      const workOrder = workOrders.find(wo => wo.id === relatedId);
+      if (workOrder && workOrder.scheduledDate) {
+        const scheduledDate = new Date(workOrder.scheduledDate);
+        const dateString = scheduledDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        
+        // Navigate to schedule with date parameter
+        navigate(`/schedule?date=${dateString}&tech=${workOrder.technicianId || ''}`);
+        toast.success("Viewing scheduled work order");
+        return;
+      }
+    }
+    
+    // Default navigation for other notification types
     navigate(path);
     toast.success("Navigating to notification");
+  };
+
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedWorkOrder(null);
+  };
+
+  const viewWorkOrderDetails = () => {
+    if (selectedWorkOrder) {
+      navigate(`/work-orders?id=${selectedWorkOrder.id}`);
+      setIsDialogOpen(false);
+    }
   };
 
   const filteredNotifications = getFilteredNotifications();
@@ -217,7 +264,12 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
                 filteredNotifications.map(notification => (
                   <DropdownMenuItem 
                     key={notification.id}
-                    onClick={() => handleNotificationClick(notification.link, notification.id)}
+                    onClick={() => handleNotificationClick(
+                      notification.link, 
+                      notification.id,
+                      notification.type,
+                      notification.relatedId
+                    )}
                     className={notification.isNew ? "bg-primary-50 font-medium" : ""}
                   >
                     <div className="flex flex-col">
@@ -270,6 +322,25 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           )}
         </div>
       </div>
+
+      {/* Work Order Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Work Order Details</DialogTitle>
+          </DialogHeader>
+          {selectedWorkOrder && (
+            <div className="space-y-4">
+              <WorkOrderDetailsPanel workOrder={selectedWorkOrder} />
+              <div className="flex justify-end">
+                <Button onClick={viewWorkOrderDetails}>
+                  View Full Details
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
