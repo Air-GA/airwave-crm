@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { fetchTechnicians } from "@/services/technicianService";
 import { fetchWorkOrders, useWorkOrderStore, updateWorkOrder, createWorkOrder } from "@/services/workOrderService";
 import { useToast } from "@/hooks/use-toast";
 import { SyncButton } from "@/components/SyncButton";
+import { syncWorkOrdersFromCRM } from "@/services/crmSyncService";  
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -39,8 +41,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Quick work order schema for the dialog
 const quickWorkOrderSchema = z.object({
@@ -61,6 +63,7 @@ const Schedule = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [isWorkOrderDetailOpen, setIsWorkOrderDetailOpen] = useState(false);
   const [isCreateWorkOrderOpen, setIsCreateWorkOrderOpen] = useState(false);
@@ -87,13 +90,50 @@ const Schedule = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      setSyncError(null);
+      console.log("Loading schedule data...");
+      
+      // Load technicians and work orders in parallel
       const [techData, ordersData] = await Promise.all([
-        fetchTechnicians(),
-        fetchWorkOrders()
+        fetchTechnicians().catch(error => {
+          console.error("Error fetching technicians:", error);
+          return [];
+        }),
+        fetchWorkOrders().catch(error => {
+          console.error("Error fetching work orders:", error);
+          return [];
+        })
       ]);
-      setTechnicians(techData);
-      setWorkOrders(ordersData); // Update the work order store
-      console.log("Loaded work orders:", ordersData.length);
+      
+      // Even if one of the requests failed, we can still update the UI with what we have
+      if (techData && techData.length > 0) {
+        console.log(`Loaded ${techData.length} technicians`);
+        setTechnicians(techData);
+      } else {
+        console.warn("No technicians data loaded");
+      }
+      
+      if (ordersData && ordersData.length > 0) {
+        console.log(`Loaded ${ordersData.length} work orders`);
+        setWorkOrders(ordersData);
+      } else {
+        console.warn("No work orders data loaded");
+        
+        // If we failed to load work orders from the regular fetch, attempt to sync from CRM
+        try {
+          console.log("Attempting to sync work orders from CRM...");
+          const syncedOrders = await syncWorkOrdersFromCRM();
+          if (syncedOrders && syncedOrders.length > 0) {
+            console.log(`Successfully synced ${syncedOrders.length} work orders from CRM`);
+            setWorkOrders(syncedOrders);
+          } else {
+            setSyncError("Unable to load work orders. Please try syncing manually.");
+          }
+        } catch (syncError) {
+          console.error("Error syncing work orders from CRM:", syncError);
+          setSyncError("Unable to load work orders. Please try syncing manually.");
+        }
+      }
     } catch (error) {
       console.error("Failed to load data:", error);
       toast({
@@ -111,21 +151,16 @@ const Schedule = () => {
   }, [toast]);
 
   // Sync function for work orders
-  const syncWorkOrders = async () => {
+  const handleSyncWorkOrders = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'http://localhost:3000'}/crm-sync/sync-work-orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        }
-      });
-      
-      if (!response.ok) throw new Error('Failed to sync work orders');
-      
-      await loadData(); // Reload data after sync
-      
-      return response.json();
+      const syncedOrders = await syncWorkOrdersFromCRM();
+      if (syncedOrders && syncedOrders.length > 0) {
+        setWorkOrders(syncedOrders);
+        setSyncError(null);
+        console.log(`Successfully synced ${syncedOrders.length} work orders`);
+        return { success: true, orders: syncedOrders };
+      }
+      return { success: false };
     } catch (error) {
       console.error("Error syncing work orders:", error);
       throw error;
@@ -273,7 +308,7 @@ const Schedule = () => {
             <p className="text-muted-foreground">Manage appointments and technician schedules</p>
           </div>
           <div className="flex gap-2">
-            <SyncButton onSync={syncWorkOrders} label="Work Orders" />
+            <SyncButton onSync={handleSyncWorkOrders} label="Work Orders" />
             <Button onClick={handleQuickCreate} variant="outline">
               <Plus className="mr-2 h-4 w-4" /> Quick Create
             </Button>
@@ -282,6 +317,12 @@ const Schedule = () => {
             </Button>
           </div>
         </div>
+        
+        {syncError && (
+          <Alert variant="destructive">
+            <AlertDescription>{syncError}</AlertDescription>
+          </Alert>
+        )}
         
         {loading ? (
           <div className="flex items-center justify-center h-64">

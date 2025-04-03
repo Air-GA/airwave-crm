@@ -4,13 +4,16 @@ import { WorkOrder, Technician } from '../types';
 import { toast } from '@/components/ui/use-toast';
 
 // Base URL for the Supabase Edge Function
-const CRM_SYNC_URL = `${import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321'}/functions/v1/crm-sync`;
+const CRM_SYNC_URL = `${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321'}/functions/v1/crm-sync`;
 
 /**
  * Fetch and sync technicians from the external CRM
  */
 export const syncTechniciansFromCRM = async (): Promise<Technician[]> => {
   try {
+    console.log("Attempting to sync technicians from CRM...");
+    console.log("Using CRM sync URL:", CRM_SYNC_URL);
+    
     // Since supabase client may not have functions property in the current setup
     // Use direct fetch to the edge function URL instead
     const response = await fetch(`${CRM_SYNC_URL}`, {
@@ -22,12 +25,16 @@ export const syncTechniciansFromCRM = async (): Promise<Technician[]> => {
       body: JSON.stringify({ action: 'sync-technicians' })
     });
     
-    const data = await response.json();
-    
+    // Check if the request was successful
     if (!response.ok) {
-      throw new Error(data.error || 'Failed to sync technicians');
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error response from sync technicians:", errorData);
+      throw new Error(errorData.error || `Failed to sync technicians: ${response.status} ${response.statusText}`);
     }
-
+    
+    const data = await response.json();
+    console.log("Successfully synced technicians:", data);
+    
     toast({
       title: "Sync Complete",
       description: `Successfully synced ${data.technicians?.length || 0} technicians from CRM`,
@@ -36,11 +43,20 @@ export const syncTechniciansFromCRM = async (): Promise<Technician[]> => {
     return data.technicians || [];
   } catch (error) {
     console.error("Error in syncTechniciansFromCRM:", error);
+    
+    // Provide more detailed error message
+    let errorMessage = "Could not sync technicians due to a network error";
+    if (error instanceof Error) {
+      errorMessage = `Sync failed: ${error.message}`;
+    }
+    
     toast({
       title: "Sync Failed",
-      description: "Could not sync technicians due to an unexpected error",
+      description: errorMessage,
       variant: "destructive",
     });
+    
+    // Return empty array to prevent further issues
     return [];
   }
 };
@@ -50,6 +66,25 @@ export const syncTechniciansFromCRM = async (): Promise<Technician[]> => {
  */
 export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
   try {
+    console.log("Attempting to sync work orders from CRM...");
+    console.log("Using CRM sync URL:", CRM_SYNC_URL);
+    
+    // Use mock data if we're in development and there's no Supabase connection
+    if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
+      console.log("Using mock data for work orders in development environment");
+      
+      // Import mock data dynamically to avoid bundling it in production
+      const { getWorkOrderMockData } = await import('../data/mockData');
+      const mockWorkOrders = getWorkOrderMockData();
+      
+      toast({
+        title: "Mock Sync Complete",
+        description: `Using ${mockWorkOrders.length} mock work orders (development mode)`,
+      });
+      
+      return mockWorkOrders;
+    }
+    
     // Since supabase client may not have functions property in the current setup
     // Use direct fetch to the edge function URL instead
     const response = await fetch(`${CRM_SYNC_URL}`, {
@@ -61,12 +96,16 @@ export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
       body: JSON.stringify({ action: 'sync-work-orders' })
     });
     
-    const data = await response.json();
-    
+    // Check if the request was successful
     if (!response.ok) {
-      throw new Error(data.error || 'Failed to sync work orders');
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error response from sync work orders:", errorData);
+      throw new Error(errorData.error || `Failed to sync work orders: ${response.status} ${response.statusText}`);
     }
-
+    
+    const data = await response.json();
+    console.log("Successfully synced work orders:", data);
+    
     toast({
       title: "Sync Complete",
       description: `Successfully synced ${data.workOrders?.length || 0} work orders from CRM`,
@@ -75,11 +114,20 @@ export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
     return data.workOrders?.map(mapWorkOrderFromDB) || [];
   } catch (error) {
     console.error("Error in syncWorkOrdersFromCRM:", error);
+    
+    // Provide more detailed error message
+    let errorMessage = "Could not sync work orders due to a network error";
+    if (error instanceof Error) {
+      errorMessage = `Sync failed: ${error.message}`;
+    }
+    
     toast({
       title: "Sync Failed",
-      description: "Could not sync work orders due to an unexpected error",
+      description: errorMessage,
       variant: "destructive",
     });
+    
+    // Return empty array to prevent further issues
     return [];
   }
 };
@@ -89,6 +137,20 @@ export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
  */
 export const pushWorkOrderUpdateToCRM = async (workOrder: WorkOrder): Promise<boolean> => {
   try {
+    console.log("Pushing work order update to CRM:", workOrder);
+    
+    // If we're in development with no Supabase, just simulate a successful update
+    if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
+      console.log("Development mode: Simulating successful work order update to CRM");
+      
+      toast({
+        title: "Update Successful",
+        description: "Work order was successfully updated (development mode)",
+      });
+      
+      return true;
+    }
+    
     // Since supabase client may not have functions property in the current setup
     // Use direct fetch to the edge function URL instead
     const response = await fetch(`${CRM_SYNC_URL}`, {
@@ -104,11 +166,15 @@ export const pushWorkOrderUpdateToCRM = async (workOrder: WorkOrder): Promise<bo
       })
     });
     
-    const data = await response.json();
-    
+    // Check if the request was successful
     if (!response.ok) {
-      throw new Error(data.error || 'Failed to update work order');
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error response from updating work order:", errorData);
+      throw new Error(errorData.error || `Failed to update work order: ${response.status} ${response.statusText}`);
     }
+    
+    const data = await response.json();
+    console.log("Successfully updated work order in CRM:", data);
 
     toast({
       title: "Update Successful",
@@ -118,11 +184,19 @@ export const pushWorkOrderUpdateToCRM = async (workOrder: WorkOrder): Promise<bo
     return true;
   } catch (error) {
     console.error("Error in pushWorkOrderUpdateToCRM:", error);
+    
+    // Provide more detailed error message
+    let errorMessage = "Could not update work order due to a network error";
+    if (error instanceof Error) {
+      errorMessage = `Update failed: ${error.message}`;
+    }
+    
     toast({
       title: "Update Failed",
-      description: "Could not update work order in CRM due to an unexpected error",
+      description: errorMessage,
       variant: "destructive",
     });
+    
     return false;
   }
 };
@@ -132,6 +206,20 @@ export const pushWorkOrderUpdateToCRM = async (workOrder: WorkOrder): Promise<bo
  */
 export const pushTechnicianUpdateToCRM = async (technician: Technician): Promise<boolean> => {
   try {
+    console.log("Pushing technician update to CRM:", technician);
+    
+    // If we're in development with no Supabase, just simulate a successful update
+    if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
+      console.log("Development mode: Simulating successful technician update to CRM");
+      
+      toast({
+        title: "Update Successful",
+        description: "Technician was successfully updated (development mode)",
+      });
+      
+      return true;
+    }
+    
     // Map the technician to the format expected by the CRM
     const techForCRM = {
       id: technician.id,
@@ -160,11 +248,15 @@ export const pushTechnicianUpdateToCRM = async (technician: Technician): Promise
       })
     });
     
-    const data = await response.json();
-    
+    // Check if the request was successful
     if (!response.ok) {
-      throw new Error(data.error || 'Failed to update technician');
+      const errorData = await response.json().catch(() => ({}));
+      console.error("Error response from updating technician:", errorData);
+      throw new Error(errorData.error || `Failed to update technician: ${response.status} ${response.statusText}`);
     }
+    
+    const data = await response.json();
+    console.log("Successfully updated technician in CRM:", data);
 
     toast({
       title: "Update Successful",
@@ -174,11 +266,19 @@ export const pushTechnicianUpdateToCRM = async (technician: Technician): Promise
     return true;
   } catch (error) {
     console.error("Error in pushTechnicianUpdateToCRM:", error);
+    
+    // Provide more detailed error message
+    let errorMessage = "Could not update technician due to a network error";
+    if (error instanceof Error) {
+      errorMessage = `Update failed: ${error.message}`;
+    }
+    
     toast({
       title: "Update Failed",
-      description: "Could not update technician in CRM due to an unexpected error",
+      description: errorMessage,
       variant: "destructive",
     });
+    
     return false;
   }
 };
