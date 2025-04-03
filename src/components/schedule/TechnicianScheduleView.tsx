@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/date-utils";
-import { Calendar, Clock, MapPin, UserRound, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, UserRound, AlertCircle, CheckCircle2, Loader2, CalendarClock } from "lucide-react";
 import { Technician, WorkOrder } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -60,6 +60,12 @@ const TechnicianScheduleView = ({
     }
   };
 
+  // Get time description for the scheduled event
+  const getTimeDescription = (date: string) => {
+    const scheduledTime = new Date(date);
+    return formatDate(scheduledTime, { timeOnly: true });
+  };
+
   const handleCardClick = (order: WorkOrder) => {
     if (onWorkOrderClick) {
       onWorkOrderClick(order);
@@ -82,7 +88,8 @@ const TechnicianScheduleView = ({
             />
             <h3 className="text-lg font-semibold">{technician.name}'s Schedule</h3>
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CalendarClock className="h-4 w-4" />
             {formatDate(selectedDate)}
           </div>
         </div>
@@ -98,14 +105,24 @@ const TechnicianScheduleView = ({
           {filteredWorkOrders.map((order) => (
             <Card 
               key={order.id} 
-              className={`border border-border ${onWorkOrderClick ? 'cursor-pointer hover:border-primary hover:shadow-sm transition-all' : ''}`}
+              className={`border ${
+                order.status === "scheduled" ? "border-sky-200 bg-sky-50/30" : 
+                order.status === "in-progress" ? "border-blue-200 bg-blue-50/30" :
+                order.status === "completed" ? "border-green-200 bg-green-50/30" :
+                order.status === "pending-completion" ? "border-amber-200 bg-amber-50/30" :
+                order.status === "cancelled" ? "border-red-200 bg-red-50/30" :
+                "border-border"
+              } ${onWorkOrderClick ? 'cursor-pointer hover:border-primary hover:shadow-sm transition-all' : ''}`}
               onClick={() => handleCardClick(order)}
             >
               <CardHeader className="p-3 pb-0">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium">
-                    {formatDate(new Date(order.scheduledDate), { timeOnly: true })}
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">
+                      {getTimeDescription(order.scheduledDate)}
+                    </CardTitle>
+                  </div>
                   {getStatusBadge(order)}
                 </div>
               </CardHeader>
@@ -164,6 +181,7 @@ const TechnicianScheduleView = ({
         <div className="rounded-lg border border-dashed p-4 text-center text-muted-foreground">
           <Calendar className="mx-auto h-8 w-8 opacity-50" />
           <p className="mt-2 text-sm">No appointments scheduled for this date</p>
+          <p className="text-xs mt-1">Select another date or technician</p>
         </div>
       )}
     </div>
