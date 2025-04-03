@@ -1,9 +1,9 @@
-
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -21,11 +21,49 @@ interface TopBarProps {
 const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { userRole, permissions } = useAuth();
   
+  const getFilteredNotifications = () => {
+    const allNotifications = [
+      {
+        id: 1,
+        title: "Work Order #wo7 Updated",
+        description: "Status changed to \"In Progress\"",
+        type: "workorder",
+        link: "/work-orders",
+        requiredPermission: "canViewAllWorkOrders"
+      },
+      {
+        id: 2,
+        title: "Inventory Alert",
+        description: "Refrigerant R-410A is low on stock",
+        type: "inventory",
+        link: "/inventory",
+        requiredPermission: "canDispatchTechnicians"
+      },
+      {
+        id: 3,
+        title: "Appointment Reminder",
+        description: "Service appointment at Midtown Office Plaza in 2 hours",
+        type: "schedule",
+        link: "/schedule",
+        requiredPermission: "canViewAllWorkOrders"
+      }
+    ];
+
+    // Filter notifications based on user permissions
+    return allNotifications.filter(notification => {
+      if (!permissions) return false;
+      return permissions[notification.requiredPermission as keyof typeof permissions];
+    });
+  };
+
   const handleNotificationClick = (path: string) => {
     navigate(path);
     toast.success("Navigating to notification");
   };
+
+  const filteredNotifications = getFilteredNotifications();
 
   return (
     <header className="border-b bg-card shadow-sm">
@@ -78,37 +116,46 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Bell className="h-5 w-5" />
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">3</span>
+                {filteredNotifications.length > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                    {filteredNotifications.length}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleNotificationClick("/work-orders")}>
-                <div className="flex flex-col">
-                  <span className="font-medium">Work Order #wo7 Updated</span>
-                  <span className="text-xs text-muted-foreground">Status changed to "In Progress"</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotificationClick("/inventory")}>
-                <div className="flex flex-col">
-                  <span className="font-medium">Inventory Alert</span>
-                  <span className="text-xs text-muted-foreground">Refrigerant R-410A is low on stock</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNotificationClick("/schedule")}>
-                <div className="flex flex-col">
-                  <span className="font-medium">Appointment Reminder</span>
-                  <span className="text-xs text-muted-foreground">Service appointment at Midtown Office Plaza in 2 hours</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="cursor-pointer text-center text-sm font-medium text-primary"
-                onClick={() => navigate("/notifications")}
-              >
-                View all notifications
-              </DropdownMenuItem>
+              {filteredNotifications.length > 0 ? (
+                filteredNotifications.map(notification => (
+                  <DropdownMenuItem 
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification.link)}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{notification.title}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {notification.description}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>
+                  No notifications available
+                </DropdownMenuItem>
+              )}
+              {filteredNotifications.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-center text-sm font-medium text-primary"
+                    onClick={() => navigate("/notifications")}
+                  >
+                    View all notifications
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           
