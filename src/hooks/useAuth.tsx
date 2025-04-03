@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -34,7 +35,6 @@ interface AuthContextType {
   login: (role: UserRole, createProfile?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   createUserProfile: (userId: string, role: UserRole, email: string, name?: string) => Promise<UserProfile | null>;
-  addUser: (email: string, role: UserRole, name?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -220,35 +220,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw error;
     }
   };
-  
-  // New function to add a user
-  const addUser = async (email: string, role: UserRole, name?: string): Promise<void> => {
-    try {
-      if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
-        throw new Error("You don't have permission to add users");
-      }
-      
-      // For a demo app - simulate user creation
-      console.log(`Adding user with email: ${email}, role: ${role}, name: ${name || 'Not provided'}`);
-      
-      // Generate a random user ID for the demo
-      const newUserId = `demo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      
-      // Create user profile
-      await createUserProfile(
-        newUserId, 
-        role, 
-        email,
-        name || `${role.charAt(0).toUpperCase() + role.slice(1)} User`
-      );
-      
-      // In a real app with Supabase, you would use supabase.auth.admin.createUser
-      // or equivalent endpoint to create the actual user account
-    } catch (error) {
-      console.error('Error adding user:', error);
-      throw error;
-    }
-  };
 
   // For demo purposes, initialize with a default state
   // In a real app, this would check the Supabase session
@@ -295,8 +266,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       permissions, 
       login, 
       logout,
-      createUserProfile,
-      addUser
+      createUserProfile
     }}>
       {children}
     </AuthContext.Provider>
