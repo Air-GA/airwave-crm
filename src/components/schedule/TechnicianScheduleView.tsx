@@ -1,11 +1,11 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/date-utils";
 import { Calendar, Clock, MapPin, UserRound, AlertCircle, CheckCircle2, Loader2, CalendarClock } from "lucide-react";
 import { Technician, WorkOrder } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useWorkOrderStore } from "@/services/workOrderService";
 
 interface TechnicianScheduleViewProps {
   technician: Technician | null;
@@ -24,30 +24,46 @@ const TechnicianScheduleView = ({
   onWorkOrderClick,
   isLoading = false
 }: TechnicianScheduleViewProps) => {
-  // Filter work orders for this technician on the selected date
-  // If showAllAppointments is true, show all appointments for the date
-  const filteredWorkOrders = workOrders.filter(order => {
+  const storeWorkOrders = useWorkOrderStore(state => state.workOrders);
+  
+  const allWorkOrders = storeWorkOrders.length > 0 ? storeWorkOrders : workOrders;
+  
+  console.log("Available work orders:", allWorkOrders.length);
+  console.log("Technician:", technician?.id, technician?.name);
+  console.log("Selected date:", selectedDate);
+  
+  const filteredWorkOrders = allWorkOrders.filter(order => {
     const orderDate = new Date(order.scheduledDate);
     
-    // Debug logs to help diagnose why orders aren't showing
     console.log(`Filtering order: ${order.id}, date: ${orderDate}, selected date: ${selectedDate}`);
-    console.log(`Tech match: ${!technician || order.technicianId === technician.id}, Date match: ${
+    console.log(`Tech match: ${!technician || order.technicianId === technician?.id}, Date match: ${
       orderDate.getFullYear() === selectedDate.getFullYear() &&
       orderDate.getMonth() === selectedDate.getMonth() &&
       orderDate.getDate() === selectedDate.getDate()
     }`);
     
+    if (showAllAppointments) {
+      return (
+        orderDate.getFullYear() === selectedDate.getFullYear() &&
+        orderDate.getMonth() === selectedDate.getMonth() &&
+        orderDate.getDate() === selectedDate.getDate()
+      );
+    }
+    
     return (
-      (showAllAppointments || (!technician || order.technicianId === technician.id)) &&
+      order.technicianId === technician?.id &&
       orderDate.getFullYear() === selectedDate.getFullYear() &&
       orderDate.getMonth() === selectedDate.getMonth() &&
       orderDate.getDate() === selectedDate.getDate()
     );
   });
 
-  console.log(`Total work orders: ${workOrders.length}, Filtered: ${filteredWorkOrders.length}`);
+  console.log(`Total work orders: ${allWorkOrders.length}, Filtered: ${filteredWorkOrders.length}`);
+  
+  filteredWorkOrders.forEach(order => {
+    console.log(`Filtered order: ${order.id}, technician: ${order.technicianId}, date: ${order.scheduledDate}`);
+  });
 
-  // Sort by scheduled time
   filteredWorkOrders.sort((a, b) => 
     new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
   );
@@ -71,7 +87,6 @@ const TechnicianScheduleView = ({
     }
   };
 
-  // Get time description for the scheduled event
   const getTimeDescription = (date: string) => {
     const scheduledTime = new Date(date);
     return formatDate(scheduledTime, { timeOnly: true });

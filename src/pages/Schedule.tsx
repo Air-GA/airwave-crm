@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { Technician, WorkOrder } from "@/types";
 import { fetchTechnicians } from "@/services/technicianService";
 import { fetchWorkOrders, useWorkOrderStore, updateWorkOrder, createWorkOrder } from "@/services/workOrderService";
 import { useToast } from "@/hooks/use-toast";
+import { SyncButton } from "@/components/SyncButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -69,8 +69,8 @@ const Schedule = () => {
   
   // Use the work orders from the store
   const workOrders = useWorkOrderStore(state => state.workOrders);
+  const setWorkOrders = useWorkOrderStore(state => state.setWorkOrders);
   const updateWorkOrderInStore = useWorkOrderStore(state => state.updateWorkOrder);
-  const addWorkOrderToStore = useWorkOrderStore(state => state.setWorkOrders);
   
   // Default values for the quick work order form
   const defaultValues: Partial<QuickWorkOrderFormValues> = {
@@ -84,29 +84,53 @@ const Schedule = () => {
     defaultValues,
   });
 
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [techData, ordersData] = await Promise.all([
+        fetchTechnicians(),
+        fetchWorkOrders()
+      ]);
+      setTechnicians(techData);
+      setWorkOrders(ordersData); // Update the work order store
+      console.log("Loaded work orders:", ordersData.length);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load schedule data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [techData, ordersData] = await Promise.all([
-          fetchTechnicians(),
-          fetchWorkOrders()
-        ]);
-        setTechnicians(techData);
-      } catch (error) {
-        console.error("Failed to load data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load schedule data. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     loadData();
   }, [toast]);
+
+  // Sync function for work orders
+  const syncWorkOrders = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'http://localhost:3000'}/crm-sync/sync-work-orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to sync work orders');
+      
+      await loadData(); // Reload data after sync
+      
+      return response.json();
+    } catch (error) {
+      console.error("Error syncing work orders:", error);
+      throw error;
+    }
+  };
   
   // Filter work orders for the selected date, but preserve the original time
   const dateWorkOrders = workOrders.filter(order => {
@@ -137,7 +161,7 @@ const Schedule = () => {
     if (selectedWorkOrder) {
       try {
         // Refresh data after status change
-        await fetchWorkOrders();
+        await loadData();
         toast({
           title: "Success",
           description: `Work order status updated successfully`,
@@ -167,6 +191,7 @@ const Schedule = () => {
       
       if (updatedOrder) {
         updateWorkOrderInStore(updatedOrder);
+        await loadData(); // Reload data to reflect changes
         toast({
           title: "Success",
           description: `Work order unassigned successfully`,
@@ -217,7 +242,7 @@ const Schedule = () => {
       });
 
       // Refresh work orders
-      const updatedWorkOrders = await fetchWorkOrders();
+      await loadData();
       
       // Close the dialog
       setIsCreateWorkOrderOpen(false);
@@ -248,6 +273,7 @@ const Schedule = () => {
             <p className="text-muted-foreground">Manage appointments and technician schedules</p>
           </div>
           <div className="flex gap-2">
+            <SyncButton onSync={syncWorkOrders} label="Work Orders" />
             <Button onClick={handleQuickCreate} variant="outline">
               <Plus className="mr-2 h-4 w-4" /> Quick Create
             </Button>
@@ -341,6 +367,7 @@ const Schedule = () => {
                     selectedDate={date}
                     showAllAppointments={!selectedTechnician}
                     onWorkOrderClick={handleWorkOrderClick}
+                    isLoading={loading}
                   />
                 </CardContent>
               </Card>
