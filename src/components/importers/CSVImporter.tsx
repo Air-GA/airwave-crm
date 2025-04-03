@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,48 +58,56 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
     
     setIsProcessing(true);
     if (onImportStart) onImportStart();
-    
-    let rowCount = 0;
-    let totalRows = 0;
-    
-    // First pass to count total rows
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      preview: 1000, // Limit to prevent browser hang on huge files
-      complete: (results) => {
-        totalRows = results.data.length;
-        
-        // Second pass to actually process the data
-        Papa.parse(file, {
-          header: true,
-          skipEmptyLines: true,
-          step: (results) => {
-            rowCount++;
-            if (onImportProgress && totalRows > 0) {
-              onImportProgress(rowCount, totalRows);
-            }
-          },
-          complete: (results) => {
-            processData(results.data);
-            setIsProcessing(false);
-          },
-          error: (error) => {
-            console.error("Error parsing CSV:", error);
-            toast({
-              title: "Error parsing file",
-              description: "There was an error parsing the CSV file. Please check the format and try again.",
-              variant: "destructive",
-            });
-            setIsProcessing(false);
+
+    try {
+      // Single pass approach to simplify the process
+      console.log("Starting CSV import for file:", file.name);
+      
+      const processResults = (results: Papa.ParseResult<any>) => {
+        if (results.data.length === 0) {
+          toast({
+            title: "Empty file",
+            description: "The uploaded file doesn't contain any valid data.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        console.log(`CSV parsed successfully. Found ${results.data.length} rows.`);
+        processData(results.data);
+      };
+      
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: processResults,
+        error: (error: any) => {
+          console.error("Error parsing CSV:", error);
+          toast({
+            title: "Error parsing file",
+            description: "There was an error parsing the CSV file. Please check the format and try again.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+        },
+        step: (row: Papa.ParseStepResult<any>, parser: Papa.Parser) => {
+          // Update progress based on the bytes processed
+          if (onImportProgress && parser.streamer) {
+            const progress = Math.round((parser.streamer.bytesLoaded / file.size) * 100);
+            onImportProgress(parser.streamer.bytesLoaded, file.size);
           }
-        });
-      },
-      error: (error) => {
-        console.error("Error counting CSV rows:", error);
-        setIsProcessing(false);
-      }
-    });
+        }
+      });
+    } catch (error) {
+      console.error("CSV parsing error:", error);
+      toast({
+        title: "Import failed",
+        description: "Failed to process the CSV file.",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
   };
   
   const processData = async (data: any[]) => {
@@ -110,12 +117,16 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
         description: "The uploaded file doesn't contain any valid data.",
         variant: "destructive",
       });
+      setIsProcessing(false);
       return;
     }
     
     try {
+      console.log(`Processing ${data.length} rows of ${type} data...`);
+      
       if (type === "customers") {
         const processedCustomers = processCustomers(data);
+        console.log(`Processed ${processedCustomers.length} customer records`);
         const result = await importCustomers(processedCustomers);
         onComplete(result, "customers");
         
@@ -126,6 +137,7 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       } 
       else if (type === "work-orders") {
         const processedWorkOrders = processWorkOrders(data);
+        console.log(`Processed ${processedWorkOrders.length} work order records`);
         const result = await importWorkOrders(processedWorkOrders);
         onComplete(result, "work-orders");
         
@@ -136,6 +148,7 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       }
       else if (type === "inventory") {
         const processedInventory = processInventory(data);
+        console.log(`Processed ${processedInventory.length} inventory records`);
         const result = await importInventory(processedInventory);
         onComplete(result, "inventory");
         
@@ -152,6 +165,9 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
           variant: "destructive",
         });
       }
+      
+      setIsProcessing(false);
+      
     } catch (error) {
       console.error("Import error:", error);
       toast({
@@ -159,6 +175,7 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
         description: "There was an error importing the data. Please check the console for details.",
         variant: "destructive",
       });
+      setIsProcessing(false);
     }
   };
   
@@ -247,6 +264,11 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
           <p className="text-sm text-muted-foreground mt-1">
             Drag and drop your CSV file here, or click to select a file
           </p>
+          {!isProcessing && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Note: Data will be stored locally since no database is connected
+            </p>
+          )}
         </div>
         <input
           type="file"
@@ -257,7 +279,7 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
         />
         <label htmlFor="csv-upload">
           <Button variant="outline" disabled={isProcessing} asChild>
-            <span>Select CSV File</span>
+            <span>{isProcessing ? "Processing..." : "Select CSV File"}</span>
           </Button>
         </label>
       </div>
