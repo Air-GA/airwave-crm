@@ -22,18 +22,18 @@ export function LoginForm() {
     setIsLoading(true);
     
     try {
-      // In a real app, this would be a call to Supabase auth
-      // For demo purposes, we're just setting the role directly
       if (!role) {
         toast({
           title: "Error",
           description: "Please select a role",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
       
-      login(role as any);
+      // Login with the selected role and create a profile
+      await login(role as any, true);
       navigate('/');
       
       toast({
@@ -97,6 +97,7 @@ export function LoginForm() {
                 <SelectItem value="hr">HR</SelectItem>
                 <SelectItem value="tech">Technician</SelectItem>
                 <SelectItem value="customer">Customer</SelectItem>
+                <SelectItem value="user">General User</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -38,7 +38,7 @@ function App() {
               <Route path="/unauthorized" element={<Unauthorized />} />
 
               {/* Protected routes */}
-              <Route element={<RoleGuard allowedRoles={["user", "admin"]} />}>
+              <Route element={<RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]} />}>
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/work-orders" element={<WorkOrders />} />
                 <Route path="/work-orders/create" element={<CreateWorkOrder />} />
