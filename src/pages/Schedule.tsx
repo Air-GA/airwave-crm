@@ -7,20 +7,27 @@ import { Calendar as CalendarIcon, Clock, Plus, UserRound } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { formatDate } from "@/lib/date-utils";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
+import WorkOrderDetailsPanel from "@/components/workorders/WorkOrderDetailsPanel";
 import { Technician, WorkOrder } from "@/types";
 import { fetchTechnicians } from "@/services/technicianService";
-import { fetchWorkOrders, useWorkOrderStore } from "@/services/workOrderService";
+import { fetchWorkOrders, useWorkOrderStore, updateWorkOrder } from "@/services/workOrderService";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
 
 const Schedule = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  const [isWorkOrderDetailOpen, setIsWorkOrderDetailOpen] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // Use the work orders from the store
   const workOrders = useWorkOrderStore(state => state.workOrders);
+  const updateWorkOrderInStore = useWorkOrderStore(state => state.updateWorkOrder);
   
   useEffect(() => {
     const loadData = async () => {
@@ -63,6 +70,67 @@ const Schedule = () => {
   
   // Get the selected technician
   const selectedTechnician = technicians.find(tech => tech.id === selectedTechnicianId);
+
+  // Handle work order click to show details
+  const handleWorkOrderClick = (workOrder: WorkOrder) => {
+    setSelectedWorkOrder(workOrder);
+    setIsWorkOrderDetailOpen(true);
+  };
+
+  // Handle status update for work order
+  const handleWorkOrderStatusUpdate = async () => {
+    if (selectedWorkOrder) {
+      try {
+        // Refresh data after status change
+        await fetchWorkOrders();
+        toast({
+          title: "Success",
+          description: `Work order status updated successfully`,
+        });
+      } catch (error) {
+        console.error("Failed to update work order:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update work order status",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Handle unassign technician
+  const handleUnassignTechnician = async (workOrderId: string) => {
+    try {
+      const currentOrder = workOrders.find(order => order.id === workOrderId);
+      if (!currentOrder) return;
+
+      const updatedOrder = await updateWorkOrder(workOrderId, {
+        technicianId: undefined,
+        technicianName: undefined,
+        status: 'pending'
+      });
+      
+      if (updatedOrder) {
+        updateWorkOrderInStore(updatedOrder);
+        toast({
+          title: "Success",
+          description: `Work order unassigned successfully`,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to unassign work order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to unassign technician",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Navigate to create new appointment
+  const handleNewAppointment = () => {
+    navigate('/create-work-order');
+  };
   
   return (
     <MainLayout>
@@ -72,7 +140,7 @@ const Schedule = () => {
             <h1 className="text-3xl font-bold tracking-tight">Schedule</h1>
             <p className="text-muted-foreground">Manage appointments and technician schedules</p>
           </div>
-          <Button>
+          <Button onClick={handleNewAppointment}>
             <Plus className="mr-2 h-4 w-4" /> New Appointment
           </Button>
         </div>
@@ -160,12 +228,30 @@ const Schedule = () => {
                     workOrders={workOrders}
                     selectedDate={date}
                     showAllAppointments={!selectedTechnician}
+                    onWorkOrderClick={handleWorkOrderClick}
                   />
                 </CardContent>
               </Card>
             </div>
           </div>
         )}
+
+        {/* Work Order Detail Dialog */}
+        <Dialog open={isWorkOrderDetailOpen} onOpenChange={setIsWorkOrderDetailOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Work Order Details</DialogTitle>
+            </DialogHeader>
+            {selectedWorkOrder && (
+              <WorkOrderDetailsPanel 
+                workOrder={selectedWorkOrder}
+                onUnassign={handleUnassignTechnician} 
+                showCompletionOptions={true}
+                onStatusUpdate={handleWorkOrderStatusUpdate}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

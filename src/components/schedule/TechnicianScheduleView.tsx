@@ -11,6 +11,7 @@ interface TechnicianScheduleViewProps {
   workOrders: WorkOrder[];
   selectedDate: Date;
   showAllAppointments?: boolean;
+  onWorkOrderClick?: (workOrder: WorkOrder) => void;
 }
 
 const TechnicianScheduleView = ({
@@ -18,6 +19,7 @@ const TechnicianScheduleView = ({
   workOrders,
   selectedDate,
   showAllAppointments = false,
+  onWorkOrderClick
 }: TechnicianScheduleViewProps) => {
   // Filter work orders for this technician on the selected date
   // If showAllAppointments is true, show all appointments for the date
@@ -55,6 +57,12 @@ const TechnicianScheduleView = ({
     }
   };
 
+  const handleCardClick = (order: WorkOrder) => {
+    if (onWorkOrderClick) {
+      onWorkOrderClick(order);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {!showAllAppointments && technician && (
@@ -80,7 +88,11 @@ const TechnicianScheduleView = ({
       {filteredWorkOrders.length > 0 ? (
         <div className="space-y-3">
           {filteredWorkOrders.map((order) => (
-            <Card key={order.id} className="border border-border">
+            <Card 
+              key={order.id} 
+              className={`border border-border ${onWorkOrderClick ? 'cursor-pointer hover:border-primary hover:shadow-sm transition-all' : ''}`}
+              onClick={() => handleCardClick(order)}
+            >
               <CardHeader className="p-3 pb-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium">
