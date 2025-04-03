@@ -1,4 +1,3 @@
-
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +50,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Fetch work orders and generate notifications
   useEffect(() => {
     const loadWorkOrders = async () => {
       try {
@@ -60,13 +58,11 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
         
         const currentTime = new Date();
         if (lastFetchTime) {
-          // Find new or updated work orders since last fetch
           const newOrders = orders.filter(order => {
             const orderCreatedAt = new Date(order.createdAt);
             return orderCreatedAt > lastFetchTime;
           });
           
-          // Create notifications for new work orders
           if (newOrders.length > 0) {
             const newNotifications = newOrders.map((order, index) => ({
               id: `new-wo-${order.id}`,
@@ -77,13 +73,12 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
               timestamp: new Date().toISOString(),
               isNew: true,
               requiredPermission: "canViewAllWorkOrders",
-              relatedId: order.id // Add related work order ID
+              relatedId: order.id
             }));
             
             setNotifications(prev => [...newNotifications, ...prev].slice(0, 10));
           }
           
-          // Check for schedule changes
           const scheduledOrders = orders.filter(order => {
             return order.status === "scheduled" && 
                   order.technicianId && 
@@ -100,7 +95,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
               timestamp: new Date().toISOString(),
               isNew: true,
               requiredPermission: "canDispatchTechnicians",
-              relatedId: order.id // Add related work order ID
+              relatedId: order.id
             }));
             
             setNotifications(prev => [...scheduleNotifications, ...prev].slice(0, 10));
@@ -113,10 +108,8 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
       }
     };
     
-    // Initial load
     loadWorkOrders();
     
-    // Set up polling interval (every 60 seconds)
     const intervalId = setInterval(loadWorkOrders, 60000);
     
     return () => {
@@ -125,7 +118,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   }, [lastFetchTime]);
   
   const getFilteredNotifications = () => {
-    // If no real notifications exist yet, provide some sample ones
     const allNotifications = notifications.length > 0 ? notifications : [
       {
         id: 1,
@@ -139,7 +131,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
       }
     ];
 
-    // Filter notifications based on user permissions
     return allNotifications.filter(notification => {
       if (!permissions) return false;
       return permissions[notification.requiredPermission as keyof typeof permissions];
@@ -147,7 +138,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   };
 
   const handleNotificationClick = (path: string, notificationId: string | number, type: string, relatedId?: string) => {
-    // Mark notification as read
     setNotifications(prev => 
       prev.map(notification => 
         notification.id === notificationId 
@@ -156,36 +146,31 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
       )
     );
     
-    // For work order notifications, show details dialog instead of just navigating
+    const baseUrl = window.location.origin;
+    let targetUrl = `${baseUrl}${path}`;
+    
     if (type === "workorder" && relatedId) {
-      const workOrder = workOrders.find(wo => wo.id === relatedId);
-      if (workOrder) {
-        // Force dialog to open by setting states in correct order
-        setSelectedWorkOrder(workOrder);
-        setTimeout(() => {
-          setIsDialogOpen(true);
-        }, 50);
-        return;
-      }
+      targetUrl = `${baseUrl}/work-orders?id=${relatedId}`;
+      window.open(targetUrl, '_blank');
+      toast.success(`Opening work order #${relatedId} details in new window`);
+      return;
     }
     
-    // For schedule notifications, navigate to the schedule page on the specific date
     if (type === "schedule" && relatedId) {
       const workOrder = workOrders.find(wo => wo.id === relatedId);
       if (workOrder && workOrder.scheduledDate) {
         const scheduledDate = new Date(workOrder.scheduledDate);
-        const dateString = scheduledDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        const dateString = scheduledDate.toISOString().split('T')[0];
         
-        // Navigate to schedule with date parameter
-        navigate(`/schedule?date=${dateString}&tech=${workOrder.technicianId || ''}`);
-        toast.success(`Viewing scheduled work order #${workOrder.id}`);
+        targetUrl = `${baseUrl}/schedule?date=${dateString}&tech=${workOrder.technicianId || ''}`;
+        window.open(targetUrl, '_blank');
+        toast.success(`Opening schedule for work order #${workOrder.id} in new window`);
         return;
       }
     }
     
-    // Default navigation for other notification types
-    navigate(path);
-    toast.success("Navigating to notification");
+    window.open(`${baseUrl}${path}`, '_blank');
+    toast.success("Opening notification page in new window");
   };
 
   const closeDialog = () => {
@@ -195,7 +180,8 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
 
   const viewWorkOrderDetails = () => {
     if (selectedWorkOrder) {
-      navigate(`/work-orders?id=${selectedWorkOrder.id}`);
+      const baseUrl = window.location.origin;
+      window.open(`${baseUrl}/work-orders?id=${selectedWorkOrder.id}`, '_blank');
       setIsDialogOpen(false);
     }
   };
@@ -206,7 +192,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   return (
     <header className="border-b bg-card shadow-sm">
       <div className="flex h-16 items-center px-4">
-        {/* Mobile menu button */}
         <Button
           variant="ghost"
           size="icon"
@@ -216,7 +201,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           <Menu className="h-5 w-5" />
         </Button>
         
-        {/* Logo - centered and enlarged for mobile */}
         {isMobile ? (
           <div className="flex-1 flex justify-center">
             <img 
@@ -226,7 +210,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
             />
           </div>
         ) : (
-          /* Logo for desktop - added to the left side with larger size */
           <div className="mr-4">
             <img 
               src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
@@ -236,7 +219,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           </div>
         )}
         
-        {/* Search - hidden on mobile when logo is centered */}
         <div className={`${isMobile ? "hidden" : "flex-1"}`}>
           <div className="relative max-w-md">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -248,7 +230,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           </div>
         </div>
         
-        {/* Right side actions */}
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -274,7 +255,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
                       notification.type,
                       notification.relatedId
                     )}
-                    className={`cursor-pointer ${notification.isNew ? "bg-primary-50 font-medium" : ""}`}
+                    className={`cursor-pointer ${notification.isNew ? "bg-accent/20" : ""}`}
                   >
                     <div className="flex flex-col w-full">
                       <div className="flex items-center justify-between">
@@ -306,7 +287,9 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="cursor-pointer text-center text-sm font-medium text-primary"
-                    onClick={() => navigate("/notifications")}
+                    onClick={() => {
+                      window.open(`${window.location.origin}/notifications`, '_blank');
+                    }}
                   >
                     View all notifications
                   </DropdownMenuItem>
@@ -327,7 +310,6 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
         </div>
       </div>
 
-      {/* Work Order Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
         if (!open) closeDialog();
         setIsDialogOpen(open);
