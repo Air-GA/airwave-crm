@@ -1,3 +1,4 @@
+
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,8 +160,11 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
     if (type === "workorder" && relatedId) {
       const workOrder = workOrders.find(wo => wo.id === relatedId);
       if (workOrder) {
+        // Force dialog to open by setting states in correct order
         setSelectedWorkOrder(workOrder);
-        setIsDialogOpen(true);
+        setTimeout(() => {
+          setIsDialogOpen(true);
+        }, 50);
         return;
       }
     }
@@ -174,7 +178,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
         
         // Navigate to schedule with date parameter
         navigate(`/schedule?date=${dateString}&tech=${workOrder.technicianId || ''}`);
-        toast.success("Viewing scheduled work order");
+        toast.success(`Viewing scheduled work order #${workOrder.id}`);
         return;
       }
     }
@@ -270,9 +274,9 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
                       notification.type,
                       notification.relatedId
                     )}
-                    className={notification.isNew ? "bg-primary-50 font-medium" : ""}
+                    className={`cursor-pointer ${notification.isNew ? "bg-primary-50 font-medium" : ""}`}
                   >
-                    <div className="flex flex-col">
+                    <div className="flex flex-col w-full">
                       <div className="flex items-center justify-between">
                         <span className={`${notification.isNew ? 'font-medium text-primary' : 'font-medium'}`}>
                           {notification.title}
@@ -324,7 +328,10 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
       </div>
 
       {/* Work Order Details Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        if (!open) closeDialog();
+        setIsDialogOpen(open);
+      }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Work Order Details</DialogTitle>
