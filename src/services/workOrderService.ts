@@ -1,6 +1,7 @@
 
 import { supabase } from '../lib/supabase';
 import { WorkOrder } from '../types';
+import { create } from 'zustand';
 
 // Sample work order data for development/fallback
 const mockWorkOrders: WorkOrder[] = [
@@ -46,6 +47,26 @@ const mockWorkOrders: WorkOrder[] = [
   }
 ];
 
+// Interface for our store
+interface WorkOrderStore {
+  workOrders: WorkOrder[];
+  setWorkOrders: (workOrders: WorkOrder[]) => void;
+  updateWorkOrder: (updatedWorkOrder: WorkOrder) => void;
+  isInitialized: boolean;
+}
+
+// Create a Zustand store for work orders
+export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
+  workOrders: [],
+  setWorkOrders: (workOrders) => set({ workOrders, isInitialized: true }),
+  updateWorkOrder: (updatedWorkOrder) => set((state) => ({
+    workOrders: state.workOrders.map(order => 
+      order.id === updatedWorkOrder.id ? updatedWorkOrder : order
+    )
+  })),
+  isInitialized: false,
+}));
+
 // Map the Supabase schema to our application types
 const mapWorkOrderFromDB = (order: any): WorkOrder => {
   return {
@@ -89,20 +110,35 @@ const mapWorkOrderToDB = (order: WorkOrder) => {
 };
 
 export const fetchWorkOrders = async (): Promise<WorkOrder[]> => {
+  const { workOrders, isInitialized } = useWorkOrderStore.getState();
+  
+  // Return from store if already initialized
+  if (isInitialized) {
+    return workOrders;
+  }
+  
   try {
     const { data, error } = await supabase
       .from('work_orders')
       .select('*');
     
+    let resultWorkOrders: WorkOrder[];
+    
     if (error) {
       console.warn('Using mock work order data due to Supabase error:', error.message);
-      return mockWorkOrders;
+      resultWorkOrders = mockWorkOrders;
+    } else {
+      resultWorkOrders = data.map(mapWorkOrderFromDB);
     }
     
-    return data.map(mapWorkOrderFromDB);
+    // Update the store
+    useWorkOrderStore.getState().setWorkOrders(resultWorkOrders);
+    return resultWorkOrders;
   } catch (error) {
     console.warn('Using mock work order data due to error:', error);
-    return mockWorkOrders;
+    const resultWorkOrders = mockWorkOrders;
+    useWorkOrderStore.getState().setWorkOrders(resultWorkOrders);
+    return resultWorkOrders;
   }
 };
 
@@ -117,13 +153,19 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
     
     if (error) {
       console.warn('Could not update work order in Supabase:', error.message);
-      // Return the original order as if it was updated
+      // Update the store anyway to maintain UI consistency
+      useWorkOrderStore.getState().updateWorkOrder(workOrder);
       return workOrder;
     }
     
-    return mapWorkOrderFromDB(data);
+    const updatedWorkOrder = mapWorkOrderFromDB(data);
+    // Update the store
+    useWorkOrderStore.getState().updateWorkOrder(updatedWorkOrder);
+    return updatedWorkOrder;
   } catch (error) {
     console.warn('Error updating work order:', error);
+    // Update the store anyway to maintain UI consistency
+    useWorkOrderStore.getState().updateWorkOrder(workOrder);
     return workOrder;
   }
 };
@@ -149,29 +191,42 @@ export const assignWorkOrder = async (
     
     if (error) {
       console.warn('Could not assign work order in Supabase:', error.message);
-      // Find the work order in our mock data and update it
-      const workOrder = mockWorkOrders.find(wo => wo.id === workOrderId);
+      // Find the work order and update it in the store
+      const { workOrders } = useWorkOrderStore.getState();
+      const workOrder = workOrders.find(wo => wo.id === workOrderId);
       if (workOrder) {
-        workOrder.technicianId = technicianId;
-        workOrder.technicianName = technicianName;
-        workOrder.scheduledDate = scheduledDate;
-        workOrder.status = 'scheduled';
-        return workOrder;
+        const updatedWorkOrder = {
+          ...workOrder,
+          technicianId,
+          technicianName,
+          scheduledDate,
+          status: 'scheduled'
+        };
+        useWorkOrderStore.getState().updateWorkOrder(updatedWorkOrder);
+        return updatedWorkOrder;
       }
       throw new Error('Work order not found');
     }
     
-    return mapWorkOrderFromDB(data);
+    const updatedWorkOrder = mapWorkOrderFromDB(data);
+    // Update the store
+    useWorkOrderStore.getState().updateWorkOrder(updatedWorkOrder);
+    return updatedWorkOrder;
   } catch (error) {
     console.warn('Error assigning work order:', error);
-    // If we get here, something really went wrong
-    const workOrder = mockWorkOrders.find(wo => wo.id === workOrderId);
+    // Find the work order and update it in the store
+    const { workOrders } = useWorkOrderStore.getState();
+    const workOrder = workOrders.find(wo => wo.id === workOrderId);
     if (workOrder) {
-      workOrder.technicianId = technicianId;
-      workOrder.technicianName = technicianName;
-      workOrder.scheduledDate = scheduledDate;
-      workOrder.status = 'scheduled';
-      return workOrder;
+      const updatedWorkOrder = {
+        ...workOrder,
+        technicianId,
+        technicianName,
+        scheduledDate,
+        status: 'scheduled'
+      };
+      useWorkOrderStore.getState().updateWorkOrder(updatedWorkOrder);
+      return updatedWorkOrder;
     }
     throw new Error('Work order not found');
   }
@@ -192,27 +247,40 @@ export const unassignWorkOrder = async (workOrderId: string): Promise<WorkOrder>
     
     if (error) {
       console.warn('Could not unassign work order in Supabase:', error.message);
-      // Find the work order in our mock data and update it
-      const workOrder = mockWorkOrders.find(wo => wo.id === workOrderId);
+      // Find the work order and update it in the store
+      const { workOrders } = useWorkOrderStore.getState();
+      const workOrder = workOrders.find(wo => wo.id === workOrderId);
       if (workOrder) {
-        workOrder.technicianId = undefined;
-        workOrder.technicianName = undefined;
-        workOrder.status = 'pending';
-        return workOrder;
+        const updatedWorkOrder = {
+          ...workOrder,
+          technicianId: undefined,
+          technicianName: undefined,
+          status: 'pending'
+        };
+        useWorkOrderStore.getState().updateWorkOrder(updatedWorkOrder);
+        return updatedWorkOrder;
       }
       throw new Error('Work order not found');
     }
     
-    return mapWorkOrderFromDB(data);
+    const updatedWorkOrder = mapWorkOrderFromDB(data);
+    // Update the store
+    useWorkOrderStore.getState().updateWorkOrder(updatedWorkOrder);
+    return updatedWorkOrder;
   } catch (error) {
     console.warn('Error unassigning work order:', error);
-    // If we get here, something really went wrong
-    const workOrder = mockWorkOrders.find(wo => wo.id === workOrderId);
+    // Find the work order and update it in the store
+    const { workOrders } = useWorkOrderStore.getState();
+    const workOrder = workOrders.find(wo => wo.id === workOrderId);
     if (workOrder) {
-      workOrder.technicianId = undefined;
-      workOrder.technicianName = undefined;
-      workOrder.status = 'pending';
-      return workOrder;
+      const updatedWorkOrder = {
+        ...workOrder,
+        technicianId: undefined,
+        technicianName: undefined,
+        status: 'pending'
+      };
+      useWorkOrderStore.getState().updateWorkOrder(updatedWorkOrder);
+      return updatedWorkOrder;
     }
     throw new Error('Work order not found');
   }

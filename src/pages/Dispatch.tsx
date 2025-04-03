@@ -34,11 +34,10 @@ import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView
 import { useToast } from "@/hooks/use-toast";
 import TechLocationMap from "@/components/maps/TechLocationMap";
 import { fetchTechnicians } from "@/services/technicianService";
-import { fetchWorkOrders, assignWorkOrder, unassignWorkOrder } from "@/services/workOrderService";
+import { fetchWorkOrders, assignWorkOrder, unassignWorkOrder, useWorkOrderStore } from "@/services/workOrderService";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [currentWorkOrderId, setCurrentWorkOrderId] = useState<string | null>(null);
@@ -48,6 +47,8 @@ const Dispatch = () => {
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast: uiToast } = useToast();
+
+  const workOrders = useWorkOrderStore(state => state.workOrders);
   
   useEffect(() => {
     const loadData = async () => {
@@ -58,7 +59,6 @@ const Dispatch = () => {
           fetchWorkOrders()
         ]);
         setTechnicians(techs);
-        setWorkOrders(orders);
       } catch (error) {
         console.error("Failed to load data:", error);
         uiToast({
@@ -149,10 +149,6 @@ const Dispatch = () => {
         scheduledDateTime.toISOString()
       );
       
-      setWorkOrders(workOrders.map(order => 
-        order.id === updatedOrder.id ? updatedOrder : order
-      ));
-      
       setSelectedTechnicianId(currentTechnicianId);
       
       toast.success(
@@ -180,12 +176,7 @@ const Dispatch = () => {
 
   const handleUnassignWorkOrder = async (orderId: string) => {
     try {
-      const updatedOrder = await unassignWorkOrder(orderId);
-      
-      setWorkOrders(workOrders.map(order => 
-        order.id === updatedOrder.id ? updatedOrder : order
-      ));
-      
+      await unassignWorkOrder(orderId);
       toast.info(`Work Order #${orderId} unassigned`);
     } catch (error) {
       console.error("Failed to unassign work order:", error);

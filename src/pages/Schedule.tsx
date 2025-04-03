@@ -9,27 +9,28 @@ import { formatDate } from "@/lib/date-utils";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { Technician, WorkOrder } from "@/types";
 import { fetchTechnicians } from "@/services/technicianService";
-import { fetchWorkOrders } from "@/services/workOrderService";
+import { fetchWorkOrders, useWorkOrderStore } from "@/services/workOrderService";
 import { useToast } from "@/hooks/use-toast";
 
 const Schedule = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Use the work orders from the store
+  const workOrders = useWorkOrderStore(state => state.workOrders);
   
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [techData, orderData] = await Promise.all([
+        const [techData, ordersData] = await Promise.all([
           fetchTechnicians(),
           fetchWorkOrders()
         ]);
         setTechnicians(techData);
-        setWorkOrders(orderData);
       } catch (error) {
         console.error("Failed to load data:", error);
         toast({
