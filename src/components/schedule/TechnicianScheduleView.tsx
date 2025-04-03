@@ -104,7 +104,7 @@ const TechnicianScheduleView = ({
               <CardContent className="p-3 pt-1">
                 <div className="space-y-1 text-sm">
                   <div className="font-medium">
-                    #{order.id} - {order.type}
+                    #{order.id.substring(0, 8)} - {order.type}
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <UserRound className="h-3.5 w-3.5" />
