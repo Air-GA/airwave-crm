@@ -51,7 +51,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Add extended helper methods
 const supabase = {
-  ...supabaseClient,
+  auth: supabaseClient.auth,
+  realtime: supabaseClient.realtime,
   
   // Helper to convert customer data to DB format
   formatCustomerForDb: (customer: any) => {

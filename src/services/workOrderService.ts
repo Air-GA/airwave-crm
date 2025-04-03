@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { WorkOrder, Customer } from "@/types";
 import { create } from "zustand";
@@ -168,8 +169,8 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
     technicianName: workOrderData.technicianName || "",
     estimatedHours: workOrderData.estimatedHours || 1,
     notes: workOrderData.notes || [],
-    email: workOrderData.email, // Email is now a valid property on WorkOrder
-    phoneNumber: workOrderData.phoneNumber, // PhoneNumber is now a valid property on WorkOrder
+    email: workOrderData.email,
+    phoneNumber: workOrderData.phoneNumber,
     completionRequired: workOrderData.completionRequired !== undefined ? workOrderData.completionRequired : true
   };
   
@@ -207,6 +208,7 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
       // Try to save to Supabase if possible
       try {
         // Using fetch API instead of supabase.from()
+        const customerForDb = supabase.formatCustomerForDb(newCustomer);
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/customers`,
           {
@@ -217,7 +219,7 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
               'Content-Type': 'application/json',
               'Prefer': 'return=minimal'
             },
-            body: JSON.stringify(supabase.formatCustomerForDb(newCustomer))
+            body: JSON.stringify(customerForDb)
           }
         );
         
