@@ -4,7 +4,7 @@ export interface Customer {
   name: string;
   email: string;
   phone: string;
-  serviceAddresses: ServiceAddress[];
+  serviceAddresses?: ServiceAddress[]; // Changed to optional with ?
   billAddress: string;
   notes?: string;
   type?: 'residential' | 'commercial';
