@@ -21,7 +21,7 @@ import Notifications from "@/pages/Notifications";
 import Timesheets from "@/pages/Timesheets";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
-import RoleGuard from "@/components/auth/RoleGuard";
+import { RoleGuard } from "@/components/guards/RoleGuard";
 import ImportData from "@/pages/ImportData";
 
 const queryClient = new QueryClient();
