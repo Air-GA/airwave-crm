@@ -16,7 +16,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       <div className="flex h-screen overflow-hidden">
         <SideNav open={sidebarOpen} setOpen={setSidebarOpen} />
         
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden md:ml-64">
           <TopBar setSidebarOpen={setSidebarOpen} />
           
           <main className="flex-1 overflow-auto bg-background p-4 md:p-6">
