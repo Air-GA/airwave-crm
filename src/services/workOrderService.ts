@@ -1,400 +1,250 @@
-
+import { WorkOrder, Customer } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { WorkOrder, Customer } from "@/types";
-import { create } from "zustand";
 import { supabase } from '@/lib/supabase';
-import { 
-  fetchMockWorkOrders, 
-  createMockWorkOrder, 
-  updateMockWorkOrder, 
-  completeMockWorkOrder, 
-  markWorkOrderPendingCompletion
-} from "./mockService";
-import { customers as mockCustomers } from "@/data/mockData";
+import { customers as mockCustomers, workOrders as mockWorkOrders } from '@/data/mockData';
 
-// Store for Work Order state management
-interface WorkOrderState {
-  workOrders: WorkOrder[];
-  setWorkOrders: (workOrders: WorkOrder[]) => void;
-  addWorkOrder: (workOrder: WorkOrder) => void;
-  updateWorkOrder: (workOrder: WorkOrder) => void;
-}
-
-export const useWorkOrderStore = create<WorkOrderState>((set) => ({
-  workOrders: [],
-  setWorkOrders: (workOrders) => set({ workOrders }),
-  addWorkOrder: (workOrder) => set((state) => ({
-    workOrders: [...state.workOrders, workOrder]
-  })),
-  updateWorkOrder: (workOrder) => set((state) => ({
-    workOrders: state.workOrders.map(wo => 
-      wo.id === workOrder.id ? workOrder : wo
-    )
-  }))
-}));
-
-// Customer store for managing customers
-interface CustomerState {
-  customers: Customer[];
-  setCustomers: (customers: Customer[]) => void;
-  addCustomer: (customer: Customer) => void;
-  updateCustomer: (customer: Customer) => void;
-}
-
-export const useCustomerStore = create<CustomerState>((set) => ({
-  customers: mockCustomers,
-  setCustomers: (customers) => set({ customers }),
-  addCustomer: (customer) => set((state) => ({
-    customers: [...state.customers, customer]
-  })),
-  updateCustomer: (customer) => set((state) => ({
-    customers: state.customers.map(c => 
-      c.id === customer.id ? customer : c
-    )
-  }))
-}));
-
-// Fetch work orders from the backend or mock service
-export const fetchWorkOrders = async () => {
-  try {
-    // First try to get from Supabase
-    try {
-      // Use direct fetch for Supabase API instead of using .from() method
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/work_orders?select=*`,
-        {
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Supabase API returned ${response.status}`);
-      }
-      
-      const data = await response.json();
-    
-      if (data && data.length > 0) {
-        // Transform Supabase data to match our WorkOrder interface
-        const orders = data.map(transformDbWorkOrder);
-        useWorkOrderStore.getState().setWorkOrders(orders);
-        return orders;
-      } else {
-        // No data in Supabase, use mock data
-        const orders = await fetchMockWorkOrders();
-        useWorkOrderStore.getState().setWorkOrders(orders);
-        return orders;
-      }
-    } catch (error) {
-      console.error("Database query error:", error);
-      const orders = await fetchMockWorkOrders();
-      useWorkOrderStore.getState().setWorkOrders(orders);
-      return orders;
-    }
-  } catch (error) {
-    console.error("Error fetching work orders:", error);
-    // Ensure we always return something
-    return [];
+// Function to create a customer from work order data
+export async function createCustomerFromWorkOrder(workOrder: Partial<WorkOrder>): Promise<Customer> {
+  if (!workOrder.customerName || !workOrder.address) {
+    throw new Error("Customer name and address are required");
   }
-};
-
-// Helper function to transform DB record to WorkOrder
-const transformDbWorkOrder = (dbRecord: any): WorkOrder => {
-  return {
-    id: dbRecord.id,
-    customerId: dbRecord.customer_id,
-    customerName: dbRecord.customer_name,
-    address: dbRecord.address,
-    type: dbRecord.type as "repair" | "maintenance" | "installation" | "inspection",
-    description: dbRecord.description,
-    priority: dbRecord.priority as "low" | "medium" | "high" | "emergency",
-    status: dbRecord.status as "pending" | "scheduled" | "in-progress" | "completed" | "pending-completion" | "cancelled",
-    scheduledDate: dbRecord.scheduled_date,
-    createdAt: dbRecord.created_at,
-    completedDate: dbRecord.completed_date,
-    technicianId: dbRecord.technician_id,
-    technicianName: dbRecord.technician_name,
-    estimatedHours: dbRecord.estimated_hours,
-    notes: dbRecord.notes,
-    pendingReason: dbRecord.pending_reason,
-    completionRequired: dbRecord.completion_required
-  };
-};
-
-// Helper function to transform WorkOrder to DB record
-const transformWorkOrderToDb = (workOrder: WorkOrder): any => {
-  return {
-    id: workOrder.id,
-    customer_id: workOrder.customerId,
-    customer_name: workOrder.customerName,
+  
+  // Create a new customer with work order details
+  const newCustomer: Customer = {
+    id: uuidv4(),
+    name: workOrder.customerName,
+    email: workOrder.email || '',
+    phone: workOrder.phoneNumber || '',
     address: workOrder.address,
-    type: workOrder.type,
-    description: workOrder.description,
-    priority: workOrder.priority,
-    status: workOrder.status,
-    scheduled_date: workOrder.scheduledDate,
-    created_at: workOrder.createdAt,
-    completed_date: workOrder.completedDate,
-    technician_id: workOrder.technicianId,
-    technician_name: workOrder.technicianName,
-    estimated_hours: workOrder.estimatedHours,
-    notes: workOrder.notes,
-    pending_reason: workOrder.pendingReason,
-    completion_required: workOrder.completionRequired
+    serviceAddress: workOrder.address,
+    billAddress: workOrder.address,
+    type: 'residential',
+    createdAt: new Date().toISOString(),
+    serviceAddresses: [
+      {
+        id: uuidv4(),
+        address: workOrder.address,
+        isPrimary: true
+      }
+    ]
   };
-};
-
-// Function to create a new work order
-export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promise<WorkOrder> => {
-  // Generate a UUID for the work order
-  const id = uuidv4();
-  const createdAt = new Date().toISOString();
   
-  // Create the work order object with defaults
+  try {
+    // Try to save to Supabase if available
+    const { data, error } = await supabase
+      .from('customers')
+      .insert(supabase.formatCustomerForDb(newCustomer))
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error saving customer to database:", error);
+      // Fall back to local storage
+      const existingCustomers = JSON.parse(localStorage.getItem('customers') || JSON.stringify(mockCustomers));
+      localStorage.setItem('customers', JSON.stringify([newCustomer, ...existingCustomers]));
+    }
+  } catch (err) {
+    console.error("Error in customer creation:", err);
+    // Fall back to local storage
+    const existingCustomers = JSON.parse(localStorage.getItem('customers') || JSON.stringify(mockCustomers));
+    localStorage.setItem('customers', JSON.stringify([newCustomer, ...existingCustomers]));
+  }
+  
+  return newCustomer;
+}
+
+export async function getWorkOrders(): Promise<WorkOrder[]> {
+  try {
+    const { data, error } = await supabase
+      .from('work_orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      return data.map((order: any) => ({
+        id: order.id,
+        customerId: order.customer_id,
+        customerName: order.customer_name,
+        address: order.address,
+        status: order.status,
+        priority: order.priority,
+        type: order.type,
+        description: order.description,
+        scheduledDate: order.scheduled_date,
+        technicianId: order.technician_id,
+        technicianName: order.technician_name,
+        createdAt: order.created_at,
+        completedAt: order.completed_at,
+        notes: order.notes,
+        partsUsed: order.parts_used
+      }));
+    }
+  } catch (err) {
+    console.error("Error fetching work orders:", err);
+  }
+  
+  // Fall back to mock data or localStorage
+  return JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
+}
+
+export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<WorkOrder> {
   const newWorkOrder: WorkOrder = {
-    id,
-    customerId: workOrderData.customerId || "",
-    customerName: workOrderData.customerName || "Unknown Customer",
-    address: workOrderData.address || "",
-    type: workOrderData.type as "repair" | "maintenance" | "installation" | "inspection" || "repair",
-    description: workOrderData.description || "",
-    priority: workOrderData.priority || "medium",
-    status: "pending", // Default to pending
-    scheduledDate: workOrderData.scheduledDate || new Date().toISOString(),
-    createdAt,
-    technicianId: workOrderData.technicianId || "",
-    technicianName: workOrderData.technicianName || "",
-    estimatedHours: workOrderData.estimatedHours || 1,
-    notes: workOrderData.notes || [],
-    email: workOrderData.email,
-    phoneNumber: workOrderData.phoneNumber,
-    completionRequired: workOrderData.completionRequired !== undefined ? workOrderData.completionRequired : true
+    id: uuidv4(),
+    customerId: workOrder.customerId || '',
+    customerName: workOrder.customerName || '',
+    address: workOrder.address || '',
+    status: workOrder.status || 'pending',
+    priority: workOrder.priority || 'medium',
+    type: workOrder.type || 'repair',
+    description: workOrder.description || '',
+    scheduledDate: workOrder.scheduledDate || new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    technicianId: workOrder.technicianId,
+    technicianName: workOrder.technicianName,
+    notes: workOrder.notes || []
   };
   
   try {
-    // Check if this is a new customer
-    const { customers } = useCustomerStore.getState();
-    let existingCustomer = customers.find(c => c.id === workOrderData.customerId);
+    // Try to save to Supabase if available
+    const { data, error } = await supabase
+      .from('work_orders')
+      .insert({
+        id: newWorkOrder.id,
+        customer_id: newWorkOrder.customerId,
+        customer_name: newWorkOrder.customerName,
+        address: newWorkOrder.address,
+        status: newWorkOrder.status,
+        priority: newWorkOrder.priority,
+        type: newWorkOrder.type,
+        description: newWorkOrder.description,
+        scheduled_date: newWorkOrder.scheduledDate,
+        technician_id: newWorkOrder.technicianId,
+        technician_name: newWorkOrder.technicianName,
+        created_at: newWorkOrder.createdAt,
+        notes: newWorkOrder.notes
+      })
+      .select()
+      .single();
     
-    // If customerId exists but we couldn't find the customer, or if no customerId is provided
-    // but we have customer information, create a new customer
-    if ((!existingCustomer && workOrderData.customerId) || 
-        (!workOrderData.customerId && workOrderData.customerName)) {
-      
-      // Create new customer with data from work order
-      const newCustomerId = workOrderData.customerId || uuidv4();
-      
-      const newCustomer: Customer = {
-        id: newCustomerId,
-        name: workOrderData.customerName || "Unknown Customer",
-        email: workOrderData.email || "",
-        phone: workOrderData.phoneNumber || "",
-        address: workOrderData.address || "",
-        serviceAddress: workOrderData.address || "",
-        billAddress: workOrderData.address || "",
-        createdAt: createdAt,
-        type: "residential" // Default
+    if (error) throw error;
+    
+    if (data) {
+      return {
+        id: data.id,
+        customerId: data.customer_id,
+        customerName: data.customer_name,
+        address: data.address,
+        status: data.status,
+        priority: data.priority,
+        type: data.type,
+        description: data.description,
+        scheduledDate: data.scheduled_date,
+        technicianId: data.technician_id,
+        technicianName: data.technician_name,
+        createdAt: data.created_at,
+        notes: data.notes
       };
-      
-      // Update customerId in the work order
-      newWorkOrder.customerId = newCustomerId;
-      
-      // Add to customer store
-      useCustomerStore.getState().addCustomer(newCustomer);
-      
-      // Try to save to Supabase if possible
-      try {
-        // Using fetch API instead of supabase.from()
-        const customerForDb = supabase.formatCustomerForDb(newCustomer);
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/customers`,
-          {
-            method: 'POST',
-            headers: {
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(customerForDb)
-          }
-        );
-        
-        if (!response.ok) {
-          throw new Error(`Supabase API returned ${response.status}`);
-        }
-      } catch (error) {
-        console.error("Error saving new customer to Supabase:", error);
-        // Fall back silently - we already saved to local store
-      }
     }
+  } catch (err) {
+    console.error("Error creating work order:", err);
+  }
+  
+  // Fall back to localStorage
+  const existingWorkOrders = JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
+  localStorage.setItem('workOrders', JSON.stringify([newWorkOrder, ...existingWorkOrders]));
+  
+  return newWorkOrder;
+}
+
+export async function updateWorkOrder(workOrderId: string, updates: Partial<WorkOrder>): Promise<WorkOrder | null> {
+  try {
+    // Format the data for the database
+    const dbUpdates: any = {};
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.scheduledDate !== undefined) dbUpdates.scheduled_date = updates.scheduledDate;
+    if (updates.technicianId !== undefined) dbUpdates.technician_id = updates.technicianId;
+    if (updates.technicianName !== undefined) dbUpdates.technician_name = updates.technicianName;
+    if (updates.completedAt !== undefined) dbUpdates.completed_at = updates.completedAt;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.partsUsed !== undefined) dbUpdates.parts_used = updates.partsUsed;
     
-    // Try to save work order to Supabase first
+    // Try to update in Supabase
+    const { data, error } = await supabase
+      .from('work_orders')
+      .update(dbUpdates)
+      .eq('id', workOrderId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (data) {
+      return {
+        id: data.id,
+        customerId: data.customer_id,
+        customerName: data.customer_name,
+        address: data.address,
+        status: data.status,
+        priority: data.priority,
+        type: data.type,
+        description: data.description,
+        scheduledDate: data.scheduled_date,
+        technicianId: data.technician_id,
+        technicianName: data.technician_name,
+        createdAt: data.created_at,
+        completedAt: data.completed_at,
+        notes: data.notes,
+        partsUsed: data.parts_used
+      };
+    }
+  } catch (err) {
+    console.error("Error updating work order in database:", err);
+  }
+  
+  // Fall back to localStorage
+  try {
+    const existingWorkOrders = JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
+    const updatedWorkOrders = existingWorkOrders.map((order: WorkOrder) => {
+      if (order.id === workOrderId) {
+        return { ...order, ...updates };
+      }
+      return order;
+    });
+    
+    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+    return updatedWorkOrders.find((order: WorkOrder) => order.id === workOrderId) || null;
+  } catch (err) {
+    console.error("Error updating work order in localStorage:", err);
+    return null;
+  }
+}
+
+export async function deleteWorkOrder(workOrderId: string): Promise<boolean> {
+  try {
+    // Try to delete from Supabase
+    const { error } = await supabase
+      .from('work_orders')
+      .delete()
+      .eq('id', workOrderId);
+    
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error("Error deleting work order from database:", err);
+    
+    // Fall back to localStorage
     try {
-      const dbRecord = transformWorkOrderToDb(newWorkOrder);
-      
-      // Using fetch API instead of supabase.from()
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/work_orders`,
-        {
-          method: 'POST',
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify(dbRecord)
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Supabase API returned ${response.status}`);
-      }
-      
-      // Successfully saved to Supabase
-      useWorkOrderStore.getState().addWorkOrder(newWorkOrder);
-      return newWorkOrder;
-    } catch (error) {
-      console.error("Supabase error:", error);
-      // Fall back to mock service
-      const created = await createMockWorkOrder(newWorkOrder);
-      useWorkOrderStore.getState().addWorkOrder(created);
-      return created;
+      const existingWorkOrders = JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
+      const filteredWorkOrders = existingWorkOrders.filter((order: WorkOrder) => order.id !== workOrderId);
+      localStorage.setItem('workOrders', JSON.stringify(filteredWorkOrders));
+      return true;
+    } catch (err) {
+      console.error("Error deleting work order from localStorage:", err);
+      return false;
     }
-  } catch (error) {
-    console.error("Error creating work order:", error);
-    throw new Error("Failed to create work order");
   }
-};
-
-// Function to update a work order
-export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
-  try {
-    // Try to update in Supabase first
-    try {
-      const dbRecord = transformWorkOrderToDb(workOrder);
-      
-      // Using fetch API instead of supabase.from()
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/work_orders?id=eq.${workOrder.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify(dbRecord)
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Supabase API returned ${response.status}`);
-      }
-      
-      // Successfully updated in Supabase
-      useWorkOrderStore.getState().updateWorkOrder(workOrder);
-      return workOrder;
-    } catch (error) {
-      console.error("Supabase error:", error);
-      // Fall back to mock service
-      const updated = await updateMockWorkOrder(workOrder);
-      useWorkOrderStore.getState().updateWorkOrder(updated);
-      return updated;
-    }
-  } catch (error) {
-    console.error("Error updating work order:", error);
-    throw new Error("Failed to update work order");
-  }
-};
-
-// Function to assign a work order to a technician
-export const assignWorkOrder = async (
-  workOrderId: string,
-  technicianId: string,
-  technicianName: string,
-  scheduledDate: string
-): Promise<WorkOrder> => {
-  try {
-    // Find the work order in the store
-    const { workOrders } = useWorkOrderStore.getState();
-    const workOrder = workOrders.find(wo => wo.id === workOrderId);
-    
-    if (!workOrder) {
-      throw new Error("Work order not found");
-    }
-    
-    // Update the work order
-    const updatedWorkOrder: WorkOrder = {
-      ...workOrder,
-      technicianId,
-      technicianName,
-      scheduledDate,
-      status: "scheduled"
-    };
-    
-    // Save the updated work order
-    return await updateWorkOrder(updatedWorkOrder);
-  } catch (error) {
-    console.error("Error assigning work order:", error);
-    throw new Error("Failed to assign work order");
-  }
-};
-
-// Function to unassign a work order from a technician
-export const unassignWorkOrder = async (workOrderId: string): Promise<WorkOrder> => {
-  try {
-    // Find the work order in the store
-    const { workOrders } = useWorkOrderStore.getState();
-    const workOrder = workOrders.find(wo => wo.id === workOrderId);
-    
-    if (!workOrder) {
-      throw new Error("Work order not found");
-    }
-    
-    // Update the work order
-    const updatedWorkOrder: WorkOrder = {
-      ...workOrder,
-      technicianId: "",
-      technicianName: "",
-      status: "pending"
-    };
-    
-    // Save the updated work order
-    return await updateWorkOrder(updatedWorkOrder);
-  } catch (error) {
-    console.error("Error unassigning work order:", error);
-    throw new Error("Failed to unassign work order");
-  }
-};
-
-// Function to mark a work order as completed
-export const completeWorkOrder = async (workOrderId: string, notes?: string): Promise<WorkOrder> => {
-  try {
-    // Try to complete in mock service first (which handles localStorage)
-    const completedWorkOrder = await completeMockWorkOrder(workOrderId, notes);
-    useWorkOrderStore.getState().updateWorkOrder(completedWorkOrder);
-    return completedWorkOrder;
-  } catch (error) {
-    console.error("Error completing work order:", error);
-    throw new Error("Failed to complete work order");
-  }
-};
-
-// Function to mark a work order as pending completion
-export const markOrderPendingCompletion = async (workOrderId: string, pendingReason: string): Promise<WorkOrder> => {
-  try {
-    // Try to mark pending in mock service first (which handles localStorage)
-    const pendingWorkOrder = await markWorkOrderPendingCompletion(workOrderId, pendingReason);
-    useWorkOrderStore.getState().updateWorkOrder(pendingWorkOrder);
-    return pendingWorkOrder;
-  } catch (error) {
-    console.error("Error marking work order as pending completion:", error);
-    throw new Error("Failed to mark work order as pending completion");
-  }
-};
+}

@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
+import { Customer } from '@/types';
 
 // Get environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -27,9 +28,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
         persistSession: true,
         autoRefreshToken: true,
       },
-      global: {
-        fetch: (url, options) => fetch(url, options),
-      },
     }
   );
 } else {
@@ -42,21 +40,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
         persistSession: true,
         autoRefreshToken: true,
       },
-      global: {
-        fetch: (url, options) => fetch(url, options),
-      },
     }
   );
 }
 
 // Add extended helper methods
 const supabase = {
+  client: supabaseClient,
   auth: supabaseClient.auth,
   realtime: supabaseClient.realtime,
+  from: supabaseClient.from.bind(supabaseClient),
+  functions: supabaseClient.functions,
   
   // Helper to convert customer data to DB format
-  formatCustomerForDb: (customer: any) => {
-    const serviceAddresses = customer.serviceAddresses?.map((addr: any) => ({
+  formatCustomerForDb: (customer: Customer) => {
+    const serviceAddresses = customer.serviceAddresses?.map((addr) => ({
       address: addr.address,
       is_primary: addr.isPrimary || false,
       notes: addr.notes || '',

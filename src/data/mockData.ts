@@ -9,6 +9,14 @@ export interface Customer {
   type: 'residential' | 'commercial';
   createdAt: string;
   lastService: string;
+  serviceAddresses?: ServiceAddress[];
+}
+
+export interface ServiceAddress {
+  id: string;
+  address: string;
+  isPrimary?: boolean;
+  notes?: string;
 }
 
 export interface WorkOrder {
@@ -31,6 +39,8 @@ export interface WorkOrder {
     quantity: number;
     price: number;
   }[];
+  email?: string;
+  phoneNumber?: string;
 }
 
 export interface InventoryItem {
@@ -60,7 +70,7 @@ export interface Technician {
   status: 'available' | 'busy' | 'off-duty';
 }
 
-// Mock customers data
+// Mock customers data with serviceAddresses
 export const customers: Customer[] = [
   {
     id: 'c1',
@@ -72,7 +82,14 @@ export const customers: Customer[] = [
     billAddress: '123 Main St, Atlanta, GA 30301',
     type: 'residential',
     createdAt: '2025-02-15T14:22:00Z',
-    lastService: '2025-03-10T09:30:00Z'
+    lastService: '2025-03-10T09:30:00Z',
+    serviceAddresses: [
+      {
+        id: 'sa1',
+        address: '123 Main St, Atlanta, GA 30301',
+        isPrimary: true
+      }
+    ]
   },
   {
     id: 'c2',
@@ -84,7 +101,20 @@ export const customers: Customer[] = [
     billAddress: 'PO Box 34578, Atlanta, GA 30332',
     type: 'commercial',
     createdAt: '2025-01-22T10:15:00Z',
-    lastService: '2025-03-05T13:45:00Z'
+    lastService: '2025-03-05T13:45:00Z',
+    serviceAddresses: [
+      {
+        id: 'sa2',
+        address: '225 North Ave NW, Atlanta, GA 30332',
+        isPrimary: true
+      },
+      {
+        id: 'sa3',
+        address: '266 Ferst Drive, Atlanta, GA 30332',
+        isPrimary: false,
+        notes: 'Research Building'
+      }
+    ]
   },
   {
     id: 'c3',
@@ -96,7 +126,14 @@ export const customers: Customer[] = [
     billAddress: '456 Oak Dr, Marietta, GA 30060',
     type: 'residential',
     createdAt: '2025-02-05T09:30:00Z',
-    lastService: '2025-04-15T11:20:00Z'
+    lastService: '2025-04-15T11:20:00Z',
+    serviceAddresses: [
+      {
+        id: 'sa4',
+        address: '456 Oak Dr, Marietta, GA 30060',
+        isPrimary: true
+      }
+    ]
   },
   {
     id: 'c4',
@@ -108,7 +145,20 @@ export const customers: Customer[] = [
     billAddress: '1100 Peachtree St NE, Suite 200, Atlanta, GA 30309',
     type: 'commercial',
     createdAt: '2025-01-11T08:45:00Z',
-    lastService: '2025-05-01T15:30:00Z'
+    lastService: '2025-05-01T15:30:00Z',
+    serviceAddresses: [
+      {
+        id: 'sa5',
+        address: '1100 Peachtree St NE, Atlanta, GA 30309',
+        isPrimary: true
+      },
+      {
+        id: 'sa6',
+        address: '1120 Peachtree St NE, Atlanta, GA 30309',
+        isPrimary: false,
+        notes: 'Annex Building'
+      }
+    ]
   },
   {
     id: 'c5',
@@ -120,7 +170,14 @@ export const customers: Customer[] = [
     billAddress: '789 Elm Street, Roswell, GA 30075',
     type: 'residential',
     createdAt: '2025-02-20T11:10:00Z',
-    lastService: '2025-04-25T10:15:00Z'
+    lastService: '2025-04-25T10:15:00Z',
+    serviceAddresses: [
+      {
+        id: 'sa7',
+        address: '789 Elm Street, Roswell, GA 30075',
+        isPrimary: true
+      }
+    ]
   }
 ];
 

@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import Papa from 'papaparse';
 import { useForm } from "react-hook-form";
@@ -33,7 +32,6 @@ import { Upload, FileWarning, Table as TableIcon, CheckCircle } from "lucide-rea
 import { Customer } from "@/types";
 import { processCustomerImport } from "@/services/importService";
 
-// Define the props for the component
 interface CSVImporterProps {
   type: "customers" | "workorders" | "inventory";
   onImportStart: () => void;
@@ -41,7 +39,6 @@ interface CSVImporterProps {
   onImportComplete: (count: number) => void;
 }
 
-// Define form schema
 const formSchema = z.object({
   file: z.instanceof(File),
   columnMappings: z.record(z.string()),
@@ -62,14 +59,12 @@ const CSVImporter = ({
   const [previewMode, setPreviewMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Define required fields based on import type
   const requiredFields = {
     customers: ['name', 'phone', 'email', 'address', 'city', 'state', 'zip'],
     workorders: ['customer', 'description', 'type', 'priority', 'status'],
     inventory: ['name', 'sku', 'category', 'unit_price', 'quantity']
   };
 
-  // Create form
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -107,26 +102,20 @@ const CSVImporter = ({
           return;
         }
         
-        // Get headers and data
         const headers = Object.keys(results.data[0] as object);
         const data = results.data as Array<Record<string, string>>;
         
         setHeaders(headers);
         setCsvData(data);
         
-        // Set form value for file
         form.setValue("file", file);
         
-        // Switch to preview mode
         setPreviewMode(true);
         
-        // Create initial mapping suggestions based on header names
         const initialMappings: Record<string, string> = {};
         
-        // Get the required fields for this import type
         const requiredForType = requiredFields[type];
         
-        // Try to guess the mappings based on header names
         requiredForType.forEach(field => {
           const matchingHeader = headers.find(h => 
             h.toLowerCase().includes(field) || 
@@ -138,7 +127,6 @@ const CSVImporter = ({
           }
         });
         
-        // Set the initial column mappings
         form.setValue("columnMappings", initialMappings);
       },
       error: (error) => {
@@ -151,7 +139,6 @@ const CSVImporter = ({
   const handleImport = useCallback(async (data: FormData) => {
     const { columnMappings } = data;
     
-    // Check if all required fields are mapped
     const requiredForType = requiredFields[type];
     const missingFields = requiredForType.filter(field => !columnMappings[field]);
     
@@ -163,9 +150,20 @@ const CSVImporter = ({
     try {
       onImportStart();
       
-      // Process the import based on type
+      const processCustomerData = (customersData: any[]): Customer[] => {
+        return customersData.map(customer => ({
+          ...customer,
+          serviceAddresses: [
+            {
+              id: crypto.randomUUID(),
+              address: customer.serviceAddress || customer.address || '',
+              isPrimary: true
+            }
+          ]
+        }));
+      };
+      
       if (type === "customers") {
-        // Transform csvData using the column mappings
         const customers = csvData.map(row => {
           return {
             id: crypto.randomUUID(),
@@ -177,7 +175,6 @@ const CSVImporter = ({
               `${row[columnMappings.billAddress]}, ${row[columnMappings.billCity] || ''}, ${row[columnMappings.billState] || ''} ${row[columnMappings.billZip] || ''}` :
               `${row[columnMappings.address] || ''}, ${row[columnMappings.city] || ''}, ${row[columnMappings.state] || ''} ${row[columnMappings.zip] || ''}`,
             notes: row[columnMappings.notes] || '',
-            // Add geolocation data if available
             location: columnMappings.latitude && columnMappings.longitude ? {
               lat: parseFloat(row[columnMappings.latitude]),
               lng: parseFloat(row[columnMappings.longitude])
@@ -185,7 +182,6 @@ const CSVImporter = ({
           };
         });
         
-        // Import the customers in batches to show progress
         const batchSize = 50;
         let imported = 0;
         
@@ -196,18 +192,13 @@ const CSVImporter = ({
           imported += batch.length;
           onImportProgress(imported, customers.length);
           
-          // Small delay to prevent UI freezing
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-        onImportComplete(customers.length);
+        onImportComplete(processCustomerData(customers));
       } else if (type === "workorders") {
-        // Similar implementation for workorders
-        // Would use a processWorkOrderImport function
         onImportComplete(csvData.length);
       } else if (type === "inventory") {
-        // Similar implementation for inventory
-        // Would use a processInventoryImport function
         onImportComplete(csvData.length);
       }
     } catch (error) {
@@ -313,7 +304,6 @@ const CSVImporter = ({
               ))}
             </div>
             
-            {/* Optional fields based on type */}
             {type === "customers" && (
               <div>
                 <h4 className="text-sm font-medium mb-2">Optional Fields</h4>

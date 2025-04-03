@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -63,7 +63,9 @@ export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCu
     }
   });
 
-  const { fields, append, remove } = form.useFieldArray({
+  // Use the useFieldArray hook directly, not as a method on form
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
     name: "serviceAddresses",
   });
 
