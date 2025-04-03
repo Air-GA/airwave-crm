@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -60,45 +61,79 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
     if (onImportStart) onImportStart();
 
     try {
-      // Single pass approach to simplify the process
       console.log("Starting CSV import for file:", file.name);
       
-      const processResults = (results: Papa.ParseResult<any>) => {
-        if (results.data.length === 0) {
+      // First read the file contents
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (!event.target?.result) {
           toast({
-            title: "Empty file",
-            description: "The uploaded file doesn't contain any valid data.",
+            title: "Error reading file",
+            description: "Could not read the file content",
             variant: "destructive",
           });
           setIsProcessing(false);
           return;
         }
-
-        console.log(`CSV parsed successfully. Found ${results.data.length} rows.`);
-        processData(results.data);
+        
+        const csvData = event.target.result as string;
+        
+        // Set up row counter for progress tracking
+        let totalRows = 0;
+        let processedRows = 0;
+        
+        // First count total rows for accurate progress reporting
+        const rowCount = csvData.split('\n').length - 1; // -1 for header
+        totalRows = Math.max(1, rowCount); // Ensure at least 1 to avoid division by zero
+        
+        // Now parse the data
+        Papa.parse(csvData, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results: Papa.ParseResult<any>) => {
+            if (results.data.length === 0) {
+              toast({
+                title: "Empty file",
+                description: "The uploaded file doesn't contain any valid data.",
+                variant: "destructive",
+              });
+              setIsProcessing(false);
+              return;
+            }
+            
+            console.log(`CSV parsed successfully. Found ${results.data.length} rows.`);
+            processData(results.data);
+          },
+          error: (error: any) => {
+            console.error("Error parsing CSV:", error);
+            toast({
+              title: "Error parsing file",
+              description: "There was an error parsing the CSV file. Please check the format and try again.",
+              variant: "destructive",
+            });
+            setIsProcessing(false);
+          },
+          step: (row: Papa.ParseStepResult<any>) => {
+            // Update progress based on rows processed
+            processedRows++;
+            if (onImportProgress) {
+              onImportProgress(processedRows, totalRows);
+            }
+          }
+        });
       };
       
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: processResults,
-        error: (error: any) => {
-          console.error("Error parsing CSV:", error);
-          toast({
-            title: "Error parsing file",
-            description: "There was an error parsing the CSV file. Please check the format and try again.",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-        },
-        step: (row: Papa.ParseStepResult<any>, parser: Papa.Parser) => {
-          // Update progress based on the bytes processed
-          if (onImportProgress && parser.streamer) {
-            const progress = Math.round((parser.streamer.bytesLoaded / file.size) * 100);
-            onImportProgress(parser.streamer.bytesLoaded, file.size);
-          }
-        }
-      });
+      reader.onerror = () => {
+        toast({
+          title: "Error reading file",
+          description: "Could not read the file content",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+      };
+      
+      reader.readAsText(file);
+      
     } catch (error) {
       console.error("CSV parsing error:", error);
       toast({
@@ -288,3 +323,4 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
 };
 
 export default CSVImporter;
+
