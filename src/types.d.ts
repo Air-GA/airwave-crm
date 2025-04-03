@@ -19,18 +19,14 @@ export interface WorkOrder {
   type: 'repair' | 'maintenance' | 'installation' | 'inspection';
   description: string;
   priority: 'low' | 'medium' | 'high' | 'emergency';
-  status: 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'pending-completion' | 'cancelled';
   scheduledDate: string;
-  createdAt: string; // Changed from createdDate to match mockData
+  createdAt: string;
   completedDate?: string;
   estimatedHours?: number;
   technicianId?: string;
   technicianName?: string;
   notes?: string[];
-  partsUsed?: {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-  }[];
+  pendingReason?: string;
+  completionRequired?: boolean;
 }

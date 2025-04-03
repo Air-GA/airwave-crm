@@ -1,7 +1,12 @@
 
 import { WorkOrder } from "@/types";
 import { create } from "zustand";
-import { fetchMockWorkOrders, updateMockWorkOrder } from "./mockService";
+import { 
+  fetchMockWorkOrders, 
+  updateMockWorkOrder, 
+  completeMockWorkOrder,
+  markWorkOrderPendingCompletion
+} from "./mockService";
 
 // Define the store state type
 interface WorkOrderStore {
@@ -42,6 +47,77 @@ export const updateWorkOrder = async (workOrder: WorkOrder) => {
     return updatedOrder;
   } catch (error) {
     console.error("Error updating work order:", error);
+    throw error;
+  }
+};
+
+// Assign work order to technician
+export const assignWorkOrder = async (
+  workOrderId: string,
+  technicianId: string,
+  technicianName: string,
+  scheduledDate: string
+) => {
+  const workOrder = useWorkOrderStore.getState().workOrders.find(
+    (order) => order.id === workOrderId
+  );
+  
+  if (!workOrder) {
+    throw new Error(`Work order with ID ${workOrderId} not found`);
+  }
+  
+  const updatedOrder: WorkOrder = {
+    ...workOrder,
+    technicianId,
+    technicianName,
+    scheduledDate,
+    status: "scheduled",
+    completionRequired: true
+  };
+  
+  return await updateWorkOrder(updatedOrder);
+};
+
+// Unassign work order from technician
+export const unassignWorkOrder = async (workOrderId: string) => {
+  const workOrder = useWorkOrderStore.getState().workOrders.find(
+    (order) => order.id === workOrderId
+  );
+  
+  if (!workOrder) {
+    throw new Error(`Work order with ID ${workOrderId} not found`);
+  }
+  
+  const updatedOrder: WorkOrder = {
+    ...workOrder,
+    technicianId: undefined,
+    technicianName: undefined,
+    status: "pending"
+  };
+  
+  return await updateWorkOrder(updatedOrder);
+};
+
+// Complete a work order
+export const completeWorkOrder = async (workOrderId: string, notes?: string) => {
+  try {
+    const completedOrder = await completeMockWorkOrder(workOrderId, notes);
+    useWorkOrderStore.getState().updateWorkOrder(completedOrder);
+    return completedOrder;
+  } catch (error) {
+    console.error("Error completing work order:", error);
+    throw error;
+  }
+};
+
+// Mark work order as pending completion with a reason
+export const markOrderPendingCompletion = async (workOrderId: string, pendingReason: string) => {
+  try {
+    const pendingOrder = await markWorkOrderPendingCompletion(workOrderId, pendingReason);
+    useWorkOrderStore.getState().updateWorkOrder(pendingOrder);
+    return pendingOrder;
+  } catch (error) {
+    console.error("Error marking work order as pending completion:", error);
     throw error;
   }
 };

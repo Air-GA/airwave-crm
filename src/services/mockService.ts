@@ -43,7 +43,8 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "1",
     technicianName: "John Smith",
     estimatedHours: 2,
-    notes: ["Customer reported loud noise", "Unit is 5 years old"]
+    notes: ["Customer reported loud noise", "Unit is 5 years old"],
+    completionRequired: true
   },
   {
     id: "wo2",
@@ -59,7 +60,44 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "2",
     technicianName: "Sarah Wilson",
     estimatedHours: 1,
-    notes: ["Regular maintenance"]
+    notes: ["Regular maintenance"],
+    completionRequired: true
+  },
+  {
+    id: "wo3",
+    customerId: "cust3",
+    customerName: "Robert Johnson",
+    address: "789 Pine Ave, Atlanta, GA",
+    type: "repair",
+    description: "Heater not working",
+    priority: "medium",
+    status: "pending-completion",
+    scheduledDate: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+    createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+    technicianId: "1",
+    technicianName: "John Smith",
+    estimatedHours: 3,
+    notes: ["Customer complained of no heat", "Need to order parts"],
+    pendingReason: "Waiting for parts to arrive",
+    completionRequired: true
+  },
+  {
+    id: "wo4",
+    customerId: "cust4",
+    customerName: "Emily Davis",
+    address: "123 Maple St, Atlanta, GA",
+    type: "installation",
+    description: "New AC unit installation",
+    priority: "high",
+    status: "completed",
+    scheduledDate: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+    createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+    completedDate: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+    technicianId: "2",
+    technicianName: "Sarah Wilson",
+    estimatedHours: 4,
+    notes: ["Installation completed successfully"],
+    completionRequired: true
   }
 ];
 
@@ -83,4 +121,41 @@ export const updateMockWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrd
 export const updateMockTechnician = async (technician: Technician): Promise<Technician> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   return technician;
+};
+
+export const completeMockWorkOrder = async (
+  workOrderId: string, 
+  notes?: string
+): Promise<WorkOrder> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  const workOrder = mockWorkOrders.find(order => order.id === workOrderId);
+  if (!workOrder) throw new Error("Work order not found");
+  
+  const updatedOrder: WorkOrder = {
+    ...workOrder,
+    status: "completed",
+    completedDate: new Date().toISOString(),
+    notes: notes ? [...(workOrder.notes || []), notes] : workOrder.notes
+  };
+  
+  return updatedOrder;
+};
+
+export const markWorkOrderPendingCompletion = async (
+  workOrderId: string,
+  pendingReason: string
+): Promise<WorkOrder> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  const workOrder = mockWorkOrders.find(order => order.id === workOrderId);
+  if (!workOrder) throw new Error("Work order not found");
+  
+  const updatedOrder: WorkOrder = {
+    ...workOrder,
+    status: "pending-completion",
+    pendingReason: pendingReason
+  };
+  
+  return updatedOrder;
 };
