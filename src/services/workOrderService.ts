@@ -1,7 +1,9 @@
+
 import { WorkOrder, Customer } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
 import { customers as mockCustomers, workOrders as mockWorkOrders } from '@/data/mockData';
+import { completeMockWorkOrder, markWorkOrderPendingCompletion } from './mockService';
 
 // Function to create a customer from work order data
 export async function createCustomerFromWorkOrder(workOrder: Partial<WorkOrder>): Promise<Customer> {
@@ -246,5 +248,121 @@ export async function deleteWorkOrder(workOrderId: string): Promise<boolean> {
       console.error("Error deleting work order from localStorage:", err);
       return false;
     }
+  }
+}
+
+// New functions for work order completion
+
+/**
+ * Complete a work order
+ * @param workOrderId The ID of the work order to complete
+ * @param completionNotes Optional notes about the completion
+ * @returns The updated work order
+ */
+export async function completeWorkOrder(workOrderId: string, completionNotes?: string): Promise<WorkOrder | null> {
+  try {
+    // Try to update in Supabase first
+    const { data, error } = await supabase
+      .from('work_orders')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        notes: supabase.client.rpc('array_append_note', { 
+          work_order_id: workOrderId,
+          new_note: completionNotes
+        })
+      })
+      .eq('id', workOrderId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (data) {
+      return {
+        id: data.id,
+        customerId: data.customer_id,
+        customerName: data.customer_name,
+        address: data.address,
+        status: data.status,
+        priority: data.priority,
+        type: data.type,
+        description: data.description,
+        scheduledDate: data.scheduled_date,
+        technicianId: data.technician_id,
+        technicianName: data.technician_name,
+        createdAt: data.created_at,
+        completedAt: data.completed_at,
+        completedDate: data.completed_at, // Add for compatibility
+        notes: data.notes,
+        partsUsed: data.parts_used
+      };
+    }
+  } catch (err) {
+    console.error("Error completing work order in database:", err);
+  }
+  
+  // Fall back to mock service
+  try {
+    const updatedOrder = await completeMockWorkOrder(workOrderId, completionNotes);
+    return updatedOrder;
+  } catch (err) {
+    console.error("Error completing work order in mock service:", err);
+    return null;
+  }
+}
+
+/**
+ * Mark a work order as pending completion
+ * @param workOrderId The ID of the work order
+ * @param pendingReason The reason why the work order is pending completion
+ * @returns The updated work order
+ */
+export async function markOrderPendingCompletion(workOrderId: string, pendingReason: string): Promise<WorkOrder | null> {
+  try {
+    // Try to update in Supabase first
+    const { data, error } = await supabase
+      .from('work_orders')
+      .update({
+        status: 'pending-completion',
+        pending_reason: pendingReason
+      })
+      .eq('id', workOrderId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (data) {
+      return {
+        id: data.id,
+        customerId: data.customer_id,
+        customerName: data.customer_name,
+        address: data.address,
+        status: data.status,
+        priority: data.priority,
+        type: data.type,
+        description: data.description,
+        scheduledDate: data.scheduled_date,
+        technicianId: data.technician_id,
+        technicianName: data.technician_name,
+        createdAt: data.created_at,
+        completedAt: data.completed_at,
+        notes: data.notes,
+        pendingReason: data.pending_reason,
+        partsUsed: data.parts_used
+      };
+    }
+  } catch (err) {
+    console.error("Error marking work order as pending completion in database:", err);
+  }
+  
+  // Fall back to mock service
+  try {
+    const updatedOrder = await markWorkOrderPendingCompletion(workOrderId, pendingReason);
+    return updatedOrder;
+  } catch (err) {
+    console.error("Error marking work order as pending completion in mock service:", err);
+    return null;
   }
 }
