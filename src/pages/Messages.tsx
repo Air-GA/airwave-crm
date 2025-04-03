@@ -19,18 +19,33 @@ import {
   Plus, 
   Search, 
   Send, 
+  Share2,
   UserPlus, 
-  Users 
+  Users,
+  Video 
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const Messages = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [activeConversation, setActiveConversation] = useState<string | null>("c1");
+  const [isDiscordDialogOpen, setIsDiscordDialogOpen] = useState(false);
+  const [discordInviteLink, setDiscordInviteLink] = useState("");
+  const [discordServerName, setDiscordServerName] = useState("");
   
   // Mock data for conversations
   const conversations = [
@@ -175,6 +190,23 @@ const Messages = () => {
       .join('')
       .toUpperCase();
   };
+
+  const startDiscordScreenShare = () => {
+    if (!discordServerName || !discordInviteLink) {
+      toast.error("Please provide both server name and invite link");
+      return;
+    }
+
+    // In a real implementation, you would use the Discord API
+    // For now, we'll just open the invite link
+    window.open(discordInviteLink, '_blank');
+    toast.success(`Screen sharing session started for ${activeChat?.name}`);
+    setIsDiscordDialogOpen(false);
+  };
+
+  const generateDiscordLink = () => {
+    setIsDiscordDialogOpen(true);
+  };
   
   return (
     <MainLayout>
@@ -269,15 +301,24 @@ const Messages = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" title="Call">
                         <PhoneCall className="h-4 w-4" />
                         <span className="sr-only">Call</span>
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" title="Email">
                         <AtSign className="h-4 w-4" />
                         <span className="sr-only">Email</span>
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        title="Discord Screen Share"
+                        onClick={generateDiscordLink}
+                      >
+                        <Share2 className="h-4 w-4" />
+                        <span className="sr-only">Screen Share</span>
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Team Chat">
                         <Users className="h-4 w-4" />
                         <span className="sr-only">Group</span>
                       </Button>
@@ -365,6 +406,51 @@ const Messages = () => {
             )}
           </Card>
         </div>
+        
+        {/* Discord integration dialog */}
+        <Dialog open={isDiscordDialogOpen} onOpenChange={setIsDiscordDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Start Discord Screen Share</DialogTitle>
+              <DialogDescription>
+                Share your Discord server details to initiate a screen sharing session with {activeChat?.name}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="discord-server">Discord Server Name</Label>
+                <Input
+                  id="discord-server"
+                  value={discordServerName}
+                  onChange={(e) => setDiscordServerName(e.target.value)}
+                  placeholder="HVAC Tech Support"
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="discord-invite">Discord Invite Link</Label>
+                <Input
+                  id="discord-invite"
+                  value={discordInviteLink}
+                  onChange={(e) => setDiscordInviteLink(e.target.value)}
+                  placeholder="https://discord.gg/your-invite-code"
+                />
+                <p className="text-sm text-muted-foreground">
+                  You can generate an invite link from your Discord server settings
+                </p>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDiscordDialogOpen(false)}>Cancel</Button>
+              <Button onClick={startDiscordScreenShare} className="gap-2">
+                <Video className="h-4 w-4" />
+                Start Screen Share
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
