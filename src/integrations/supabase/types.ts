@@ -9,7 +9,214 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          address: string | null
+          bill_address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          last_service: string | null
+          name: string
+          phone: string | null
+          service_address: string | null
+          type: string
+        }
+        Insert: {
+          address?: string | null
+          bill_address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_service?: string | null
+          name: string
+          phone?: string | null
+          service_address?: string | null
+          type: string
+        }
+        Update: {
+          address?: string | null
+          bill_address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_service?: string | null
+          name?: string
+          phone?: string | null
+          service_address?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      inventory: {
+        Row: {
+          category: string
+          description: string | null
+          id: string
+          location: string | null
+          name: string
+          price: number
+          quantity: number
+          reorder_level: number
+          sku: string | null
+          supplier: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          category: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          price?: number
+          quantity?: number
+          reorder_level?: number
+          sku?: string | null
+          supplier?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          category?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          price?: number
+          quantity?: number
+          reorder_level?: number
+          sku?: string | null
+          supplier?: string | null
+          unit_price?: number | null
+        }
+        Relationships: []
+      }
+      service_addresses: {
+        Row: {
+          address: string
+          customer_id: string
+          id: string
+          is_primary: boolean
+          notes: string | null
+        }
+        Insert: {
+          address: string
+          customer_id: string
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+        }
+        Update: {
+          address?: string
+          customer_id?: string
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      technicians: {
+        Row: {
+          created_at: string
+          current_location_address: string | null
+          current_location_lat: number | null
+          current_location_lng: number | null
+          id: string
+          name: string
+          specialties: string[] | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          current_location_address?: string | null
+          current_location_lat?: number | null
+          current_location_lng?: number | null
+          id?: string
+          name: string
+          specialties?: string[] | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          current_location_address?: string | null
+          current_location_lat?: number | null
+          current_location_lng?: number | null
+          id?: string
+          name?: string
+          specialties?: string[] | null
+          status?: string
+        }
+        Relationships: []
+      }
+      work_orders: {
+        Row: {
+          address: string
+          completed_date: string | null
+          created_at: string
+          customer_id: string
+          customer_name: string
+          description: string
+          estimated_hours: number | null
+          id: string
+          notes: string[] | null
+          priority: string
+          scheduled_date: string
+          status: string
+          technician_id: string | null
+          technician_name: string | null
+          type: string
+        }
+        Insert: {
+          address: string
+          completed_date?: string | null
+          created_at?: string
+          customer_id: string
+          customer_name: string
+          description: string
+          estimated_hours?: number | null
+          id?: string
+          notes?: string[] | null
+          priority: string
+          scheduled_date: string
+          status: string
+          technician_id?: string | null
+          technician_name?: string | null
+          type: string
+        }
+        Update: {
+          address?: string
+          completed_date?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_name?: string
+          description?: string
+          estimated_hours?: number | null
+          id?: string
+          notes?: string[] | null
+          priority?: string
+          scheduled_date?: string
+          status?: string
+          technician_id?: string | null
+          technician_name?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

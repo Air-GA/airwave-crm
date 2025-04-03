@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/date-utils";
-import { Calendar, Clock, MapPin, UserRound, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Calendar, Clock, MapPin, UserRound, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Technician, WorkOrder } from "@/types";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TechnicianScheduleViewProps {
   technician: Technician | null;
@@ -12,6 +13,7 @@ interface TechnicianScheduleViewProps {
   selectedDate: Date;
   showAllAppointments?: boolean;
   onWorkOrderClick?: (workOrder: WorkOrder) => void;
+  isLoading?: boolean;
 }
 
 const TechnicianScheduleView = ({
@@ -19,7 +21,8 @@ const TechnicianScheduleView = ({
   workOrders,
   selectedDate,
   showAllAppointments = false,
-  onWorkOrderClick
+  onWorkOrderClick,
+  isLoading = false
 }: TechnicianScheduleViewProps) => {
   // Filter work orders for this technician on the selected date
   // If showAllAppointments is true, show all appointments for the date
@@ -85,7 +88,12 @@ const TechnicianScheduleView = ({
         </div>
       )}
 
-      {filteredWorkOrders.length > 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center p-8 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mr-2" />
+          <span>Loading schedule...</span>
+        </div>
+      ) : filteredWorkOrders.length > 0 ? (
         <div className="space-y-3">
           {filteredWorkOrders.map((order) => (
             <Card 
@@ -122,10 +130,23 @@ const TechnicianScheduleView = ({
                   </div>
                   
                   {order.status === "pending-completion" && order.pendingReason && (
-                    <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-600 bg-amber-50 p-2 rounded-md">
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5" />
-                      <span>Pending: {order.pendingReason}</span>
-                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-600 bg-amber-50 p-2 rounded-md">
+                            <AlertCircle className="h-3.5 w-3.5 mt-0.5" />
+                            <span className="truncate">
+                              Pending: {order.pendingReason.length > 40 ? 
+                                `${order.pendingReason.substring(0, 40)}...` : 
+                                order.pendingReason}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">{order.pendingReason}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                   
                   {order.status === "completed" && (
