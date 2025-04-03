@@ -60,26 +60,45 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
     setIsProcessing(true);
     if (onImportStart) onImportStart();
     
+    let rowCount = 0;
+    let totalRows = 0;
+    
+    // First pass to count total rows
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      preview: 1000, // Limit to prevent browser hang on huge files
       complete: (results) => {
-        processData(results.data);
-        setIsProcessing(false);
+        totalRows = results.data.length;
+        
+        // Second pass to actually process the data
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          step: (results) => {
+            rowCount++;
+            if (onImportProgress && totalRows > 0) {
+              onImportProgress(rowCount, totalRows);
+            }
+          },
+          complete: (results) => {
+            processData(results.data);
+            setIsProcessing(false);
+          },
+          error: (error) => {
+            console.error("Error parsing CSV:", error);
+            toast({
+              title: "Error parsing file",
+              description: "There was an error parsing the CSV file. Please check the format and try again.",
+              variant: "destructive",
+            });
+            setIsProcessing(false);
+          }
+        });
       },
       error: (error) => {
-        console.error("Error parsing CSV:", error);
-        toast({
-          title: "Error parsing file",
-          description: "There was an error parsing the CSV file. Please check the format and try again.",
-          variant: "destructive",
-        });
+        console.error("Error counting CSV rows:", error);
         setIsProcessing(false);
-      },
-      step: (results, parser) => {
-        if (onImportProgress && parser.getCharIndex() && file.size) {
-          onImportProgress(parser.getCharIndex(), file.size);
-        }
       }
     });
   };

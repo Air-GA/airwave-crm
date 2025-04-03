@@ -18,6 +18,7 @@ export const importCustomers = async (
     const updatedCustomers = [...existingCustomers, ...customers];
     localStorage.setItem('imported_customers', JSON.stringify(updatedCustomers));
     
+    console.log("Imported customers:", customers.length);
     return customers;
   } catch (error) {
     console.error("Error importing customers:", error);
@@ -44,6 +45,7 @@ export const importWorkOrders = async (
     const updatedWorkOrders = [...existingWorkOrders, ...workOrders];
     localStorage.setItem('imported_work_orders', JSON.stringify(updatedWorkOrders));
     
+    console.log("Imported work orders:", workOrders.length);
     return workOrders;
   } catch (error) {
     console.error("Error importing work orders:", error);
@@ -70,6 +72,7 @@ export const importInventory = async (
     const updatedInventory = [...existingInventory, ...inventory];
     localStorage.setItem('imported_inventory', JSON.stringify(updatedInventory));
     
+    console.log("Imported inventory items:", inventory.length);
     return inventory;
   } catch (error) {
     console.error("Error importing inventory:", error);

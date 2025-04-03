@@ -33,8 +33,10 @@ const ImportData = () => {
   };
 
   const handleImportProgress = (current: number, total: number) => {
-    if (total) {
-      setProgress(Math.round((current / total) * 100));
+    if (total > 0) {
+      const calculatedProgress = Math.round((current / total) * 100);
+      setProgress(calculatedProgress);
+      console.log(`Import progress: ${calculatedProgress}% (${current}/${total})`);
     }
   };
   
@@ -56,8 +58,8 @@ const ImportData = () => {
         >
           <TabsList>
             <TabsTrigger value="customers">Customer Import</TabsTrigger>
-            <TabsTrigger value="work-orders" disabled={!importComplete}>Work Orders Import</TabsTrigger>
-            <TabsTrigger value="inventory" disabled={!importComplete}>Inventory Import</TabsTrigger>
+            <TabsTrigger value="work-orders">Work Orders Import</TabsTrigger>
+            <TabsTrigger value="inventory">Inventory Import</TabsTrigger>
           </TabsList>
           
           <TabsContent value="customers">
@@ -91,7 +93,10 @@ const ImportData = () => {
                     ) : (
                       <CSVImporter 
                         type="customers"
-                        onImportStart={() => setImporting(true)}
+                        onImportStart={() => {
+                          setImporting(true);
+                          setProgress(0);
+                        }}
                         onImportProgress={handleImportProgress}
                         onComplete={handleImportComplete}
                       />
@@ -136,19 +141,16 @@ const ImportData = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p>After importing customers, you can now import work order data.</p>
+                <p>Import your work order data here.</p>
                 <div className="mt-4">
                   <CSVImporter 
                     type="work-orders" 
-                    onImportStart={() => setImporting(true)}
-                    onImportProgress={handleImportProgress}
-                    onComplete={(items) => {
-                      setImporting(false);
-                      toast({
-                        title: "Import Complete",
-                        description: `Successfully imported ${items.length} work orders.`,
-                      });
+                    onImportStart={() => {
+                      setImporting(true);
+                      setProgress(0);
                     }}
+                    onImportProgress={handleImportProgress}
+                    onComplete={handleImportComplete}
                   />
                 </div>
               </CardContent>
@@ -168,15 +170,12 @@ const ImportData = () => {
                 <div className="mt-4">
                   <CSVImporter 
                     type="inventory"
-                    onImportStart={() => setImporting(true)}
-                    onImportProgress={handleImportProgress}
-                    onComplete={(items) => {
-                      setImporting(false);
-                      toast({
-                        title: "Import Complete",
-                        description: `Successfully imported ${items.length} inventory items.`,
-                      });
+                    onImportStart={() => {
+                      setImporting(true);
+                      setProgress(0);
                     }}
+                    onImportProgress={handleImportProgress}
+                    onComplete={handleImportComplete}
                   />
                 </div>
               </CardContent>
