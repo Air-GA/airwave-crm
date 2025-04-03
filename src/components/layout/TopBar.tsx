@@ -1,3 +1,4 @@
+
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,40 +14,115 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { WorkOrder } from "@/types";
+import { fetchWorkOrders } from "@/services/workOrderService";
 
 interface TopBarProps {
   setSidebarOpen: (open: boolean) => void;
+}
+
+interface Notification {
+  id: number | string;
+  title: string;
+  description: string;
+  type: string;
+  link: string;
+  timestamp: string;
+  isNew: boolean;
+  requiredPermission: string;
 }
 
 const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { userRole, permissions } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
+  
+  // Fetch work orders and generate notifications
+  useEffect(() => {
+    const loadWorkOrders = async () => {
+      try {
+        const orders = await fetchWorkOrders();
+        setWorkOrders(orders);
+        
+        const currentTime = new Date();
+        if (lastFetchTime) {
+          // Find new or updated work orders since last fetch
+          const newOrders = orders.filter(order => {
+            const orderCreatedAt = new Date(order.createdAt);
+            return orderCreatedAt > lastFetchTime;
+          });
+          
+          // Create notifications for new work orders
+          if (newOrders.length > 0) {
+            const newNotifications = newOrders.map((order, index) => ({
+              id: `new-wo-${order.id}`,
+              title: `New Work Order #${order.id}`,
+              description: `${order.type} at ${order.address}`,
+              type: "workorder",
+              link: "/work-orders",
+              timestamp: new Date().toISOString(),
+              isNew: true,
+              requiredPermission: "canViewAllWorkOrders"
+            }));
+            
+            setNotifications(prev => [...newNotifications, ...prev].slice(0, 10));
+          }
+          
+          // Check for schedule changes
+          const scheduledOrders = orders.filter(order => {
+            return order.status === "scheduled" && 
+                  order.technicianId && 
+                  order.scheduledDate > lastFetchTime.toISOString();
+          });
+          
+          if (scheduledOrders.length > 0) {
+            const scheduleNotifications = scheduledOrders.map((order, index) => ({
+              id: `schedule-${order.id}`,
+              title: `Schedule Update`,
+              description: `Work order #${order.id} assigned to ${order.technicianName}`,
+              type: "schedule",
+              link: "/schedule",
+              timestamp: new Date().toISOString(),
+              isNew: true,
+              requiredPermission: "canDispatchTechnicians"
+            }));
+            
+            setNotifications(prev => [...scheduleNotifications, ...prev].slice(0, 10));
+          }
+        }
+        
+        setLastFetchTime(currentTime);
+      } catch (error) {
+        console.error("Error fetching notifications data:", error);
+      }
+    };
+    
+    // Initial load
+    loadWorkOrders();
+    
+    // Set up polling interval (every 60 seconds)
+    const intervalId = setInterval(loadWorkOrders, 60000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [lastFetchTime]);
   
   const getFilteredNotifications = () => {
-    const allNotifications = [
+    // If no real notifications exist yet, provide some sample ones
+    const allNotifications = notifications.length > 0 ? notifications : [
       {
         id: 1,
-        title: "Work Order #wo7 Updated",
-        description: "Status changed to \"In Progress\"",
+        title: "Work Order Updates",
+        description: "No new updates at this time",
         type: "workorder",
         link: "/work-orders",
-        requiredPermission: "canViewAllWorkOrders"
-      },
-      {
-        id: 2,
-        title: "Inventory Alert",
-        description: "Refrigerant R-410A is low on stock",
-        type: "inventory",
-        link: "/inventory",
-        requiredPermission: "canDispatchTechnicians"
-      },
-      {
-        id: 3,
-        title: "Appointment Reminder",
-        description: "Service appointment at Midtown Office Plaza in 2 hours",
-        type: "schedule",
-        link: "/schedule",
+        timestamp: new Date().toISOString(),
+        isNew: false,
         requiredPermission: "canViewAllWorkOrders"
       }
     ];
@@ -58,12 +134,23 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
     });
   };
 
-  const handleNotificationClick = (path: string) => {
+  const handleNotificationClick = (path: string, notificationId: string | number) => {
+    // Mark notification as read
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, isNew: false } 
+          : notification
+      )
+    );
+    
+    // Navigate to the page
     navigate(path);
     toast.success("Navigating to notification");
   };
 
   const filteredNotifications = getFilteredNotifications();
+  const newNotificationsCount = filteredNotifications.filter(n => n.isNew).length;
 
   return (
     <header className="border-b bg-card shadow-sm">
@@ -114,11 +201,11 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-                {filteredNotifications.length > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-                    {filteredNotifications.length}
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className={`h-5 w-5 ${newNotificationsCount > 0 ? 'text-primary' : ''}`} />
+                {newNotificationsCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white animate-pulse">
+                    {newNotificationsCount}
                   </span>
                 )}
               </Button>
@@ -130,12 +217,25 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
                 filteredNotifications.map(notification => (
                   <DropdownMenuItem 
                     key={notification.id}
-                    onClick={() => handleNotificationClick(notification.link)}
+                    onClick={() => handleNotificationClick(notification.link, notification.id)}
+                    className={notification.isNew ? "bg-primary-50 font-medium" : ""}
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">{notification.title}</span>
+                      <div className="flex items-center justify-between">
+                        <span className={`${notification.isNew ? 'font-medium text-primary' : 'font-medium'}`}>
+                          {notification.title}
+                        </span>
+                        {notification.isNew && (
+                          <span className="ml-2 text-xs px-1.5 py-0.5 bg-primary text-primary-foreground rounded-full">
+                            New
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-muted-foreground">
                         {notification.description}
+                      </span>
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {new Date(notification.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </span>
                     </div>
                   </DropdownMenuItem>
