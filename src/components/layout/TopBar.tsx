@@ -1,3 +1,4 @@
+
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,6 +139,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
   };
 
   const handleNotificationClick = (path: string, notificationId: string | number, type: string, relatedId?: string) => {
+    // Mark notification as read
     setNotifications(prev => 
       prev.map(notification => 
         notification.id === notificationId 
@@ -201,6 +203,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           <Menu className="h-5 w-5" />
         </Button>
         
+        {/* Logo section */}
         {isMobile ? (
           <div className="flex-1 flex justify-center">
             <img 
@@ -219,6 +222,7 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
           </div>
         )}
         
+        {/* Search section */}
         <div className={`${isMobile ? "hidden" : "flex-1"}`}>
           <div className="relative max-w-md">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -288,6 +292,8 @@ const TopBar = ({ setSidebarOpen }: TopBarProps) => {
                   <DropdownMenuItem 
                     className="cursor-pointer text-center text-sm font-medium text-primary"
                     onClick={() => {
+                      // Mark all notifications as read when viewing all
+                      setNotifications(prev => prev.map(notification => ({ ...notification, isNew: false })));
                       window.open(`${window.location.origin}/notifications`, '_blank');
                     }}
                   >

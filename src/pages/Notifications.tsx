@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -61,7 +60,7 @@ const Notifications = () => {
       notification.id === id ? { ...notification, read: true } : notification
     ));
     toast.success("Navigating to notification source");
-    window.location.href = link;
+    window.open(link, '_blank');
   };
 
   const markAllAsRead = () => {
