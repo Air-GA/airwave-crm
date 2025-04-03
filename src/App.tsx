@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/hooks/useAuth";
 
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
@@ -29,34 +30,36 @@ function App() {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="light" storageKey="hvac-ui-theme">
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
+        <AuthProvider>
+          <ThemeProvider defaultTheme="light" storageKey="hvac-ui-theme">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
 
-            {/* Protected routes */}
-            <Route element={<RoleGuard allowedRoles={["user", "admin"]} />}>
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/work-orders" element={<WorkOrders />} />
-              <Route path="/work-orders/create" element={<CreateWorkOrder />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/dispatch" element={<Dispatch />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/invoices" element={<Invoices />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/timesheets" element={<Timesheets />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/import-data" element={<ImportData />} />
-            </Route>
+              {/* Protected routes */}
+              <Route element={<RoleGuard allowedRoles={["user", "admin"]} />}>
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/work-orders" element={<WorkOrders />} />
+                <Route path="/work-orders/create" element={<CreateWorkOrder />} />
+                <Route path="/schedule" element={<Schedule />} />
+                <Route path="/dispatch" element={<Dispatch />} />
+                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/timesheets" element={<Timesheets />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/import-data" element={<ImportData />} />
+              </Route>
 
-            {/* Not found */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </ThemeProvider>
+              {/* Not found */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </ThemeProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );
