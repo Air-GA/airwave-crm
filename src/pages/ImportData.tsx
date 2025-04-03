@@ -10,7 +10,6 @@ import { Progress } from "@/components/ui/progress";
 import { FileSpreadsheet, Upload, Check, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CSVImporter from "@/components/importers/CSVImporter";
-import { Customer } from "@/types";
 
 const ImportData = () => {
   const [importTab, setImportTab] = useState<string>("customers");
@@ -21,15 +20,15 @@ const ImportData = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const handleImportComplete = (count: number) => {
-    setImportedCount(count);
+  const handleImportComplete = (items: any[]) => {
+    setImportedCount(items.length);
     setImportComplete(true);
     setImporting(false);
     setProgress(100);
     
     toast({
       title: "Import Complete",
-      description: `Successfully imported ${count} ${importTab}.`,
+      description: `Successfully imported ${items.length} ${importTab}.`,
     });
   };
 
@@ -57,7 +56,7 @@ const ImportData = () => {
         >
           <TabsList>
             <TabsTrigger value="customers">Customer Import</TabsTrigger>
-            <TabsTrigger value="workorders" disabled={!importComplete}>Work Orders Import</TabsTrigger>
+            <TabsTrigger value="work-orders" disabled={!importComplete}>Work Orders Import</TabsTrigger>
             <TabsTrigger value="inventory" disabled={!importComplete}>Inventory Import</TabsTrigger>
           </TabsList>
           
@@ -94,7 +93,7 @@ const ImportData = () => {
                         type="customers"
                         onImportStart={() => setImporting(true)}
                         onImportProgress={handleImportProgress}
-                        onImportComplete={handleImportComplete}
+                        onComplete={handleImportComplete}
                       />
                     )}
                   </>
@@ -117,7 +116,7 @@ const ImportData = () => {
                       </Button>
                       <Button 
                         variant="outline" 
-                        onClick={() => setImportTab("workorders")}
+                        onClick={() => setImportTab("work-orders")}
                       >
                         Import Work Orders Next
                       </Button>
@@ -128,7 +127,7 @@ const ImportData = () => {
             </Card>
           </TabsContent>
           
-          <TabsContent value="workorders">
+          <TabsContent value="work-orders">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -140,14 +139,14 @@ const ImportData = () => {
                 <p>After importing customers, you can now import work order data.</p>
                 <div className="mt-4">
                   <CSVImporter 
-                    type="workorders" 
+                    type="work-orders" 
                     onImportStart={() => setImporting(true)}
                     onImportProgress={handleImportProgress}
-                    onImportComplete={(count) => {
+                    onComplete={(items) => {
                       setImporting(false);
                       toast({
                         title: "Import Complete",
-                        description: `Successfully imported ${count} work orders.`,
+                        description: `Successfully imported ${items.length} work orders.`,
                       });
                     }}
                   />
@@ -171,11 +170,11 @@ const ImportData = () => {
                     type="inventory"
                     onImportStart={() => setImporting(true)}
                     onImportProgress={handleImportProgress}
-                    onImportComplete={(count) => {
+                    onComplete={(items) => {
                       setImporting(false);
                       toast({
                         title: "Import Complete",
-                        description: `Successfully imported ${count} inventory items.`,
+                        description: `Successfully imported ${items.length} inventory items.`,
                       });
                     }}
                   />

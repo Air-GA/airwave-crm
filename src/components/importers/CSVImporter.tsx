@@ -4,17 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload } from "lucide-react";
 import Papa from "papaparse";
-import { Customer, WorkOrder } from "@/types";
+import { Customer, WorkOrder, InventoryItem } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
-import { importCustomers, importWorkOrders } from "@/services/importService";
+import { importCustomers, importWorkOrders, importInventory } from "@/services/importService";
 import { useToast } from "@/hooks/use-toast";
 
 interface CSVImporterProps {
   type: "customers" | "work-orders" | "inventory";
   onComplete: (items: any[], type: string) => void;
+  onImportStart?: () => void;
+  onImportProgress?: (current: number, total: number) => void;
 }
 
-const CSVImporter = ({ type, onComplete }: CSVImporterProps) => {
+const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVImporterProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -56,6 +58,7 @@ const CSVImporter = ({ type, onComplete }: CSVImporterProps) => {
     }
     
     setIsProcessing(true);
+    if (onImportStart) onImportStart();
     
     Papa.parse(file, {
       header: true,
@@ -72,6 +75,11 @@ const CSVImporter = ({ type, onComplete }: CSVImporterProps) => {
           variant: "destructive",
         });
         setIsProcessing(false);
+      },
+      step: (results, parser) => {
+        if (onImportProgress && parser.getCharIndex() && file.size) {
+          onImportProgress(parser.getCharIndex(), file.size);
+        }
       }
     });
   };
@@ -105,6 +113,16 @@ const CSVImporter = ({ type, onComplete }: CSVImporterProps) => {
         toast({
           title: "Import successful",
           description: `${result.length} work orders have been imported successfully.`,
+        });
+      }
+      else if (type === "inventory") {
+        const processedInventory = processInventory(data);
+        const result = await importInventory(processedInventory);
+        onComplete(result, "inventory");
+        
+        toast({
+          title: "Import successful",
+          description: `${result.length} inventory items have been imported successfully.`,
         });
       }
       else {
@@ -173,6 +191,22 @@ const CSVImporter = ({ type, onComplete }: CSVImporterProps) => {
       technicianName: item.technicianName || item.technician_name || item.TechnicianName || undefined,
       completedAt: item.completedAt || item.completed_at || item.CompletedAt || undefined,
       notes: item.notes || item.Notes || []
+    }));
+  };
+  
+  const processInventory = (data: any[]): InventoryItem[] => {
+    return data.map(item => ({
+      id: item.id || uuidv4(),
+      name: item.name || item.Name || "",
+      category: item.category || item.Category || "",
+      description: item.description || item.Description || "",
+      quantity: Number(item.quantity || item.Quantity || 0),
+      price: Number(item.price || item.Price || 0),
+      reorderLevel: Number(item.reorderLevel || item.reorder_level || item.ReorderLevel || 5),
+      supplier: item.supplier || item.Supplier || "",
+      location: item.location || item.Location || "",
+      sku: item.sku || item.SKU || "",
+      unit_price: Number(item.unit_price || item.unitPrice || item.UnitPrice || 0),
     }));
   };
   

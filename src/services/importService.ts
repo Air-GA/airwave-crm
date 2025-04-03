@@ -1,6 +1,86 @@
 
-import { Customer, WorkOrder } from "@/types";
+import { Customer, WorkOrder, InventoryItem } from "@/types";
 import { toast } from "@/components/ui/use-toast";
+
+/**
+ * Import customer data
+ * @param customers Array of customer objects to import
+ * @returns Array of imported customer objects
+ */
+export const importCustomers = async (
+  customers: Customer[]
+): Promise<Customer[]> => {
+  try {
+    // In a real implementation, this would make API calls to store in database
+    
+    // Store in localStorage for demo purposes
+    const existingCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
+    const updatedCustomers = [...existingCustomers, ...customers];
+    localStorage.setItem('imported_customers', JSON.stringify(updatedCustomers));
+    
+    return customers;
+  } catch (error) {
+    console.error("Error importing customers:", error);
+    toast({
+      title: "Import Error",
+      description: `Error importing customers: ${(error as Error).message}`,
+      variant: "destructive",
+    });
+    throw error;
+  }
+};
+
+/**
+ * Import work order data
+ * @param workOrders Array of work order objects to import
+ * @returns Array of imported work order objects
+ */
+export const importWorkOrders = async (
+  workOrders: WorkOrder[]
+): Promise<WorkOrder[]> => {
+  try {
+    // Store in localStorage for demo purposes
+    const existingWorkOrders = JSON.parse(localStorage.getItem('imported_work_orders') || '[]');
+    const updatedWorkOrders = [...existingWorkOrders, ...workOrders];
+    localStorage.setItem('imported_work_orders', JSON.stringify(updatedWorkOrders));
+    
+    return workOrders;
+  } catch (error) {
+    console.error("Error importing work orders:", error);
+    toast({
+      title: "Import Error",
+      description: `Error importing work orders: ${(error as Error).message}`,
+      variant: "destructive",
+    });
+    throw error;
+  }
+};
+
+/**
+ * Import inventory data
+ * @param inventory Array of inventory objects to import
+ * @returns Array of imported inventory objects
+ */
+export const importInventory = async (
+  inventory: InventoryItem[]
+): Promise<InventoryItem[]> => {
+  try {
+    // Store in localStorage for demo purposes
+    const existingInventory = JSON.parse(localStorage.getItem('imported_inventory') || '[]');
+    const updatedInventory = [...existingInventory, ...inventory];
+    localStorage.setItem('imported_inventory', JSON.stringify(updatedInventory));
+    
+    return inventory;
+  } catch (error) {
+    console.error("Error importing inventory:", error);
+    toast({
+      title: "Import Error",
+      description: `Error importing inventory: ${(error as Error).message}`,
+      variant: "destructive",
+    });
+    throw error;
+  }
+};
 
 /**
  * Process customer data import from CSV
