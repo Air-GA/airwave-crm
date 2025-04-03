@@ -1,12 +1,12 @@
 
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 type AllowedRoles = Array<'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user'>;
 
 interface RoleGuardProps {
-  children: ReactNode;
+  children?: ReactNode;
   allowedRoles: AllowedRoles;
   fallbackPath?: string;
 }
@@ -27,5 +27,5 @@ export function RoleGuard({
     return <Navigate to={fallbackPath} replace state={{ allowedRoles }} />;
   }
 
-  return <>{children}</>;
+  return <>{children || <Outlet />}</>;
 }
