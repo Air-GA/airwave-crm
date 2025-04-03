@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
@@ -43,8 +42,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { createWorkOrder } from "@/services/workOrderService";
 
-// Define form schema using Zod
 const workOrderSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
   address: z.string().min(5, "Valid address is required"),
@@ -63,7 +62,6 @@ const workOrderSchema = z.object({
 
 type WorkOrderFormValues = z.infer<typeof workOrderSchema>;
 
-// Default values for the form
 const defaultValues: Partial<WorkOrderFormValues> = {
   type: "maintenance",
   priority: "medium",
@@ -73,11 +71,6 @@ const defaultValues: Partial<WorkOrderFormValues> = {
 };
 
 const CreateWorkOrder = () => {
-  // Function to parse URL query parameters
-  function useQuery() {
-    return new URLSearchParams(useLocation().search);
-  }
-  
   const { toast } = useToast();
   const navigate = useNavigate();
   const query = useQuery();
@@ -86,14 +79,12 @@ const CreateWorkOrder = () => {
   const [partQuantity, setPartQuantity] = useState(1);
   const [partPrice, setPartPrice] = useState(0);
   
-  // Get customer data from URL parameters
   const customerId = query.get("customerId");
   const customerName = query.get("customerName");
   const customerPhone = query.get("customerPhone");
   const customerEmail = query.get("customerEmail");
   const customerAddress = query.get("customerAddress");
   
-  // Initialize form with React Hook Form and Zod validation, with URL parameters as default values
   const form = useForm<WorkOrderFormValues>({
     resolver: zodResolver(workOrderSchema),
     defaultValues: {
@@ -105,7 +96,6 @@ const CreateWorkOrder = () => {
     },
   });
   
-  // Set form values when URL params change
   useEffect(() => {
     if (customerName) {
       form.setValue("customerName", customerName);
@@ -122,32 +112,38 @@ const CreateWorkOrder = () => {
   }, [customerId, customerName, customerPhone, customerEmail, customerAddress, form]);
   
   const onSubmit = (data: WorkOrderFormValues) => {
-    // Calculate the total cost based on parts
     const partsTotal = parts.reduce((sum, part) => sum + (part.price * part.quantity), 0);
     
-    // Prepare the complete work order data
-    const newWorkOrder = {
+    const formattedParts = parts.map(part => ({
+      id: part.id,
+      name: part.name,
+      quantity: part.quantity,
+      price: part.price
+    }));
+    
+    createWorkOrder({
       ...data,
-      id: `WO${Math.floor(Math.random() * 1000)}`, // Generate a simple ID (in a real app this would come from backend)
       status: "pending",
-      customerId: customerId || undefined, // Include customer ID if available
+      customerId: customerId || undefined,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      partsUsed: parts,
-      totalCost: partsTotal,
-    };
-    
-    // Here you would typically save this to your database or state management
-    console.log("New Work Order:", newWorkOrder);
-    
-    // Show success message
-    toast({
-      title: "Work Order Created",
-      description: `Work order #${newWorkOrder.id} has been created successfully.`,
+      partsUsed: formattedParts.length > 0 ? formattedParts : undefined,
+    })
+    .then((newWorkOrder) => {
+      toast({
+        title: "Work Order Created",
+        description: `Work order #${newWorkOrder.id} has been created successfully.`,
+      });
+      
+      navigate("/work-orders");
+    })
+    .catch((error) => {
+      console.error("Error creating work order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create work order. Please try again.",
+        variant: "destructive",
+      });
     });
-    
-    // Navigate back to work orders list
-    navigate("/work-orders");
   };
   
   const addPart = () => {
@@ -163,7 +159,6 @@ const CreateWorkOrder = () => {
       },
     ]);
     
-    // Reset part input fields
     setPartName("");
     setPartQuantity(1);
     setPartPrice(0);
@@ -173,7 +168,6 @@ const CreateWorkOrder = () => {
     setParts(parts.filter((part) => part.id !== partId));
   };
   
-  // Calculate total cost of parts
   const calculateTotal = () => {
     return parts.reduce((sum, part) => sum + (part.price * part.quantity), 0).toFixed(2);
   };
@@ -197,7 +191,6 @@ const CreateWorkOrder = () => {
                 <TabsTrigger value="parts">Parts & Costs</TabsTrigger>
               </TabsList>
               
-              {/* Customer Details Tab */}
               <TabsContent value="details" className="space-y-4 py-4">
                 <Card>
                   <CardHeader>
@@ -270,7 +263,6 @@ const CreateWorkOrder = () => {
                 </Card>
               </TabsContent>
               
-              {/* Service Details Tab */}
               <TabsContent value="service" className="space-y-4 py-4">
                 <Card>
                   <CardHeader>
@@ -453,7 +445,6 @@ const CreateWorkOrder = () => {
                 </Card>
               </TabsContent>
               
-              {/* Parts & Costs Tab */}
               <TabsContent value="parts" className="space-y-4 py-4">
                 <Card>
                   <CardHeader>

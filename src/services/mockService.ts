@@ -1,4 +1,3 @@
-
 import { Technician, WorkOrder } from "@/types";
 
 // Mock technicians data
@@ -158,4 +157,18 @@ export const markWorkOrderPendingCompletion = async (
   };
   
   return updatedOrder;
+};
+
+// Mock function to create a work order
+export const createMockWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
+  // Get existing work orders from localStorage
+  const existingOrders = JSON.parse(localStorage.getItem('mockWorkOrders') || '[]');
+  
+  // Add the new work order
+  const updatedOrders = [...existingOrders, workOrder];
+  
+  // Save back to localStorage
+  localStorage.setItem('mockWorkOrders', JSON.stringify(updatedOrders));
+  
+  return workOrder;
 };
