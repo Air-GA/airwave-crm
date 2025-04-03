@@ -1,15 +1,10 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { 
   Dialog,
   DialogContent,
@@ -17,18 +12,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Customer, customers as initialCustomers } from "@/data/mockData";
-import { ChevronDown, FileEdit, MoreHorizontal, Phone, Plus, Search, UserRound } from "lucide-react";
+import { Customer, ServiceAddress, customers as initialCustomers } from "@/data/mockData";
+import { ChevronDown, FileEdit, Plus, Search, UserRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
+import { CustomerCard } from "@/components/customers/CustomerCard";
 import { toast } from "sonner";
 
 const Customers = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    // Map any existing customers to ensure they have serviceAddresses property
+    return initialCustomers.map(customer => {
+      if (!customer.serviceAddresses) {
+        return {
+          ...customer,
+          serviceAddresses: [
+            { 
+              id: `legacy-${customer.id}`, 
+              address: customer.serviceAddress || '', 
+              isPrimary: true 
+            }
+          ]
+        };
+      }
+      return customer;
+    });
+  });
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
@@ -40,8 +52,14 @@ const Customers = () => {
   };
   
   // Handle creating a new work order for a customer
-  const handleCreateWorkOrder = (customer: Customer) => {
-    navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone)}&customerEmail=${encodeURIComponent(customer.email)}&customerAddress=${encodeURIComponent(customer.serviceAddress)}`);
+  const handleCreateWorkOrder = (customer: Customer, serviceAddress?: string) => {
+    // Use the provided service address or get the primary one
+    const addressToUse = serviceAddress || 
+      (customer.serviceAddresses?.find(a => a.isPrimary)?.address || 
+      customer.serviceAddresses?.[0]?.address || 
+      customer.serviceAddress || '');
+  
+    navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone)}&customerEmail=${encodeURIComponent(customer.email)}&customerAddress=${encodeURIComponent(addressToUse)}`);
   };
   
   // Handle viewing customer details
@@ -55,7 +73,8 @@ const Customers = () => {
     const matchesSearch = !searchQuery || 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery);
+      customer.phone.includes(searchQuery) || 
+      customer.serviceAddresses?.some(addr => addr.address.toLowerCase().includes(searchQuery.toLowerCase()));
     
     return matchesSearch;
   });
@@ -102,7 +121,7 @@ const Customers = () => {
             <CustomerCard 
               key={customer.id} 
               customer={customer} 
-              onCreateWorkOrder={() => handleCreateWorkOrder(customer)}
+              onCreateWorkOrder={(serviceAddress) => handleCreateWorkOrder(customer, serviceAddress)}
               onViewDetails={() => handleViewCustomerDetails(customer)}
             />
           ))}
@@ -124,7 +143,7 @@ const Customers = () => {
         {/* Customer details dialog */}
         {selectedCustomer && (
           <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-xl">{selectedCustomer.name}</DialogTitle>
                 <DialogDescription>
@@ -145,8 +164,35 @@ const Customers = () => {
                 </div>
                 
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground">Service Address</h4>
-                  <p>{selectedCustomer.serviceAddress}</p>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Service Addresses</h4>
+                  {selectedCustomer.serviceAddresses && selectedCustomer.serviceAddresses.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedCustomer.serviceAddresses.map((addr: ServiceAddress) => (
+                        <div key={addr.id} className="p-3 border rounded-md">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              {addr.isPrimary && <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full mb-1 inline-block">Primary</span>}
+                              <p>{addr.address}</p>
+                              {addr.notes && <p className="text-sm text-muted-foreground mt-1">{addr.notes}</p>}
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => {
+                                handleCreateWorkOrder(selectedCustomer, addr.address);
+                                setShowCustomerDetails(false);
+                              }}
+                            >
+                              <FileEdit className="h-4 w-4 mr-1" />
+                              Work Order
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>{selectedCustomer.serviceAddress || 'No service address'}</p>
+                  )}
                 </div>
                 
                 <div>
@@ -172,76 +218,6 @@ const Customers = () => {
         )}
       </div>
     </MainLayout>
-  );
-};
-
-interface CustomerCardProps {
-  customer: Customer;
-  onCreateWorkOrder: () => void;
-  onViewDetails: () => void;
-}
-
-const CustomerCard = ({ customer, onCreateWorkOrder, onViewDetails }: CustomerCardProps) => {
-  const isMobile = useIsMobile();
-  
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div className="rounded-full p-1.5 bg-blue-100 text-blue-600">
-              <UserRound className="h-4 w-4" />
-            </div>
-            <CardTitle className="text-lg font-medium">{customer.name}</CardTitle>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onViewDetails}>View Details</DropdownMenuItem>
-              <DropdownMenuItem onClick={onCreateWorkOrder}>Create Work Order</DropdownMenuItem>
-              <DropdownMenuItem>View Service History</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <span>{customer.phone}</span>
-          </div>
-          <p className="text-muted-foreground">
-            {customer.email}
-          </p>
-          <Tabs defaultValue="service">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="service">Service Address</TabsTrigger>
-              <TabsTrigger value="billing">Billing Address</TabsTrigger>
-            </TabsList>
-            <TabsContent value="service" className="pt-2">
-              <p className="text-sm">{customer.serviceAddress}</p>
-            </TabsContent>
-            <TabsContent value="billing" className="pt-2">
-              <p className="text-sm">{customer.billAddress}</p>
-            </TabsContent>
-          </Tabs>
-          <div className="flex gap-2 pt-2">
-            <Button size="sm" variant="outline" className="flex-1" onClick={onCreateWorkOrder}>
-              <FileEdit className="mr-1.5 h-4 w-4" />
-              {isMobile ? "Work Order" : "New Work Order"}
-            </Button>
-            <Button size="sm" className="flex-1" onClick={onViewDetails}>
-              View Details
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 };
 

@@ -56,13 +56,28 @@ const supabase = {
   
   // Helper to convert customer data to DB format
   formatCustomerForDb: (customer: any) => {
+    const serviceAddresses = customer.serviceAddresses?.map((addr: any) => ({
+      address: addr.address,
+      is_primary: addr.isPrimary || false,
+      notes: addr.notes || '',
+    })) || [];
+
+    // If no service addresses but has a serviceAddress field, add it as primary
+    if (serviceAddresses.length === 0 && customer.serviceAddress) {
+      serviceAddresses.push({
+        address: customer.serviceAddress,
+        is_primary: true,
+        notes: '',
+      });
+    }
+
     return {
       id: customer.id,
       name: customer.name,
       email: customer.email || null,
       phone: customer.phone || null,
       address: customer.address || null,
-      service_address: customer.serviceAddress || null,
+      service_addresses: serviceAddresses,
       bill_address: customer.billAddress || null,
       type: customer.type || 'residential',
       created_at: customer.createdAt || new Date().toISOString()

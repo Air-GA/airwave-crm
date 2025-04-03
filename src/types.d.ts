@@ -4,7 +4,7 @@ export interface Customer {
   name: string;
   email: string;
   phone: string;
-  serviceAddress: string;
+  serviceAddresses: ServiceAddress[];
   billAddress: string;
   notes?: string;
   type?: 'residential' | 'commercial';
@@ -15,6 +15,14 @@ export interface Customer {
     lng: number;
   };
   address?: string;
+  serviceAddress?: string; // Maintained for backward compatibility
+}
+
+export interface ServiceAddress {
+  id: string;
+  address: string;
+  isPrimary?: boolean;
+  notes?: string;
 }
 
 export interface Technician {
