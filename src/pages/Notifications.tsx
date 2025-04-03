@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -56,9 +57,12 @@ const Notifications = () => {
   ]);
 
   const handleNotificationClick = (id: number, link: string) => {
+    // Update the notification status to read
     setNotifications(notifications.map(notification => 
       notification.id === id ? { ...notification, read: true } : notification
     ));
+    
+    // Show success toast and open in new window
     toast.success("Navigating to notification source");
     window.open(link, '_blank');
   };
