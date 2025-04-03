@@ -28,6 +28,15 @@ const TechnicianScheduleView = ({
   // If showAllAppointments is true, show all appointments for the date
   const filteredWorkOrders = workOrders.filter(order => {
     const orderDate = new Date(order.scheduledDate);
+    
+    // Debug logs to help diagnose why orders aren't showing
+    console.log(`Filtering order: ${order.id}, date: ${orderDate}, selected date: ${selectedDate}`);
+    console.log(`Tech match: ${!technician || order.technicianId === technician.id}, Date match: ${
+      orderDate.getFullYear() === selectedDate.getFullYear() &&
+      orderDate.getMonth() === selectedDate.getMonth() &&
+      orderDate.getDate() === selectedDate.getDate()
+    }`);
+    
     return (
       (showAllAppointments || (!technician || order.technicianId === technician.id)) &&
       orderDate.getFullYear() === selectedDate.getFullYear() &&
@@ -35,6 +44,8 @@ const TechnicianScheduleView = ({
       orderDate.getDate() === selectedDate.getDate()
     );
   });
+
+  console.log(`Total work orders: ${workOrders.length}, Filtered: ${filteredWorkOrders.length}`);
 
   // Sort by scheduled time
   filteredWorkOrders.sort((a, b) => 
