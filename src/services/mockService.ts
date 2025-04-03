@@ -109,7 +109,9 @@ export const fetchMockTechnicians = async (): Promise<Technician[]> => {
 };
 
 export const fetchMockWorkOrders = async (): Promise<WorkOrder[]> => {
+  // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 500));
+  
   // Get work orders from localStorage if they exist, otherwise use mock data
   const storedOrders = localStorage.getItem('mockWorkOrders');
   if (storedOrders) {
@@ -126,6 +128,7 @@ export const fetchMockWorkOrders = async (): Promise<WorkOrder[]> => {
 };
 
 export const updateMockWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
+  // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 500));
   
   // Get existing orders
@@ -243,6 +246,7 @@ export const markWorkOrderPendingCompletion = async (
 
 // Mock function to create a work order
 export const createMockWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
+  // Simulate API delay  
   await new Promise(resolve => setTimeout(resolve, 500));
   
   // Get existing orders

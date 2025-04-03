@@ -39,25 +39,34 @@ export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
 export const fetchWorkOrders = async () => {
   try {
     // First try to get from Supabase
-    let { data, error } = await supabase
-      .from('work_orders')
-      .select('*');
+    try {
+      // Use any typing here to avoid TypeScript errors since the database tables
+      // may not be fully defined in the types yet
+      const { data, error } = await supabase
+        .from('work_orders')
+        .select('*') as { data: any[], error: any };
     
-    if (error) {
-      console.error("Supabase error:", error);
-      // Fall back to mock data
-      const orders = await fetchMockWorkOrders();
-      useWorkOrderStore.getState().setWorkOrders(orders);
-      return orders;
-    }
-    
-    if (data && data.length > 0) {
-      // Transform Supabase data to match our WorkOrder interface
-      const orders = data.map(transformDbWorkOrder);
-      useWorkOrderStore.getState().setWorkOrders(orders);
-      return orders;
-    } else {
-      // No data in Supabase, use mock data
+      if (error) {
+        console.error("Supabase error:", error);
+        // Fall back to mock data
+        const orders = await fetchMockWorkOrders();
+        useWorkOrderStore.getState().setWorkOrders(orders);
+        return orders;
+      }
+      
+      if (data && data.length > 0) {
+        // Transform Supabase data to match our WorkOrder interface
+        const orders = data.map(transformDbWorkOrder);
+        useWorkOrderStore.getState().setWorkOrders(orders);
+        return orders;
+      } else {
+        // No data in Supabase, use mock data
+        const orders = await fetchMockWorkOrders();
+        useWorkOrderStore.getState().setWorkOrders(orders);
+        return orders;
+      }
+    } catch (error) {
+      console.error("Database query error:", error);
       const orders = await fetchMockWorkOrders();
       useWorkOrderStore.getState().setWorkOrders(orders);
       return orders;
@@ -77,10 +86,10 @@ const transformDbWorkOrder = (dbRecord: any): WorkOrder => {
     customerId: dbRecord.customer_id,
     customerName: dbRecord.customer_name,
     address: dbRecord.address,
-    type: dbRecord.type,
+    type: dbRecord.type as "repair" | "maintenance" | "installation" | "inspection",
     description: dbRecord.description,
-    priority: dbRecord.priority,
-    status: dbRecord.status,
+    priority: dbRecord.priority as "low" | "medium" | "high" | "emergency",
+    status: dbRecord.status as "pending" | "scheduled" | "in-progress" | "completed" | "pending-completion" | "cancelled",
     scheduledDate: dbRecord.scheduled_date,
     createdAt: dbRecord.created_at,
     completedDate: dbRecord.completed_date,
@@ -152,7 +161,7 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
       const dbRecord = transformWorkOrderToDb(newWorkOrder);
       const { error } = await supabase
         .from('work_orders')
-        .insert(dbRecord);
+        .insert(dbRecord) as { data: any, error: any };
       
       if (error) {
         console.error("Error saving to Supabase:", error);
@@ -183,7 +192,7 @@ export const updateWorkOrder = async (workOrder: WorkOrder) => {
       const { error } = await supabase
         .from('work_orders')
         .update(dbRecord)
-        .eq('id', workOrder.id);
+        .eq('id', workOrder.id) as { data: any, error: any };
       
       if (error) {
         console.error("Error updating in Supabase:", error);
