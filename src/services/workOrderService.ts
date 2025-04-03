@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { WorkOrder, Customer } from "@/types";
 import { create } from "zustand";
@@ -59,22 +58,24 @@ export const fetchWorkOrders = async () => {
   try {
     // First try to get from Supabase
     try {
-      // Use type assertions to bypass strict TypeScript checking
-      // since we're providing a fallback to mock data
-      const response = await (supabase
-        .from('work_orders')
-        .select('*')) as any;
+      // Use direct fetch for Supabase API instead of using .from() method
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/work_orders?select=*`,
+        {
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
       
-      const { data, error } = response;
-    
-      if (error) {
-        console.error("Supabase error:", error);
-        // Fall back to mock data
-        const orders = await fetchMockWorkOrders();
-        useWorkOrderStore.getState().setWorkOrders(orders);
-        return orders;
+      if (!response.ok) {
+        throw new Error(`Supabase API returned ${response.status}`);
       }
       
+      const data = await response.json();
+    
       if (data && data.length > 0) {
         // Transform Supabase data to match our WorkOrder interface
         const orders = data.map(transformDbWorkOrder);
@@ -167,6 +168,8 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
     technicianName: workOrderData.technicianName || "",
     estimatedHours: workOrderData.estimatedHours || 1,
     notes: workOrderData.notes || [],
+    email: workOrderData.email, // Email is now a valid property on WorkOrder
+    phoneNumber: workOrderData.phoneNumber, // PhoneNumber is now a valid property on WorkOrder
     completionRequired: workOrderData.completionRequired !== undefined ? workOrderData.completionRequired : true
   };
   
@@ -203,17 +206,24 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
       
       // Try to save to Supabase if possible
       try {
-        await supabase.from('customers').insert({
-          id: newCustomer.id,
-          name: newCustomer.name,
-          email: newCustomer.email,
-          phone: newCustomer.phone,
-          address: newCustomer.address,
-          service_address: newCustomer.serviceAddress,
-          bill_address: newCustomer.billAddress,
-          created_at: newCustomer.createdAt,
-          type: newCustomer.type
-        }).throwOnError();
+        // Using fetch API instead of supabase.from()
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/customers`,
+          {
+            method: 'POST',
+            headers: {
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(supabase.formatCustomerForDb(newCustomer))
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Supabase API returned ${response.status}`);
+        }
       } catch (error) {
         console.error("Error saving new customer to Supabase:", error);
         // Fall back silently - we already saved to local store
@@ -223,19 +233,24 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
     // Try to save work order to Supabase first
     try {
       const dbRecord = transformWorkOrderToDb(newWorkOrder);
-      // Use type assertion to bypass strict TypeScript checking
-      const response = await (supabase
-        .from('work_orders')
-        .insert(dbRecord)) as any;
       
-      const { error } = response;
+      // Using fetch API instead of supabase.from()
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/work_orders`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(dbRecord)
+        }
+      );
       
-      if (error) {
-        console.error("Error saving to Supabase:", error);
-        // Fall back to mock service
-        const created = await createMockWorkOrder(newWorkOrder);
-        useWorkOrderStore.getState().addWorkOrder(created);
-        return created;
+      if (!response.ok) {
+        throw new Error(`Supabase API returned ${response.status}`);
       }
       
       // Successfully saved to Supabase
@@ -260,20 +275,24 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
     // Try to update in Supabase first
     try {
       const dbRecord = transformWorkOrderToDb(workOrder);
-      // Use type assertion to bypass strict TypeScript checking
-      const response = await (supabase
-        .from('work_orders')
-        .update(dbRecord)
-        .eq('id', workOrder.id)) as any;
       
-      const { error } = response;
+      // Using fetch API instead of supabase.from()
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/work_orders?id=eq.${workOrder.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(dbRecord)
+        }
+      );
       
-      if (error) {
-        console.error("Error updating in Supabase:", error);
-        // Fall back to mock service
-        const updated = await updateMockWorkOrder(workOrder);
-        useWorkOrderStore.getState().updateWorkOrder(updated);
-        return updated;
+      if (!response.ok) {
+        throw new Error(`Supabase API returned ${response.status}`);
       }
       
       // Successfully updated in Supabase

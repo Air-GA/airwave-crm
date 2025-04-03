@@ -28,7 +28,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
         autoRefreshToken: true,
       },
       global: {
-        fetch: (...args) => fetch(...args),
+        fetch: (url, options) => fetch(url, options),
       },
     }
   );
@@ -43,7 +43,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
         autoRefreshToken: true,
       },
       global: {
-        fetch: (...args) => fetch(...args),
+        fetch: (url, options) => fetch(url, options),
       },
     }
   );

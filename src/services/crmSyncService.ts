@@ -11,26 +11,29 @@ const CRM_SYNC_URL = `${import.meta.env.VITE_SUPABASE_URL || 'http://localhost:5
  */
 export const syncTechniciansFromCRM = async (): Promise<Technician[]> => {
   try {
-    const { data: functionData, error: functionError } = await supabase.functions.invoke('crm-sync', {
-      body: { action: 'sync-technicians' }
+    // Since supabase client may not have functions property in the current setup
+    // Use direct fetch to the edge function URL instead
+    const response = await fetch(`${CRM_SYNC_URL}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ action: 'sync-technicians' })
     });
-
-    if (functionError) {
-      console.error("Error syncing technicians:", functionError);
-      toast({
-        title: "Sync Failed",
-        description: `Could not sync technicians: ${functionError.message}`,
-        variant: "destructive",
-      });
-      return [];
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to sync technicians');
     }
 
     toast({
       title: "Sync Complete",
-      description: `Successfully synced ${functionData.technicians?.length || 0} technicians from CRM`,
+      description: `Successfully synced ${data.technicians?.length || 0} technicians from CRM`,
     });
 
-    return functionData.technicians || [];
+    return data.technicians || [];
   } catch (error) {
     console.error("Error in syncTechniciansFromCRM:", error);
     toast({
@@ -47,26 +50,29 @@ export const syncTechniciansFromCRM = async (): Promise<Technician[]> => {
  */
 export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
   try {
-    const { data: functionData, error: functionError } = await supabase.functions.invoke('crm-sync', {
-      body: { action: 'sync-work-orders' }
+    // Since supabase client may not have functions property in the current setup
+    // Use direct fetch to the edge function URL instead
+    const response = await fetch(`${CRM_SYNC_URL}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ action: 'sync-work-orders' })
     });
-
-    if (functionError) {
-      console.error("Error syncing work orders:", functionError);
-      toast({
-        title: "Sync Failed",
-        description: `Could not sync work orders: ${functionError.message}`,
-        variant: "destructive",
-      });
-      return [];
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to sync work orders');
     }
 
     toast({
       title: "Sync Complete",
-      description: `Successfully synced ${functionData.workOrders?.length || 0} work orders from CRM`,
+      description: `Successfully synced ${data.workOrders?.length || 0} work orders from CRM`,
     });
 
-    return functionData.workOrders?.map(mapWorkOrderFromDB) || [];
+    return data.workOrders?.map(mapWorkOrderFromDB) || [];
   } catch (error) {
     console.error("Error in syncWorkOrdersFromCRM:", error);
     toast({
@@ -83,22 +89,25 @@ export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
  */
 export const pushWorkOrderUpdateToCRM = async (workOrder: WorkOrder): Promise<boolean> => {
   try {
-    const { data: functionData, error: functionError } = await supabase.functions.invoke('crm-sync', {
-      body: { 
+    // Since supabase client may not have functions property in the current setup
+    // Use direct fetch to the edge function URL instead
+    const response = await fetch(`${CRM_SYNC_URL}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ 
         action: 'push-update',
         type: 'work-order',
-        payload: mapWorkOrderToDB(workOrder)
-      }
+        payload: mapWorkOrderToDB(workOrder) 
+      })
     });
-
-    if (functionError) {
-      console.error("Error pushing work order update:", functionError);
-      toast({
-        title: "Update Failed",
-        description: `Could not update work order in CRM: ${functionError.message}`,
-        variant: "destructive",
-      });
-      return false;
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update work order');
     }
 
     toast({
@@ -136,22 +145,25 @@ export const pushTechnicianUpdateToCRM = async (technician: Technician): Promise
       } : undefined
     };
 
-    const { data: functionData, error: functionError } = await supabase.functions.invoke('crm-sync', {
-      body: { 
+    // Since supabase client may not have functions property in the current setup
+    // Use direct fetch to the edge function URL instead
+    const response = await fetch(`${CRM_SYNC_URL}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ 
         action: 'push-update',
         type: 'technician',
         payload: techForCRM
-      }
+      })
     });
-
-    if (functionError) {
-      console.error("Error pushing technician update:", functionError);
-      toast({
-        title: "Update Failed",
-        description: `Could not update technician in CRM: ${functionError.message}`,
-        variant: "destructive",
-      });
-      return false;
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update technician');
     }
 
     toast({

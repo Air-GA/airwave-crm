@@ -54,6 +54,9 @@ export interface WorkOrder {
     quantity: number;
     price: number;
   }[];
+  // Add these fields to support customer creation from work orders
+  email?: string;
+  phoneNumber?: string;
 }
 
 export interface InventoryItem {
