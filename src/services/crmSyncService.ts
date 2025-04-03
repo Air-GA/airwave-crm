@@ -2,6 +2,7 @@
 import { supabase } from '../lib/supabase';
 import { WorkOrder, Technician } from '../types';
 import { toast } from '@/components/ui/use-toast';
+import { workOrders as mockWorkOrders } from '../data/mockData';
 
 // Base URL for the Supabase Edge Function
 const CRM_SYNC_URL = `${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321'}/functions/v1/crm-sync`;
@@ -73,9 +74,8 @@ export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
     if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
       console.log("Using mock data for work orders in development environment");
       
-      // Import mock data dynamically to avoid bundling it in production
-      const { getWorkOrderMockData } = await import('../data/mockData');
-      const mockWorkOrders = getWorkOrderMockData();
+      // Use the imported mockWorkOrders directly instead of dynamically importing a function
+      console.log(`Returning ${mockWorkOrders.length} mock work orders`);
       
       toast({
         title: "Mock Sync Complete",
