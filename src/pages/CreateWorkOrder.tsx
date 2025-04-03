@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
@@ -43,6 +44,7 @@ import { CalendarIcon, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { createWorkOrder } from "@/services/workOrderService";
+import { WorkOrder } from "@/types";
 
 const workOrderSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
@@ -70,10 +72,15 @@ const defaultValues: Partial<WorkOrderFormValues> = {
   notes: "",
 };
 
+// Function to extract query parameters
+function useQueryParams() {
+  return new URLSearchParams(useLocation().search);
+}
+
 const CreateWorkOrder = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const query = useQuery();
+  const query = useQueryParams();
   const [parts, setParts] = useState<{ id: string; name: string; quantity: number; price: number }[]>([]);
   const [partName, setPartName] = useState("");
   const [partQuantity, setPartQuantity] = useState(1);
@@ -90,9 +97,9 @@ const CreateWorkOrder = () => {
     defaultValues: {
       ...defaultValues,
       customerName: customerName || defaultValues.customerName || "",
-      phoneNumber: customerPhone || defaultValues.phoneNumber || "",
-      email: customerEmail || defaultValues.email || "",
-      address: customerAddress || defaultValues.address || "",
+      phoneNumber: customerPhone || "",
+      email: customerEmail || "",
+      address: customerAddress || "",
     },
   });
   
@@ -112,8 +119,6 @@ const CreateWorkOrder = () => {
   }, [customerId, customerName, customerPhone, customerEmail, customerAddress, form]);
   
   const onSubmit = (data: WorkOrderFormValues) => {
-    const partsTotal = parts.reduce((sum, part) => sum + (part.price * part.quantity), 0);
-    
     const formattedParts = parts.map(part => ({
       id: part.id,
       name: part.name,
@@ -121,10 +126,19 @@ const CreateWorkOrder = () => {
       price: part.price
     }));
     
+    // Ensure type is correctly cast to a valid WorkOrder type
+    const workOrderType = data.type as WorkOrder["type"];
+    const workOrderPriority = data.priority as WorkOrder["priority"];
+    
     createWorkOrder({
-      ...data,
       status: "pending",
       customerId: customerId || undefined,
+      customerName: data.customerName,
+      address: data.address,
+      type: workOrderType,
+      description: data.description,
+      priority: workOrderPriority,
+      scheduledDate: data.scheduledDate.toISOString(),
       createdAt: new Date().toISOString(),
       partsUsed: formattedParts.length > 0 ? formattedParts : undefined,
     })
@@ -293,7 +307,6 @@ const CreateWorkOrder = () => {
                                 <SelectItem value="maintenance">Maintenance</SelectItem>
                                 <SelectItem value="repair">Repair</SelectItem>
                                 <SelectItem value="inspection">Inspection</SelectItem>
-                                <SelectItem value="consultation">Consultation</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />

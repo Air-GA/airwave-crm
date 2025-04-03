@@ -1,3 +1,4 @@
+
 import { Technician, WorkOrder } from "@/types";
 
 // Mock technicians data
@@ -109,11 +110,46 @@ export const fetchMockTechnicians = async (): Promise<Technician[]> => {
 
 export const fetchMockWorkOrders = async (): Promise<WorkOrder[]> => {
   await new Promise(resolve => setTimeout(resolve, 500));
+  // Get work orders from localStorage if they exist, otherwise use mock data
+  const storedOrders = localStorage.getItem('mockWorkOrders');
+  if (storedOrders) {
+    try {
+      const parsedOrders = JSON.parse(storedOrders);
+      if (Array.isArray(parsedOrders) && parsedOrders.length > 0) {
+        return parsedOrders;
+      }
+    } catch (error) {
+      console.error("Error parsing stored work orders:", error);
+    }
+  }
   return mockWorkOrders;
 };
 
 export const updateMockWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
   await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Get existing orders
+  const storedOrders = localStorage.getItem('mockWorkOrders');
+  let orders = [];
+  
+  if (storedOrders) {
+    try {
+      orders = JSON.parse(storedOrders);
+    } catch (error) {
+      orders = [...mockWorkOrders];
+    }
+  } else {
+    orders = [...mockWorkOrders];
+  }
+  
+  // Update the order in the array
+  const updatedOrders = orders.map(order => 
+    order.id === workOrder.id ? workOrder : order
+  );
+  
+  // Save back to localStorage
+  localStorage.setItem('mockWorkOrders', JSON.stringify(updatedOrders));
+  
   return workOrder;
 };
 
@@ -128,7 +164,22 @@ export const completeMockWorkOrder = async (
 ): Promise<WorkOrder> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  const workOrder = mockWorkOrders.find(order => order.id === workOrderId);
+  // Get existing orders
+  const storedOrders = localStorage.getItem('mockWorkOrders');
+  let orders = [];
+  
+  if (storedOrders) {
+    try {
+      orders = JSON.parse(storedOrders);
+    } catch (error) {
+      orders = [...mockWorkOrders];
+    }
+  } else {
+    orders = [...mockWorkOrders];
+  }
+  
+  // Find the work order
+  const workOrder = orders.find(order => order.id === workOrderId);
   if (!workOrder) throw new Error("Work order not found");
   
   const updatedOrder: WorkOrder = {
@@ -137,6 +188,14 @@ export const completeMockWorkOrder = async (
     completedDate: new Date().toISOString(),
     notes: notes ? [...(workOrder.notes || []), notes] : workOrder.notes
   };
+  
+  // Update the order in the array
+  const updatedOrders = orders.map(order => 
+    order.id === workOrderId ? updatedOrder : order
+  );
+  
+  // Save back to localStorage
+  localStorage.setItem('mockWorkOrders', JSON.stringify(updatedOrders));
   
   return updatedOrder;
 };
@@ -147,7 +206,22 @@ export const markWorkOrderPendingCompletion = async (
 ): Promise<WorkOrder> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  const workOrder = mockWorkOrders.find(order => order.id === workOrderId);
+  // Get existing orders
+  const storedOrders = localStorage.getItem('mockWorkOrders');
+  let orders = [];
+  
+  if (storedOrders) {
+    try {
+      orders = JSON.parse(storedOrders);
+    } catch (error) {
+      orders = [...mockWorkOrders];
+    }
+  } else {
+    orders = [...mockWorkOrders];
+  }
+  
+  // Find the work order
+  const workOrder = orders.find(order => order.id === workOrderId);
   if (!workOrder) throw new Error("Work order not found");
   
   const updatedOrder: WorkOrder = {
@@ -156,16 +230,37 @@ export const markWorkOrderPendingCompletion = async (
     pendingReason: pendingReason
   };
   
+  // Update the order in the array
+  const updatedOrders = orders.map(order => 
+    order.id === workOrderId ? updatedOrder : order
+  );
+  
+  // Save back to localStorage
+  localStorage.setItem('mockWorkOrders', JSON.stringify(updatedOrders));
+  
   return updatedOrder;
 };
 
 // Mock function to create a work order
 export const createMockWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
-  // Get existing work orders from localStorage
-  const existingOrders = JSON.parse(localStorage.getItem('mockWorkOrders') || '[]');
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Get existing orders
+  const storedOrders = localStorage.getItem('mockWorkOrders');
+  let orders = [];
+  
+  if (storedOrders) {
+    try {
+      orders = JSON.parse(storedOrders);
+    } catch (error) {
+      orders = [...mockWorkOrders];
+    }
+  } else {
+    orders = [...mockWorkOrders];
+  }
   
   // Add the new work order
-  const updatedOrders = [...existingOrders, workOrder];
+  const updatedOrders = [...orders, workOrder];
   
   // Save back to localStorage
   localStorage.setItem('mockWorkOrders', JSON.stringify(updatedOrders));

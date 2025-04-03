@@ -39,7 +39,7 @@ export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
 export const fetchWorkOrders = async () => {
   try {
     // First try to get from Supabase
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('work_orders')
       .select('*');
     
@@ -126,15 +126,19 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
     // Generate an ID for the work order if not provided
     const workOrderId = workOrderData.id || `WO${Math.floor(Math.random() * 1000)}`;
     
+    // Ensure the work order type is valid
+    const type = (workOrderData.type || "maintenance") as "repair" | "maintenance" | "installation" | "inspection";
+    const priority = (workOrderData.priority || "medium") as "low" | "medium" | "high" | "emergency";
+    
     // Prepare work order data with default values for required fields
     const newWorkOrder: WorkOrder = {
       id: workOrderId,
       customerId: workOrderData.customerId || "",
       customerName: workOrderData.customerName || "",
       address: workOrderData.address || "",
-      type: workOrderData.type || "maintenance",
+      type: type,
       description: workOrderData.description || "",
-      priority: workOrderData.priority || "medium",
+      priority: priority,
       status: "pending", // Always create as pending
       scheduledDate: workOrderData.scheduledDate || new Date().toISOString(),
       createdAt: new Date().toISOString(),
@@ -145,9 +149,10 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
     
     // Try to save to Supabase first
     try {
+      const dbRecord = transformWorkOrderToDb(newWorkOrder);
       const { error } = await supabase
         .from('work_orders')
-        .insert(transformWorkOrderToDb(newWorkOrder));
+        .insert(dbRecord);
       
       if (error) {
         console.error("Error saving to Supabase:", error);
@@ -174,9 +179,10 @@ export const updateWorkOrder = async (workOrder: WorkOrder) => {
   try {
     // Try updating in Supabase first
     try {
+      const dbRecord = transformWorkOrderToDb(workOrder);
       const { error } = await supabase
         .from('work_orders')
-        .update(transformWorkOrderToDb(workOrder))
+        .update(dbRecord)
         .eq('id', workOrder.id);
       
       if (error) {
