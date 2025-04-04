@@ -22,7 +22,8 @@ import {
   Share2,
   UserPlus, 
   Users,
-  Video 
+  Video,
+  Laptop 
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const Messages = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,6 +48,9 @@ const Messages = () => {
   const [isDiscordDialogOpen, setIsDiscordDialogOpen] = useState(false);
   const [discordInviteLink, setDiscordInviteLink] = useState("");
   const [discordServerName, setDiscordServerName] = useState("");
+  const [discordChannelName, setDiscordChannelName] = useState("");
+  const [discordShareType, setDiscordShareType] = useState<"screen" | "camera">("screen");
+  const { userRole } = useAuth();
   
   // Mock data for conversations
   const conversations = [
@@ -179,6 +184,7 @@ const Messages = () => {
     if (newMessage.trim() !== "") {
       // In a real app, you would add the message to the conversation and send it to the server
       // For this demo, we'll just clear the input
+      toast.success("Message sent");
       setNewMessage("");
     }
   };
@@ -191,20 +197,36 @@ const Messages = () => {
       .toUpperCase();
   };
 
-  const startDiscordScreenShare = () => {
+  const startDiscordShare = () => {
     if (!discordServerName || !discordInviteLink) {
       toast.error("Please provide both server name and invite link");
       return;
     }
 
     // In a real implementation, you would use the Discord API
-    // For now, we'll just open the invite link
+    // For now, we'll just open the invite link and show a success message
     window.open(discordInviteLink, '_blank');
-    toast.success(`Screen sharing session started for ${activeChat?.name}`);
+    
+    const shareText = discordShareType === "screen" 
+      ? "Screen sharing session" 
+      : "Video call";
+      
+    toast.success(`${shareText} initiated via Discord with ${activeChat?.name}`);
+    
+    // Add a system message to the conversation about the Discord share
+    // In a real app, you would update the conversation in the database
+    
     setIsDiscordDialogOpen(false);
   };
 
-  const generateDiscordLink = () => {
+  const isTeamMember = () => {
+    // Check if the active chat is with a team member
+    // This is a simplified check - in a real app, you would check the user's role or department
+    return activeChat?.name.includes("Tech") || activeChat?.name.includes("Team");
+  };
+
+  const showDiscordDialog = (type: "screen" | "camera") => {
+    setDiscordShareType(type);
     setIsDiscordDialogOpen(true);
   };
   
@@ -297,7 +319,9 @@ const Messages = () => {
                       </Avatar>
                       <div>
                         <CardTitle>{activeChat.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">Customer</p>
+                        <p className="text-sm text-muted-foreground">
+                          {isTeamMember() ? "Team Member" : "Customer"}
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -309,15 +333,44 @@ const Messages = () => {
                         <AtSign className="h-4 w-4" />
                         <span className="sr-only">Email</span>
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        title="Discord Screen Share"
-                        onClick={generateDiscordLink}
-                      >
-                        <Share2 className="h-4 w-4" />
-                        <span className="sr-only">Screen Share</span>
-                      </Button>
+                      
+                      {/* Discord integration buttons */}
+                      {isTeamMember() && (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="Discord Screen Share"
+                            onClick={() => showDiscordDialog("screen")}
+                          >
+                            <Laptop className="h-4 w-4" />
+                            <span className="sr-only">Screen Share</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="Discord Video Call"
+                            onClick={() => showDiscordDialog("camera")}
+                          >
+                            <Video className="h-4 w-4" />
+                            <span className="sr-only">Video Call</span>
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Customer-facing share button - separate from team communication */}
+                      {!isTeamMember() && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          title="Share Screen"
+                          onClick={() => showDiscordDialog("screen")}
+                        >
+                          <Share2 className="h-4 w-4" />
+                          <span className="sr-only">Share Screen</span>
+                        </Button>
+                      )}
+                      
                       <Button variant="ghost" size="icon" title="Team Chat">
                         <Users className="h-4 w-4" />
                         <span className="sr-only">Group</span>
@@ -411,9 +464,11 @@ const Messages = () => {
         <Dialog open={isDiscordDialogOpen} onOpenChange={setIsDiscordDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Start Discord Screen Share</DialogTitle>
+              <DialogTitle>
+                {discordShareType === "screen" ? "Start Discord Screen Share" : "Start Discord Video Call"}
+              </DialogTitle>
               <DialogDescription>
-                Share your Discord server details to initiate a screen sharing session with {activeChat?.name}.
+                Share your Discord server details to initiate a {discordShareType === "screen" ? "screen sharing session" : "video call"} with {activeChat?.name}.
               </DialogDescription>
             </DialogHeader>
             
@@ -429,6 +484,16 @@ const Messages = () => {
               </div>
               
               <div className="grid gap-2">
+                <Label htmlFor="discord-channel">Discord Channel Name (optional)</Label>
+                <Input
+                  id="discord-channel"
+                  value={discordChannelName}
+                  onChange={(e) => setDiscordChannelName(e.target.value)}
+                  placeholder="tech-support"
+                />
+              </div>
+              
+              <div className="grid gap-2">
                 <Label htmlFor="discord-invite">Discord Invite Link</Label>
                 <Input
                   id="discord-invite"
@@ -437,16 +502,21 @@ const Messages = () => {
                   placeholder="https://discord.gg/your-invite-code"
                 />
                 <p className="text-sm text-muted-foreground">
-                  You can generate an invite link from your Discord server settings
+                  You can generate an invite link from your Discord server settings.
+                  Make sure to set appropriate permissions for the invite.
                 </p>
               </div>
             </div>
             
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDiscordDialogOpen(false)}>Cancel</Button>
-              <Button onClick={startDiscordScreenShare} className="gap-2">
-                <Video className="h-4 w-4" />
-                Start Screen Share
+              <Button onClick={startDiscordShare} className="gap-2">
+                {discordShareType === "screen" ? (
+                  <Laptop className="h-4 w-4" />
+                ) : (
+                  <Video className="h-4 w-4" />
+                )}
+                Start {discordShareType === "screen" ? "Screen Share" : "Video Call"}
               </Button>
             </DialogFooter>
           </DialogContent>

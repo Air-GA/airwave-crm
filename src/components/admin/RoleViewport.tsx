@@ -50,6 +50,7 @@ export const RoleViewport = ({
       case 'reports':
         return ['manager', 'hr', 'user'];
       case 'messages':
+        // All roles can access messages, but they'll see different interfaces and capabilities
         return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
       case 'notifications':
         return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
@@ -69,7 +70,11 @@ export const RoleViewport = ({
       <div className="w-full max-w-7xl p-4 h-[90vh]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <LayoutDashboard className="h-5 w-5 mr-2" />
+            {currentPage.toLowerCase() === 'messages' ? (
+              <MessagesSquare className="h-5 w-5 mr-2" />
+            ) : (
+              <LayoutDashboard className="h-5 w-5 mr-2" />
+            )}
             <h2 className="text-xl font-bold">Role View: {currentPage}</h2>
             <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700">
               Admin Feature
