@@ -7,7 +7,7 @@ const Login = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <img 
           src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-          alt="Air Georgia Logo" 
+          alt="Air Georgia Heating & Air Conditioning" 
           className="mx-auto h-16 w-auto" 
         />
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">

@@ -1,4 +1,3 @@
-
 import {
   BarChart3,
   Calendar,
@@ -31,7 +30,6 @@ interface NavItem {
   icon: any;
 }
 
-// Update the navigation items to remove the import data page
 export const navigationItems = [
   {
     title: "Dashboard",
@@ -122,7 +120,7 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
         <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
           <img 
             src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-            alt="Air Georgia Logo" 
+            alt="Air Georgia Heating & Air Conditioning" 
             className="h-10 w-auto" 
           />
           <button onClick={handleClose}>
@@ -140,7 +138,7 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
         <SidebarHeader className="flex h-16 items-center px-4 border-b border-sidebar-border">
           <img 
             src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-            alt="Air Georgia Logo" 
+            alt="Air Georgia Heating & Air Conditioning" 
             className="h-10 w-auto" 
           />
         </SidebarHeader>
@@ -152,7 +150,6 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
   );
 };
 
-// Extracted common menu component
 SideNav.Menu = function SideNavMenu() {
   return (
     <SidebarMenu className="flex flex-col space-y-0.5 p-2">
