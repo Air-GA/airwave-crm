@@ -268,7 +268,7 @@ const Dispatch = () => {
             <Tabs defaultValue="list">
               <TabsList>
                 <TabsTrigger value="list">List View</TabsTrigger>
-                <TabsTrigger value="map">Map View</TabsTrigger>
+                <TabsTrigger value="map" disabled={true}>Map View (Disabled)</TabsTrigger>
               </TabsList>
 
               <TabsContent value="list" className="pt-4">
@@ -406,7 +406,16 @@ const Dispatch = () => {
               </TabsContent>
 
               <TabsContent value="map" className="pt-4">
-                <TechLocationMap apiKey="EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA" />
+                <Card className="p-6">
+                  <div className="flex flex-col items-center justify-center text-center gap-4 py-8">
+                    <MapPin className="h-12 w-12 text-muted-foreground" />
+                    <h3 className="text-lg font-medium">Map Integration Disabled</h3>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      The technician location map integration is currently disabled.
+                      Contact your administrator to enable this feature.
+                    </p>
+                  </div>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>

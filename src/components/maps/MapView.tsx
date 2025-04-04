@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import TechLocationMap from './TechLocationMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,36 +8,31 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Hardcoded API key from user
 const API_KEY = 'EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA';
 
 const MapView = () => {
   const [showMap, setShowMap] = useState(false);
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [mapKey, setMapKey] = useState<string>(`tech-map-${Date.now()}`);
   
-  // Check for Google Maps API key on component mount
   useEffect(() => {
     const checkApiKey = () => {
       try {
-        // Save the provided API key in settings if not already present
         const integrations = getIntegrationSettings();
         if (!integrations.googleMaps?.apiKey) {
           integrations.googleMaps = {
             ...integrations.googleMaps,
-            connected: true,
+            connected: false,
             apiKey: API_KEY,
           };
           saveIntegrationSettings(integrations);
-          console.log("Saved Google Maps API key to settings");
+          console.log("Saved Google Maps API key to settings (disabled)");
         }
         
-        // Auto-show map
         if (!showMap) {
-          console.log("Auto-showing map with API key");
-          setShowMap(true);
-          setApiKeyError(null);
+          console.log("Map integration is disabled");
+          setApiKeyError("Map integration is currently disabled");
         }
       } catch (error) {
         console.error("Error checking API key:", error);
@@ -47,7 +41,6 @@ const MapView = () => {
       }
     };
     
-    // Initial check
     checkApiKey();
   }, [showMap]);
 
@@ -100,45 +93,24 @@ const MapView = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {apiKeyError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{apiKeyError}</AlertDescription>
-          </Alert>
-        )}
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Map integration is currently disabled.
+          </AlertDescription>
+        </Alert>
         
-        {!showMap ? (
-          <div className="text-center py-8">
-            <p className="mb-4">
-              Click the button below to load the map and see technician locations.
-            </p>
-            <Button 
-              onClick={() => {
-                setShowMap(true);
-                toast.info("Loading map", {
-                  description: "Please wait while the map is being loaded..."
-                });
-              }}
-            >
-              Show Map
-            </Button>
-          </div>
-        ) : (
-          <div>
-            <TechLocationMap key={mapKey} onError={handleMapError} apiKey={API_KEY} />
-            <div className="mt-2 flex justify-end">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleRetry}
-                className="flex items-center gap-1"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Reload Map
-              </Button>
-            </div>
-          </div>
-        )}
+        <div className="text-center py-8">
+          <p className="mb-4">
+            The map integration has been temporarily disabled.
+          </p>
+          <Button 
+            disabled
+            variant="outline"
+          >
+            Map Feature Disabled
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
