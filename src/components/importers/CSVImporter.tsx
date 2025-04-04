@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload } from "lucide-react";
+import { Upload, FileSpreadsheet } from "lucide-react";
 import Papa from "papaparse";
+import * as XLSX from 'xlsx';
 import { Customer, WorkOrder, InventoryItem } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
 import { importCustomers, importWorkOrders, importInventory } from "@/services/importService";
@@ -47,11 +47,28 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
     }
   };
   
+  const isExcelFile = (file: File) => {
+    const excelTypes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12'
+    ];
+    return excelTypes.includes(file.type) || 
+           file.name.endsWith('.xlsx') || 
+           file.name.endsWith('.xls') || 
+           file.name.endsWith('.xlsm');
+  };
+  
+  const isCsvFile = (file: File) => {
+    return file.type === "text/csv" || 
+           file.name.endsWith('.csv');
+  };
+  
   const handleFile = (file: File) => {
-    if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
+    if (!isCsvFile(file) && !isExcelFile(file)) {
       toast({
         title: "Invalid file format",
-        description: "Please upload a CSV file",
+        description: "Please upload a CSV or Excel file (.csv, .xlsx, .xls)",
         variant: "destructive",
       });
       return;
@@ -61,88 +78,149 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
     if (onImportStart) onImportStart();
 
     try {
-      console.log("Starting CSV import for file:", file.name);
+      console.log(`Starting ${isExcelFile(file) ? 'Excel' : 'CSV'} import for file:`, file.name);
       
-      // First read the file contents
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (!event.target?.result) {
+      if (isExcelFile(file)) {
+        handleExcelFile(file);
+      } else {
+        handleCsvFile(file);
+      }
+    } catch (error) {
+      console.error("File parsing error:", error);
+      toast({
+        title: "Import failed",
+        description: "Failed to process the file.",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
+  };
+  
+  const handleExcelFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        if (!data) {
+          throw new Error("Could not read file");
+        }
+        
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        console.log(`Excel parsed successfully. Found ${jsonData.length} rows.`);
+        
+        if (jsonData.length === 0) {
           toast({
-            title: "Error reading file",
-            description: "Could not read the file content",
+            title: "Empty file",
+            description: "The uploaded file doesn't contain any valid data.",
             variant: "destructive",
           });
           setIsProcessing(false);
           return;
         }
         
-        const csvData = event.target.result as string;
+        // Update progress
+        if (onImportProgress) {
+          onImportProgress(jsonData.length, jsonData.length);
+        }
         
-        // Set up row counter for progress tracking
-        let totalRows = 0;
-        let processedRows = 0;
-        
-        // First count total rows for accurate progress reporting
-        const rowCount = csvData.split('\n').length - 1; // -1 for header
-        totalRows = Math.max(1, rowCount); // Ensure at least 1 to avoid division by zero
-        
-        // Now parse the data
-        Papa.parse(csvData, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results: Papa.ParseResult<any>) => {
-            if (results.data.length === 0) {
-              toast({
-                title: "Empty file",
-                description: "The uploaded file doesn't contain any valid data.",
-                variant: "destructive",
-              });
-              setIsProcessing(false);
-              return;
-            }
-            
-            console.log(`CSV parsed successfully. Found ${results.data.length} rows.`);
-            processData(results.data);
-          },
-          error: (error: any) => {
-            console.error("Error parsing CSV:", error);
-            toast({
-              title: "Error parsing file",
-              description: "There was an error parsing the CSV file. Please check the format and try again.",
-              variant: "destructive",
-            });
-            setIsProcessing(false);
-          },
-          step: (row: Papa.ParseStepResult<any>) => {
-            // Update progress based on rows processed
-            processedRows++;
-            if (onImportProgress) {
-              onImportProgress(processedRows, totalRows);
-            }
-          }
+        processData(jsonData);
+      } catch (error) {
+        console.error("Error parsing Excel file:", error);
+        toast({
+          title: "Error parsing file",
+          description: "There was an error parsing the Excel file. Please check the format and try again.",
+          variant: "destructive",
         });
-      };
-      
-      reader.onerror = () => {
+        setIsProcessing(false);
+      }
+    };
+    
+    reader.onerror = () => {
+      toast({
+        title: "Error reading file",
+        description: "Could not read the file content",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    };
+    
+    reader.readAsBinaryString(file);
+  };
+  
+  const handleCsvFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (!event.target?.result) {
         toast({
           title: "Error reading file",
           description: "Could not read the file content",
           variant: "destructive",
         });
         setIsProcessing(false);
-      };
+        return;
+      }
       
-      reader.readAsText(file);
+      const csvData = event.target.result as string;
       
-    } catch (error) {
-      console.error("CSV parsing error:", error);
+      // Set up row counter for progress tracking
+      let totalRows = 0;
+      let processedRows = 0;
+      
+      // First count total rows for accurate progress reporting
+      const rowCount = csvData.split('\n').length - 1; // -1 for header
+      totalRows = Math.max(1, rowCount); // Ensure at least 1 to avoid division by zero
+      
+      // Now parse the data
+      Papa.parse(csvData, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results: Papa.ParseResult<any>) => {
+          if (results.data.length === 0) {
+            toast({
+              title: "Empty file",
+              description: "The uploaded file doesn't contain any valid data.",
+              variant: "destructive",
+            });
+            setIsProcessing(false);
+            return;
+          }
+          
+          console.log(`CSV parsed successfully. Found ${results.data.length} rows.`);
+          processData(results.data);
+        },
+        error: (error: any) => {
+          console.error("Error parsing CSV:", error);
+          toast({
+            title: "Error parsing file",
+            description: "There was an error parsing the CSV file. Please check the format and try again.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+        },
+        step: (row: Papa.ParseStepResult<any>) => {
+          // Update progress based on rows processed
+          processedRows++;
+          if (onImportProgress) {
+            onImportProgress(processedRows, totalRows);
+          }
+        }
+      });
+    };
+    
+    reader.onerror = () => {
       toast({
-        title: "Import failed",
-        description: "Failed to process the CSV file.",
+        title: "Error reading file",
+        description: "Could not read the file content",
         variant: "destructive",
       });
       setIsProcessing(false);
-    }
+    };
+    
+    reader.readAsText(file);
   };
   
   const processData = async (data: any[]) => {
@@ -292,12 +370,12 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
     >
       <div className="flex flex-col items-center justify-center space-y-4">
         <div className="rounded-full bg-primary/10 p-3">
-          <Upload className="h-8 w-8 text-primary" />
+          <FileSpreadsheet className="h-8 w-8 text-primary" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold">Upload {type} CSV File</h3>
+          <h3 className="text-lg font-semibold">Upload {type} File</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Drag and drop your CSV file here, or click to select a file
+            Drag and drop your CSV or Excel file here, or click to select a file
           </p>
           {!isProcessing && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -309,12 +387,12 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
           type="file"
           id="csv-upload"
           className="hidden"
-          accept=".csv"
+          accept=".csv,.xlsx,.xls"
           onChange={handleFileChange}
         />
         <label htmlFor="csv-upload">
           <Button variant="outline" disabled={isProcessing} asChild>
-            <span>{isProcessing ? "Processing..." : "Select CSV File"}</span>
+            <span>{isProcessing ? "Processing..." : "Select CSV or Excel File"}</span>
           </Button>
         </label>
       </div>
@@ -323,4 +401,3 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
 };
 
 export default CSVImporter;
-

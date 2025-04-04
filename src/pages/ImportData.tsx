@@ -77,7 +77,7 @@ const ImportData = () => {
                       <AlertTriangle className="h-4 w-4" />
                       <AlertTitle>Important</AlertTitle>
                       <AlertDescription>
-                        CSV files should contain columns for customer name, email, phone, 
+                        CSV or Excel files should contain columns for customer name, email, phone, 
                         service address (including city, state, zip), and billing address.
                       </AlertDescription>
                     </Alert>
@@ -141,7 +141,7 @@ const ImportData = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Import your work order data here.</p>
+                <p>Import your work order data here from CSV or Excel files.</p>
                 <div className="mt-4">
                   <CSVImporter 
                     type="work-orders" 
@@ -166,7 +166,7 @@ const ImportData = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Import your inventory items and stock levels.</p>
+                <p>Import your inventory items and stock levels from CSV or Excel files.</p>
                 <div className="mt-4">
                   <CSVImporter 
                     type="inventory"

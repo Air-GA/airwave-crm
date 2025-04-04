@@ -88,11 +88,13 @@ export const importInventory = async (
   }
 };
 
-// For backward compatibility, keep these functions but simplify them to use the main import functions
-export const processCustomerImport = async (customers: Customer[]): Promise<number> => {
+// Simplified import functions with better type safety
+export const processCustomerImport = async (customers: Partial<Customer>[]): Promise<number> => {
   try {
-    await importCustomers(customers);
-    return customers.length;
+    // Cast to Customer[] after validation if needed
+    const validCustomers = customers.filter(c => c.name) as Customer[];
+    await importCustomers(validCustomers);
+    return validCustomers.length;
   } catch (error) {
     console.error("Error processing customer import:", error);
     throw error;
@@ -101,18 +103,28 @@ export const processCustomerImport = async (customers: Customer[]): Promise<numb
 
 export const processWorkOrderImport = async (workOrders: Partial<WorkOrder>[]): Promise<number> => {
   try {
-    await importWorkOrders(workOrders as WorkOrder[]);
-    return workOrders.length;
+    // Filter out invalid work orders before casting
+    const validWorkOrders = workOrders.filter(wo => 
+      wo.customerId && wo.address && wo.type && wo.description
+    ) as WorkOrder[];
+    
+    await importWorkOrders(validWorkOrders);
+    return validWorkOrders.length;
   } catch (error) {
     console.error("Error processing work order import:", error);
     throw error;
   }
 };
 
-export const processInventoryImport = async (inventory: any[]): Promise<number> => {
+export const processInventoryImport = async (inventory: Partial<InventoryItem>[]): Promise<number> => {
   try {
-    await importInventory(inventory as InventoryItem[]);
-    return inventory.length;
+    // Filter out invalid inventory items before casting
+    const validInventory = inventory.filter(item => 
+      item.name && item.category
+    ) as InventoryItem[];
+    
+    await importInventory(validInventory);
+    return validInventory.length;
   } catch (error) {
     console.error("Error processing inventory import:", error);
     throw error;
