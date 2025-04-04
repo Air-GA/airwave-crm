@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -43,6 +42,15 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import MaintenancePlanList from "@/components/schedule/MaintenancePlanList";
+import { 
+  DndContext, 
+  DragEndEvent,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  TouchSensor,
+} from "@dnd-kit/core";
 
 // Quick work order schema for the dialog
 const quickWorkOrderSchema = z.object({
@@ -54,6 +62,7 @@ const quickWorkOrderSchema = z.object({
   priority: z.enum(["low", "medium", "high", "emergency"]),
   description: z.string().min(10, "Description is required"),
   technicianId: z.string().optional(),
+  maintenanceTimePreference: z.string().optional(),
 });
 
 type QuickWorkOrderFormValues = z.infer<typeof quickWorkOrderSchema>;
@@ -67,8 +76,25 @@ const Schedule = () => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [isWorkOrderDetailOpen, setIsWorkOrderDetailOpen] = useState(false);
   const [isCreateWorkOrderOpen, setIsCreateWorkOrderOpen] = useState(false);
+  const [isMaintenanceOrderOpen, setIsMaintenanceOrderOpen] = useState(false);
+  const [selectedMaintenanceItem, setSelectedMaintenanceItem] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Setup drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
   
   // Use the work orders from the store
   const workOrders = useWorkOrderStore(state => state.workOrders);
@@ -85,6 +111,11 @@ const Schedule = () => {
   const form = useForm<QuickWorkOrderFormValues>({
     resolver: zodResolver(quickWorkOrderSchema),
     defaultValues,
+  });
+  
+  // Form for maintenance appointment creation
+  const maintenanceForm = useForm<QuickWorkOrderFormValues>({
+    resolver: zodResolver(quickWorkOrderSchema),
   });
 
   const loadData = async () => {
@@ -299,6 +330,112 @@ const Schedule = () => {
     }
   };
   
+  // Handle maintenance item drag start
+  const handleMaintenanceDragStart = (item: any) => {
+    console.log("Maintenance drag started:", item);
+  };
+  
+  // Handle maintenance item drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+    
+    // Check if we dropped onto the calendar area
+    if (over.id === "calendar-drop-area") {
+      const maintenanceItem = active.data.current;
+      setSelectedMaintenanceItem(maintenanceItem);
+      
+      // Pre-populate the maintenance form
+      maintenanceForm.reset({
+        customerName: maintenanceItem.customerName,
+        address: maintenanceItem.address,
+        phoneNumber: "", // This would come from your customer data
+        email: "", // This would come from your customer data
+        type: "maintenance",
+        priority: "medium",
+        description: "Biannual HVAC maintenance service",
+        maintenanceTimePreference: maintenanceItem.preferredTime
+      });
+      
+      setIsMaintenanceOrderOpen(true);
+    }
+  };
+  
+  // Handle maintenance schedule click
+  const handleMaintenanceSchedule = (item: any) => {
+    setSelectedMaintenanceItem(item);
+    
+    // Pre-populate the maintenance form
+    maintenanceForm.reset({
+      customerName: item.customerName,
+      address: item.address,
+      phoneNumber: "", // This would come from your customer data
+      email: "", // This would come from your customer data
+      type: "maintenance",
+      priority: "medium",
+      description: "Biannual HVAC maintenance service",
+      maintenanceTimePreference: item.preferredTime
+    });
+    
+    setIsMaintenanceOrderOpen(true);
+  };
+  
+  // Handle maintenance form submission
+  const onSubmitMaintenanceCreate = async (data: QuickWorkOrderFormValues) => {
+    try {
+      // Parse the preferred time to get start time
+      let scheduledDate = new Date(date);
+      const timePreference = data.maintenanceTimePreference || "8:00 AM - 11:00 AM";
+      const startHour = parseInt(timePreference.split(':')[0]);
+      const isPM = timePreference.includes('PM') && startHour !== 12;
+      
+      // Set the scheduled time
+      scheduledDate.setHours(isPM ? startHour + 12 : startHour, 0, 0, 0);
+      
+      // Create the maintenance work order
+      const newWorkOrder = await createWorkOrder({
+        customerName: data.customerName,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        address: data.address,
+        type: "maintenance",
+        description: data.description,
+        priority: data.priority,
+        scheduledDate: scheduledDate.toISOString(),
+        status: data.technicianId ? 'scheduled' : 'pending',
+        technicianId: data.technicianId || undefined,
+        technicianName: data.technicianId 
+          ? technicians.find(t => t.id === data.technicianId)?.name 
+          : undefined,
+        estimatedHours: 3, // 3 hours for HVAC maintenance
+        isMaintenancePlan: true,
+        maintenanceTimePreference: data.maintenanceTimePreference
+      });
+
+      // Refresh work orders
+      await loadData();
+      
+      // Close the dialog
+      setIsMaintenanceOrderOpen(false);
+      
+      // Reset the form
+      maintenanceForm.reset();
+
+      toast({
+        title: "Maintenance Scheduled",
+        description: `HVAC maintenance for ${data.customerName} has been scheduled.`,
+      });
+    } catch (error) {
+      console.error("Failed to create maintenance order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to schedule maintenance. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -331,92 +468,102 @@ const Schedule = () => {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-[300px_1fr]">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Calendar</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(date) => date && setDate(date)}
-                    className="rounded-md border pointer-events-auto"
-                  />
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Technicians</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {technicians.map((technician) => (
+          <DndContext 
+            sensors={sensors} 
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid gap-6 md:grid-cols-[300px_1fr]">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Calendar</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(date) => date && setDate(date)}
+                      className="rounded-md border pointer-events-auto"
+                    />
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Technicians</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y">
+                      {technicians.map((technician) => (
+                        <div
+                          key={technician.id}
+                          className={`cursor-pointer p-3 transition-colors hover:bg-muted ${
+                            technician.id === selectedTechnicianId ? "bg-muted" : ""
+                          }`}
+                          onClick={() => setSelectedTechnicianId(technician.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`h-2 w-2 rounded-full ${
+                                technician.status === "available"
+                                  ? "bg-green-500"
+                                  : technician.status === "busy"
+                                  ? "bg-amber-500"
+                                  : "bg-gray-500"
+                              }`}
+                            />
+                            <p>{technician.name}</p>
+                          </div>
+                        </div>
+                      ))}
                       <div
-                        key={technician.id}
                         className={`cursor-pointer p-3 transition-colors hover:bg-muted ${
-                          technician.id === selectedTechnicianId ? "bg-muted" : ""
+                          selectedTechnicianId === null ? "bg-muted" : ""
                         }`}
-                        onClick={() => setSelectedTechnicianId(technician.id)}
+                        onClick={() => setSelectedTechnicianId(null)}
                       >
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`h-2 w-2 rounded-full ${
-                              technician.status === "available"
-                                ? "bg-green-500"
-                                : technician.status === "busy"
-                                ? "bg-amber-500"
-                                : "bg-gray-500"
-                            }`}
-                          />
-                          <p>{technician.name}</p>
+                          <div className="h-2 w-2 rounded-full bg-blue-500" />
+                          <p>All Technicians</p>
                         </div>
                       </div>
-                    ))}
-                    <div
-                      className={`cursor-pointer p-3 transition-colors hover:bg-muted ${
-                        selectedTechnicianId === null ? "bg-muted" : ""
-                      }`}
-                      onClick={() => setSelectedTechnicianId(null)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                        <p>All Technicians</p>
-                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+                
+                <MaintenancePlanList 
+                  onDragStart={handleMaintenanceDragStart}
+                  onSchedule={handleMaintenanceSchedule}
+                />
+              </div>
+              
+              <div className="space-y-6">
+                <Card id="calendar-drop-area" className="relative">
+                  <CardHeader className="pb-2">
+                    <CardTitle>
+                      {selectedTechnician 
+                        ? `${selectedTechnician.name}'s Schedule - ${formatDate(date)}`
+                        : `All Appointments - ${formatDate(date)}`
+                      }
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <TechnicianScheduleView
+                      technician={selectedTechnician}
+                      workOrders={workOrders}
+                      selectedDate={date}
+                      showAllAppointments={!selectedTechnician}
+                      onWorkOrderClick={handleWorkOrderClick}
+                      isLoading={loading}
+                    />
+                  </CardContent>
+                  <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-transparent transition-colors duration-200 rounded-lg data-[droppable=true]:border-primary data-[droppable=true]:bg-primary/5" data-droppable="true" />
+                </Card>
+              </div>
             </div>
-            
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle>
-                    {selectedTechnician 
-                      ? `${selectedTechnician.name}'s Schedule - ${formatDate(date)}`
-                      : `All Appointments - ${formatDate(date)}`
-                    }
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <TechnicianScheduleView
-                    technician={selectedTechnician}
-                    workOrders={workOrders}
-                    selectedDate={date}
-                    showAllAppointments={!selectedTechnician}
-                    onWorkOrderClick={handleWorkOrderClick}
-                    isLoading={loading}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          </DndContext>
         )}
 
-        {/* Work Order Detail Dialog */}
         <Dialog open={isWorkOrderDetailOpen} onOpenChange={setIsWorkOrderDetailOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -433,7 +580,6 @@ const Schedule = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Quick Create Work Order Dialog */}
         <Dialog open={isCreateWorkOrderOpen} onOpenChange={setIsCreateWorkOrderOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -603,6 +749,179 @@ const Schedule = () => {
                     Cancel
                   </Button>
                   <Button type="submit">Create Work Order</Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isMaintenanceOrderOpen} onOpenChange={setIsMaintenanceOrderOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Schedule HVAC Maintenance</DialogTitle>
+            </DialogHeader>
+            <Form {...maintenanceForm}>
+              <form onSubmit={maintenanceForm.handleSubmit(onSubmitMaintenanceCreate)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={maintenanceForm.control}
+                    name="customerName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Customer Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={maintenanceForm.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="(555) 123-4567" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={maintenanceForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="customer@example.com" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={maintenanceForm.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Service Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 Main St" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={maintenanceForm.control}
+                    name="maintenanceTimePreference"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preferred Time</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select preferred time" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="8:00 AM - 11:00 AM">8:00 AM - 11:00 AM</SelectItem>
+                            <SelectItem value="11:00 AM - 2:00 PM">11:00 AM - 2:00 PM</SelectItem>
+                            <SelectItem value="2:00 PM - 5:00 PM">2:00 PM - 5:00 PM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={maintenanceForm.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Priority</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value || "medium"}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={maintenanceForm.control}
+                  name="technicianId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assign Technician</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a technician" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {technicians.map((tech) => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={maintenanceForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Details about the maintenance service" 
+                          className="min-h-[80px]" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex justify-end space-x-2 pt-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsMaintenanceOrderOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">Schedule Maintenance</Button>
                 </div>
               </form>
             </Form>

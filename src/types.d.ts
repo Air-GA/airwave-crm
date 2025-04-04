@@ -16,6 +16,9 @@ export interface Customer {
   };
   address?: string;
   serviceAddress?: string; // Maintained for backward compatibility
+  maintenancePlan?: 'biannual' | 'quarterly' | 'annual' | null;
+  maintenanceTimePreference?: string;
+  nextMaintenanceDate?: string;
 }
 
 export interface ServiceAddress {
@@ -23,6 +26,10 @@ export interface ServiceAddress {
   address: string;
   isPrimary?: boolean;
   notes?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 export interface Technician {
@@ -65,6 +72,10 @@ export interface WorkOrder {
   // Add these fields to support customer creation from work orders
   email?: string;
   phoneNumber?: string;
+  // Add maintenance plan related fields
+  isMaintenancePlan?: boolean;
+  maintenanceTimePreference?: string;
+  nearbyAddresses?: string[];
 }
 
 export interface InventoryItem {
