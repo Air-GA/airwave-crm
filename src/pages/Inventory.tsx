@@ -422,6 +422,7 @@ const Inventory = () => {
             </TabsTrigger>
           </TabsList>
           
+          
           <TabsContent value="all-inventory" className="space-y-6">
             <div className="grid gap-6 md:grid-cols-4">
               <Card>
@@ -624,6 +625,7 @@ const Inventory = () => {
             </Card>
           </TabsContent>
           
+          
           <TabsContent value="warehouse" className="space-y-6">
             <Card>
               <CardHeader>
@@ -683,13 +685,14 @@ const Inventory = () => {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      )
+                      );
                     })}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
+          
           
           <TabsContent value="mobile-units" className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -763,6 +766,7 @@ const Inventory = () => {
             </div>
           </TabsContent>
           
+          
           <TabsContent value="alerts" className="space-y-6">
             <Card>
               <CardHeader>
@@ -816,6 +820,7 @@ const Inventory = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          
           
           <TabsContent value="transfers" className="space-y-6">
             <Card>
@@ -895,6 +900,4 @@ const Inventory = () => {
                       <FormLabel>Destination Location</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl
+                        defaultValue={field
