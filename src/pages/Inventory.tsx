@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -117,6 +118,42 @@ const Inventory = () => {
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ExtendedInventoryItem | null>(null);
   const [expandedInvoices, setExpandedInvoices] = useState<Record<string, boolean>>({});
+  const [transferHistory, setTransferHistory] = useState<InventoryTransfer[]>([
+    {
+      id: "TR001",
+      date: "2024-03-01T10:30:00Z",
+      sourceLocation: "warehouse",
+      destinationLocation: "MU001",
+      items: [
+        { itemId: "INV001", itemName: "Air Filter - MERV 13", quantity: 5, invoiceNumber: "INV-2023-001" },
+        { itemId: "INV004", itemName: "Capacitor 45/5 MFD", quantity: 8, invoiceNumber: "INV-2023-001" }
+      ],
+      createdBy: "Admin User"
+    },
+    {
+      id: "TR002",
+      date: "2024-03-02T09:15:00Z",
+      sourceLocation: "warehouse",
+      destinationLocation: "MU003",
+      items: [
+        { itemId: "INV001", itemName: "Air Filter - MERV 13", quantity: 3, invoiceNumber: "INV-2023-002" },
+        { itemId: "INV004", itemName: "Capacitor 45/5 MFD", quantity: 7, invoiceNumber: "INV-2023-002" }
+      ],
+      createdBy: "Admin User"
+    },
+    {
+      id: "TR003",
+      date: "2024-03-03T14:45:00Z",
+      sourceLocation: "warehouse",
+      destinationLocation: "MU002",
+      items: [
+        { itemId: "INV002", itemName: "Refrigerant R-410A (10lb)", quantity: 2, invoiceNumber: "INV-2023-003" },
+        { itemId: "INV004", itemName: "Capacitor 45/5 MFD", quantity: 5, invoiceNumber: "INV-2023-003" }
+      ],
+      createdBy: "Admin User"
+    }
+  ]);
+  
   const { permissions } = useAuth();
   const isMobile = useIsMobile();
   
