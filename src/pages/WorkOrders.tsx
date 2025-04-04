@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -259,10 +258,10 @@ const WorkOrders = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-2">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl md:text-2xl font-bold">Work Orders</h1>
+            <h1 className="text-2xl font-bold">Work Orders</h1>
             <SyncButton onSync={handleSyncWorkOrders} label="Work Orders" />
           </div>
           <Link to="/work-orders/create">
@@ -272,7 +271,7 @@ const WorkOrders = () => {
           </Link>
         </div>
         
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -356,14 +355,14 @@ const WorkOrders = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80" align="end">
-                <div className="grid gap-3">
-                  <div className="space-y-1.5">
-                    <h4 className="font-medium leading-none text-sm">Date</h4>
-                    <div className="flex flex-wrap gap-1.5">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Date</h4>
+                    <div className="space-y-1">
                       <Button 
                         variant={dateFilter === "all" ? "default" : "outline"} 
                         size="sm" 
-                        className="h-7 px-2"
+                        className="mr-1 mb-1"
                         onClick={() => setDateFilter("all")}
                       >
                         All
@@ -371,7 +370,7 @@ const WorkOrders = () => {
                       <Button 
                         variant={dateFilter === "today" ? "default" : "outline"} 
                         size="sm"
-                        className="h-7 px-2" 
+                        className="mr-1 mb-1" 
                         onClick={() => setDateFilter("today")}
                       >
                         Today
@@ -379,7 +378,7 @@ const WorkOrders = () => {
                       <Button 
                         variant={dateFilter === "tomorrow" ? "default" : "outline"} 
                         size="sm" 
-                        className="h-7 px-2"
+                        className="mr-1 mb-1"
                         onClick={() => setDateFilter("tomorrow")}
                       >
                         Tomorrow
@@ -387,7 +386,7 @@ const WorkOrders = () => {
                       <Button 
                         variant={dateFilter === "this-week" ? "default" : "outline"} 
                         size="sm" 
-                        className="h-7 px-2"
+                        className="mr-1 mb-1"
                         onClick={() => setDateFilter("this-week")}
                       >
                         This Week
@@ -395,7 +394,6 @@ const WorkOrders = () => {
                       <Button 
                         variant={dateFilter === "this-month" ? "default" : "outline"} 
                         size="sm"
-                        className="h-7 px-2"
                         onClick={() => setDateFilter("this-month")}
                       >
                         This Month
@@ -403,9 +401,9 @@ const WorkOrders = () => {
                     </div>
                   </div>
                   
-                  <div className="space-y-1.5">
-                    <h4 className="font-medium leading-none text-sm">Technician</h4>
-                    <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Technician</h4>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
                       <div 
                         key="all" 
                         className="flex items-center space-x-2 rounded-md p-1 hover:bg-accent cursor-pointer"
@@ -471,7 +469,7 @@ const WorkOrders = () => {
             </Popover>
           </div>
           
-          <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto mt-2 md:mt-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto">
             <span>{filteredWorkOrders.length} work orders</span>
           </div>
         </div>
@@ -550,11 +548,11 @@ const WorkOrders = () => {
         )}
         
         {isLoading ? (
-          <div className="flex justify-center items-center py-6">
+          <div className="flex justify-center items-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 mt-1">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredWorkOrders.map(workOrder => (
               <WorkOrderCard 
                 key={workOrder.id} 
@@ -568,14 +566,14 @@ const WorkOrders = () => {
         )}
         
         {!isLoading && filteredWorkOrders.length === 0 && (
-          <div className="rounded-lg border border-dashed p-6 text-center my-4">
-            <ClipboardCheck className="mx-auto h-10 w-10 text-muted-foreground" />
-            <h3 className="mt-3 text-lg font-medium">No work orders found</h3>
-            <p className="mt-1.5 text-sm text-muted-foreground">
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <ClipboardCheck className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-medium">No work orders found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
               Try adjusting your search or filters, or create a new work order.
             </p>
-            <Button className="mt-3" onClick={() => navigate("/work-orders/create")}>
-              <Plus className="mr-1.5 h-4 w-4" /> Create Work Order
+            <Button className="mt-4" onClick={() => navigate("/work-orders/create")}>
+              <Plus className="mr-2 h-4 w-4" /> Create Work Order
             </Button>
           </div>
         )}

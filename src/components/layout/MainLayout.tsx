@@ -33,13 +33,13 @@ const MainLayout = ({ children, pageName }: MainLayoutProps) => {
       <div className="flex h-screen overflow-hidden">
         <SideNav open={sidebarOpen} setOpen={setSidebarOpen} />
         
-        <div className="relative flex-1 flex flex-col overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden md:ml-64">
           <TopBar setSidebarOpen={setSidebarOpen}>
             <AdminViewToggle currentPage={getPageName()} />
           </TopBar>
           
-          <main className="flex-1 overflow-auto bg-background p-3 md:p-5">
-            <div className="w-full">
+          <main className="flex-1 overflow-auto bg-background p-4 md:p-6">
+            <div className="mx-auto max-w-7xl">
               {children}
             </div>
           </main>
