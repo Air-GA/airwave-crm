@@ -107,9 +107,8 @@ export async function getMaintenancePlansFromCRM() {
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // Return mock maintenance data
+  // Return mock maintenance data - using type filtering instead of isMaintenancePlan property
   return workOrders.filter(order => 
-    order.type === 'maintenance' && 
-    order.isMaintenancePlan === true
+    order.type === 'maintenance'
   );
 }
