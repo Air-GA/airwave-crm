@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -65,7 +64,8 @@ import {
   ChevronRight,
   ChevronUp,
   Calendar,
-  User
+  User,
+  Trash2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
@@ -75,6 +75,7 @@ import { InventoryItem, InventoryTransfer } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ExtendedInventoryItem extends InventoryItem {
   sku: string;
@@ -117,6 +118,7 @@ const Inventory = () => {
   const [selectedItem, setSelectedItem] = useState<ExtendedInventoryItem | null>(null);
   const [expandedInvoices, setExpandedInvoices] = useState<Record<string, boolean>>({});
   const { permissions } = useAuth();
+  const isMobile = useIsMobile();
   
   const transferForm = useForm<TransferFormData>({
     defaultValues: {
@@ -223,41 +225,6 @@ const Inventory = () => {
       reorderLevel: 10,
       mobileUnits: []
     },
-  ]);
-
-  // Add mock transfers history
-  const [transferHistory, setTransferHistory] = useState<InventoryTransfer[]>([
-    {
-      id: "TR001",
-      date: "2025-04-01T09:30:00Z",
-      sourceLocation: "warehouse",
-      destinationLocation: "MU001",
-      items: [
-        { itemId: "INV001", itemName: "Air Filter - MERV 13", quantity: 5, invoiceNumber: "INV-2025-001" },
-        { itemId: "INV004", itemName: "Capacitor 45/5 MFD", quantity: 3, invoiceNumber: "INV-2025-001" }
-      ],
-      createdBy: "Admin User"
-    },
-    {
-      id: "TR002",
-      date: "2025-04-02T14:15:00Z",
-      sourceLocation: "warehouse",
-      destinationLocation: "MU002",
-      items: [
-        { itemId: "INV002", itemName: "Refrigerant R-410A (10lb)", quantity: 2, invoiceNumber: "INV-2025-002" }
-      ],
-      createdBy: "Admin User"
-    },
-    {
-      id: "TR003",
-      date: "2025-04-03T11:45:00Z",
-      sourceLocation: "MU001",
-      destinationLocation: "warehouse",
-      items: [
-        { itemId: "INV001", itemName: "Air Filter - MERV 13", quantity: 2, invoiceNumber: "INV-2025-001" }
-      ],
-      createdBy: "David Martinez"
-    }
   ]);
 
   const mobileUnits = [
@@ -408,7 +375,6 @@ const Inventory = () => {
         });
       });
       
-      // Record the transfer in history
       const newTransfer: InventoryTransfer = {
         id: `TR${String(transferHistory.length + 1).padStart(3, '0')}`,
         date: new Date().toISOString(),
@@ -423,7 +389,7 @@ const Inventory = () => {
             invoiceNumber: item.invoiceNumber
           };
         }),
-        createdBy: "Admin User" // Could be replaced with actual user name
+        createdBy: "Admin User"
       };
       
       setTransferHistory(prev => [newTransfer, ...prev]);
@@ -442,14 +408,50 @@ const Inventory = () => {
     }
   };
 
-  // Helper to get location name
+  const handleRemoveItemFromUnit = (unitId: string, itemId: string, invoiceNumber?: string) => {
+    if (!permissions.canEditData) {
+      toast.error("Permission denied", {
+        description: "You do not have permission to remove inventory items."
+      });
+      return;
+    }
+
+    try {
+      setInventoryItems(currentItems => {
+        return currentItems.map(item => {
+          if (item.id === itemId) {
+            const updatedMobileUnits = item.mobileUnits.filter(
+              unit => !(unit.unitId === unitId && (!invoiceNumber || unit.invoiceNumber === invoiceNumber))
+            );
+            return {
+              ...item,
+              mobileUnits: updatedMobileUnits
+            };
+          }
+          return item;
+        });
+      });
+
+      const unit = mobileUnits.find(u => u.id === unitId);
+      const item = inventoryItems.find(i => i.id === itemId);
+      
+      toast.success("Item removed", {
+        description: `${item?.name} has been removed from ${unit?.name}.`
+      });
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item", {
+        description: "There was an error removing the inventory item."
+      });
+    }
+  };
+
   const getLocationName = (locationId: string) => {
     if (locationId === "warehouse") return "Main Warehouse";
     const unit = mobileUnits.find(u => u.id === locationId);
     return unit ? unit.name : locationId;
   };
 
-  // Group inventory items by mobile unit and invoice number
   const getInvoiceGroupsByMobileUnit = (unitId: string) => {
     const itemsByInvoice: Record<string, InvoiceGroup> = {};
     
@@ -849,7 +851,18 @@ const Inventory = () => {
                                   {group.items.map((entry, idx) => (
                                     <li key={`${entry.item.id}-${idx}`} className="text-sm flex justify-between py-1">
                                       <span>{entry.item.name}</span>
-                                      <span className="font-medium">{entry.quantity}</span>
+                                      <div className="flex items-center">
+                                        <span className="font-medium mr-2">{entry.quantity}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => handleRemoveItemFromUnit(unit.id, entry.item.id, group.invoiceNumber)}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                          <span className="sr-only">Remove item</span>
+                                        </Button>
+                                      </div>
                                     </li>
                                   ))}
                                 </ul>
