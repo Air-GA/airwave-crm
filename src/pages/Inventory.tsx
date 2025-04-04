@@ -68,7 +68,6 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { InventoryItem } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
-// Extend the inventory item type to include mobile unit tracking
 interface ExtendedInventoryItem extends InventoryItem {
   sku: string;
   minStock: number;
@@ -81,10 +80,10 @@ interface ExtendedInventoryItem extends InventoryItem {
   }[];
 }
 
-// Types for form data
 interface TransferItemData {
   itemId: string;
   quantity: number;
+  invoiceNumber: string;
 }
 
 interface TransferFormData {
@@ -100,22 +99,19 @@ const Inventory = () => {
   const [selectedItem, setSelectedItem] = useState<ExtendedInventoryItem | null>(null);
   const { permissions } = useAuth();
   
-  // Transfer inventory form
   const transferForm = useForm<TransferFormData>({
     defaultValues: {
       sourceLocation: "warehouse",
       destinationLocation: "",
-      items: [{ itemId: "", quantity: 1 }]
+      items: [{ itemId: "", quantity: 1, invoiceNumber: "" }]
     }
   });
   
-  // Field array for multiple item transfers
   const { fields, append, remove } = useFieldArray({
     control: transferForm.control,
     name: "items"
   });
 
-  // Mock data for inventory items
   const [inventoryItems, setInventoryItems] = useState<ExtendedInventoryItem[]>([
     {
       id: "INV001",
@@ -209,23 +205,20 @@ const Inventory = () => {
       mobileUnits: []
     },
   ]);
-  
-  // Mock data for mobile units
+
   const mobileUnits = [
     { id: "MU001", name: "Truck 1", technicianName: "David Martinez", status: "active" },
     { id: "MU002", name: "Truck 2", technicianName: "Lisa Wong", status: "active" },
     { id: "MU003", name: "Truck 3", technicianName: "Robert Johnson", status: "maintenance" },
     { id: "MU004", name: "Truck 4", technicianName: "Unassigned", status: "inactive" }
   ];
-  
-  // Filter inventory items
+
   const filteredItems = inventoryItems.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Edit minimum stock level
   const handleEditMinStock = (itemId: string) => {
     if (!permissions.canEditData) {
       toast.error("Permission denied", {
@@ -239,7 +232,6 @@ const Inventory = () => {
     });
   };
 
-  // Open transfer dialog
   const openTransferDialog = (item: ExtendedInventoryItem | null = null) => {
     setSelectedItem(item);
     
@@ -248,19 +240,18 @@ const Inventory = () => {
       destinationLocation: "",
       items: [{ 
         itemId: item ? item.id : "",
-        quantity: 1 
+        quantity: 1,
+        invoiceNumber: "" 
       }]
     });
     
     setIsTransferDialogOpen(true);
   };
 
-  // Add another item to transfer
   const addItemToTransfer = () => {
-    append({ itemId: "", quantity: 1 });
+    append({ itemId: "", quantity: 1, invoiceNumber: "" });
   };
 
-  // Handle inventory transfer
   const handleTransferInventory = async (data: TransferFormData) => {
     if (data.sourceLocation === data.destinationLocation) {
       toast.error("Invalid transfer", {
@@ -738,7 +729,7 @@ const Inventory = () => {
                           transferForm.reset({
                             sourceLocation: "warehouse",
                             destinationLocation: unit.id,
-                            items: [{ itemId: item.id, quantity: 1 }]
+                            items: [{ itemId: item.id, quantity: 1, invoiceNumber: "" }]
                           });
                           setIsTransferDialogOpen(true);
                         }
@@ -908,12 +899,12 @@ const Inventory = () => {
               
               <div className="space-y-4">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-3 gap-4 items-end">
+                  <div key={field.id} className="grid grid-cols-4 gap-4 items-end">
                     <FormField
                       control={transferForm.control}
                       name={`items.${index}.itemId`}
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-1">
                           <FormLabel>Item</FormLabel>
                           <Select
                             onValueChange={field.onChange}
@@ -941,7 +932,7 @@ const Inventory = () => {
                       control={transferForm.control}
                       name={`items.${index}.quantity`}
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="col-span-1">
                           <FormLabel>Quantity</FormLabel>
                           <FormControl>
                             <Input
@@ -949,6 +940,24 @@ const Inventory = () => {
                               min={1}
                               onChange={e => field.onChange(Number(e.target.value))}
                               value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={transferForm.control}
+                      name={`items.${index}.invoiceNumber`}
+                      render={({ field }) => (
+                        <FormItem className="col-span-1">
+                          <FormLabel>Invoice #</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="text"
+                              placeholder="INV-123"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
