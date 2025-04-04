@@ -1,4 +1,3 @@
-
 export interface Technician {
   id: string;
   name: string;
@@ -47,33 +46,16 @@ export interface Customer {
   billAddress?: string;
   type: 'residential' | 'commercial' | 'industrial';
   createdAt: string;
-  serviceAddresses?: ServiceAddress[];
+  serviceAddresses?: Array<{
+    id: string;
+    address: string;
+    isPrimary?: boolean;
+    notes?: string;
+  }>;
   maintenancePlan?: {
     active: boolean;
     type: 'biannual' | 'annual' | 'quarterly';
     nextServiceDate?: string;
     preferredTimeSlot?: string;
   };
-}
-
-export interface ServiceAddress {
-  id: string;
-  address: string;
-  isPrimary?: boolean;
-  notes?: string;
-}
-
-export interface InventoryItem {
-  id: string;
-  name: string;
-  category: string;
-  description?: string;
-  quantity: number;
-  price: number;
-  cost?: number;
-  reorderLevel: number;
-  supplier?: string;
-  location?: string;
-  sku?: string;
-  unit_price?: number;
 }

@@ -1,3 +1,4 @@
+
 import { Technician, WorkOrder } from "@/types";
 
 // Mock technicians data
@@ -7,18 +8,22 @@ export const mockTechnicians: Technician[] = [
     name: "John Smith",
     status: "available",
     specialties: ["HVAC", "Heating"],
-    current_location_lat: 33.7490,
-    current_location_lng: -84.3880,
-    current_location_address: "Atlanta, GA"
+    currentLocation: {
+      lat: 33.7490,
+      lng: -84.3880,
+      address: "Atlanta, GA"
+    }
   },
   {
     id: "2",
     name: "Sarah Wilson",
     status: "busy",
     specialties: ["Cooling", "Installation"],
-    current_location_lat: 33.7590,
-    current_location_lng: -84.3920,
-    current_location_address: "Midtown, Atlanta, GA"
+    currentLocation: {
+      lat: 33.7590,
+      lng: -84.3920,
+      address: "Midtown, Atlanta, GA"
+    }
   }
 ];
 
@@ -38,7 +43,8 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "1",
     technicianName: "John Smith",
     estimatedHours: 2,
-    notes: ["Customer reported loud noise", "Unit is 5 years old"]
+    notes: ["Customer reported loud noise", "Unit is 5 years old"],
+    completionRequired: true
   },
   {
     id: "wo2",
@@ -54,7 +60,8 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "2",
     technicianName: "Sarah Wilson",
     estimatedHours: 1,
-    notes: ["Regular maintenance"]
+    notes: ["Regular maintenance"],
+    completionRequired: true
   },
   {
     id: "wo3",
@@ -71,7 +78,8 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianName: "John Smith",
     estimatedHours: 3,
     notes: ["Customer complained of no heat", "Need to order parts"],
-    pendingReason: "Waiting for parts to arrive"
+    pendingReason: "Waiting for parts to arrive",
+    completionRequired: true
   },
   {
     id: "wo4",
@@ -88,7 +96,8 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "2",
     technicianName: "Sarah Wilson",
     estimatedHours: 4,
-    notes: ["Installation completed successfully"]
+    notes: ["Installation completed successfully"],
+    completionRequired: true
   }
 ];
 

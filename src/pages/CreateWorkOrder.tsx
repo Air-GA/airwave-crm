@@ -122,7 +122,7 @@ const CreateWorkOrder = () => {
       id: part.id,
       name: part.name,
       quantity: part.quantity,
-      cost: part.price
+      price: part.price
     }));
     
     // Ensure type is correctly cast to a valid WorkOrder type

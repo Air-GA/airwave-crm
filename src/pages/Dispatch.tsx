@@ -1,966 +1,680 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  GoogleMap,
-  LoadScript,
-  Marker,
-  InfoWindow,
-} from "@react-google-maps/api";
-import { format, parseISO } from 'date-fns';
+import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MapPin, Phone, Mail, CheckCircle, AlertTriangle, Clock, UserRound, Truck, GripVertical, MoreVertical, FileEdit, Check, X } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
+import { Button } from "@/components/ui/button";
+import { Calendar, Clock, MapPin, User, Briefcase, X } from "lucide-react";
+import { formatDate } from "@/lib/date-utils";
+import { 
+  DndContext, 
+  DragEndEvent, 
+  MouseSensor, 
+  TouchSensor,
+  useSensor, 
+  useSensors, 
+  DragStartEvent,
+  DragOverlay,
+  useDraggable,
+  useDroppable 
+} from "@dnd-kit/core";
+import { toast } from "sonner";
+import { WorkOrder, Technician } from "@/types";
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogFooter,
+  DialogHeader,
+  DialogTitle
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  fetchMockTechnicians,
-  fetchMockWorkOrders,
-  updateMockWorkOrder,
-  updateMockTechnician,
-  completeMockWorkOrder,
-  markWorkOrderPendingCompletion
-} from "@/services/mockService";
-import { syncTechniciansFromCRM, syncWorkOrdersFromCRM, pushWorkOrderUpdateToCRM, pushTechnicianUpdateToCRM } from "@/services/crmSyncService";
-import { Technician, WorkOrder } from "@/types";
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import TechLocationMap from "@/components/maps/TechLocationMap";
+import { fetchTechnicians } from "@/services/technicianService";
+import { fetchWorkOrders, assignWorkOrder, unassignWorkOrder, useWorkOrderStore } from "@/services/workOrderService";
 
 const Dispatch = () => {
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null);
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
-  const [showWorkOrderDetails, setShowWorkOrderDetails] = useState(false);
-  const [showTechnicianDetails, setShowTechnicianDetails] = useState(false);
-  const [isCompletingWorkOrder, setIsCompletingWorkOrder] = useState(false);
-  const [completionNotes, setCompletionNotes] = useState("");
-  const [isMarkingPendingCompletion, setIsMarkingPendingCompletion] = useState(false);
-  const [pendingReason, setPendingReason] = useState("");
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isPushingUpdates, setIsPushingUpdates] = useState(false);
-  const [isTechnicianDialogOpen, setIsTechnicianDialogOpen] = useState(false);
-  const [editedTechnician, setEditedTechnician] = useState<Technician | null>(null);
-  const [editedTechnicianStatus, setEditedTechnicianStatus] = useState<Technician["status"]>("available");
-  const [editedTechnicianAddress, setEditedTechnicianAddress] = useState("");
-  const [editedTechnicianLat, setEditedTechnicianLat] = useState<number | undefined>(undefined);
-  const [editedTechnicianLng, setEditedTechnicianLng] = useState<number | undefined>(undefined);
-  const [editedTechnicianSkills, setEditedTechnicianSkills] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredTechnicians, setFilteredTechnicians] = useState<Technician[]>([]);
-  const [isMobile] = useIsMobile();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [currentWorkOrderId, setCurrentWorkOrderId] = useState<string | null>(null);
+  const [currentTechnicianId, setCurrentTechnicianId] = useState<string | null>(null);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast: uiToast } = useToast();
 
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const mapContainerStyle = {
-    width: "100%",
-    height: "400px",
-    borderRadius: "0.375rem",
-    border: "1px solid #e4e4e7",
-  };
-  const defaultLocation = { lat: 33.7490, lng: -84.3880 }; // Default to Atlanta, GA
-  const mapOptions: google.maps.MapOptions = {
-    disableDefaultUI: true,
-    zoomControl: true,
-  };
-
+  const workOrders = useWorkOrderStore(state => state.workOrders);
+  
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [techs, orders] = await Promise.all([
+          fetchTechnicians(),
+          fetchWorkOrders()
+        ]);
+        setTechnicians(techs);
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        uiToast({
+          title: "Error",
+          description: "Failed to load dispatch data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const techniciansData = await fetchMockTechnicians();
-      setTechnicians(techniciansData);
-
-      const workOrdersData = await fetchMockWorkOrders();
-      setWorkOrders(workOrdersData);
-    } catch (error) {
-      console.error("Error loading data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load data. Please try again.",
-        variant: "destructive",
-      });
-    }
+  }, [uiToast]);
+  
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 5,
+    },
+  });
+  
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 100,
+      tolerance: 5,
+    },
+  });
+  
+  const sensors = useSensors(mouseSensor, touchSensor);
+  
+  const activeWorkOrders = workOrders.filter(
+    order => order.status === 'pending' || order.status === 'scheduled'
+  );
+  
+  const unassignedWorkOrders = activeWorkOrders.filter(order => !order.technicianId);
+  
+  const technicianWorkOrders = selectedTechnicianId
+    ? activeWorkOrders.filter(order => order.technicianId === selectedTechnicianId)
+    : [];
+  
+  const availableTechnicians = technicians.filter(tech => tech.status === 'available').length;
+  const busyTechnicians = technicians.filter(tech => tech.status === 'busy').length;
+  const offDutyTechnicians = technicians.filter(tech => tech.status === 'off-duty').length;
+  
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveOrderId(active.id as string);
   };
 
-  const syncDataFromCRM = async () => {
-    setIsSyncing(true);
-    try {
-      const syncedTechnicians = await syncTechniciansFromCRM();
-      setTechnicians(syncedTechnicians);
-
-      const syncedWorkOrders = await syncWorkOrdersFromCRM();
-      setWorkOrders(syncedWorkOrders);
-
-      toast({
-        title: "Sync Complete",
-        description: "Data has been synced from the CRM.",
-      });
-    } catch (error) {
-      console.error("Error syncing data:", error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync data from the CRM. Please check the console for details.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const handleTechnicianStatusChange = async (technician: Technician, status: Technician["status"]) => {
-    try {
-      const updatedTechnician: Technician = { ...technician, status };
-      await updateMockTechnician(updatedTechnician);
-      setTechnicians(
-        technicians.map((tech) =>
-          tech.id === technician.id ? updatedTechnician : tech
-        )
-      );
-
-      setTechnicians((prevTechnicians) =>
-        prevTechnicians.map((tech) =>
-          tech.id === technician.id ? { ...tech, status: status } : tech
-        )
-      );
-
-      toast({
-        title: "Technician Updated",
-        description: `${technician.name}'s status has been updated to ${status}.`,
-      });
-
-      setIsPushingUpdates(true);
-      const success = await pushTechnicianUpdateToCRM(updatedTechnician);
-      if (!success) {
-        toast({
-          title: "CRM Update Failed",
-          description: `Failed to push ${technician.name}'s status update to the CRM.`,
-          variant: "destructive",
-        });
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveOrderId(null);
+    
+    if (!over) return;
+    
+    const workOrderId = active.id as string;
+    const technicianId = over.id as string;
+    
+    if (workOrderId && technicianId) {
+      setCurrentWorkOrderId(workOrderId);
+      setCurrentTechnicianId(technicianId);
+      
+      const workOrder = workOrders.find(order => order.id === workOrderId);
+      
+      if (workOrder) {
+        const date = workOrder.scheduledDate ? new Date(workOrder.scheduledDate) : new Date();
+        setScheduledDate(date.toISOString().split('T')[0]);
+        setScheduledTime(date.toTimeString().substring(0, 5));
       }
-    } catch (error) {
-      console.error("Error updating technician status:", error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update technician status. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPushingUpdates(false);
+      
+      setIsScheduleModalOpen(true);
     }
   };
-
-  const handleWorkOrderStatusChange = async (workOrder: WorkOrder, status: WorkOrder["status"]) => {
+  
+  const handleScheduleConfirm = async () => {
+    if (!currentWorkOrderId || !currentTechnicianId) return;
+    
+    const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}:00`);
+    
     try {
-      const updatedWorkOrder: WorkOrder = { ...workOrder, status };
-      await updateMockWorkOrder(updatedWorkOrder);
-      setWorkOrders(
-        workOrders.map((wo) =>
-          wo.id === workOrder.id ? updatedWorkOrder : wo
-        )
+      const technician = technicians.find(t => t.id === currentTechnicianId);
+      if (!technician) return;
+      
+      const updatedOrder = await assignWorkOrder(
+        currentWorkOrderId,
+        currentTechnicianId,
+        technician.name,
+        scheduledDateTime.toISOString()
       );
-
-      setWorkOrders((prevWorkOrders) =>
-        prevWorkOrders.map((wo) =>
-          wo.id === workOrder.id ? { ...wo, status: status } : wo
-        )
-      );
-
-      toast({
-        title: "Work Order Updated",
-        description: `Work order #${workOrder.id} status has been updated to ${status}.`,
-      });
-
-      setIsPushingUpdates(true);
-      const success = await pushWorkOrderUpdateToCRM(updatedWorkOrder);
-      if (!success) {
-        toast({
-          title: "CRM Update Failed",
-          description: `Failed to push work order #${workOrder.id} status update to the CRM.`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error updating work order status:", error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update work order status. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPushingUpdates(false);
-    }
-  };
-
-  const handleCompleteWorkOrder = async () => {
-    if (!selectedWorkOrder) return;
-
-    setIsCompletingWorkOrder(true);
-    try {
-      const updatedWorkOrder = await completeMockWorkOrder(selectedWorkOrder.id, completionNotes);
-
-      setWorkOrders((prevWorkOrders) =>
-        prevWorkOrders.map((wo) =>
-          wo.id === selectedWorkOrder.id ? updatedWorkOrder : wo
-        )
-      );
-
-      setShowWorkOrderDetails(false);
-      setCompletionNotes("");
-
-      toast({
-        title: "Work Order Completed",
-        description: `Work order #${selectedWorkOrder.id} has been marked as completed.`,
-      });
-
-      setIsPushingUpdates(true);
-      const success = await pushWorkOrderUpdateToCRM(updatedWorkOrder);
-      if (!success) {
-        toast({
-          title: "CRM Update Failed",
-          description: `Failed to push work order #${selectedWorkOrder.id} completion status to the CRM.`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error completing work order:", error);
-      toast({
-        title: "Completion Failed",
-        description: "Failed to complete work order. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCompletingWorkOrder(false);
-      setIsPushingUpdates(false);
-    }
-  };
-
-  const handleMarkPendingCompletion = async () => {
-    if (!selectedWorkOrder) return;
-
-    setIsMarkingPendingCompletion(true);
-    try {
-      const updatedWorkOrder = await markWorkOrderPendingCompletion(selectedWorkOrder.id, pendingReason);
-
-      setWorkOrders((prevWorkOrders) =>
-        prevWorkOrders.map((wo) =>
-          wo.id === selectedWorkOrder.id ? updatedWorkOrder : wo
-        )
-      );
-
-      setShowWorkOrderDetails(false);
-      setPendingReason("");
-
-      toast({
-        title: "Work Order Updated",
-        description: `Work order #${selectedWorkOrder.id} has been marked as pending completion.`,
-      });
-
-      setIsPushingUpdates(true);
-      const success = await pushWorkOrderUpdateToCRM(updatedWorkOrder);
-      if (!success) {
-        toast({
-          title: "CRM Update Failed",
-          description: `Failed to push work order #${selectedWorkOrder.id} pending completion status to the CRM.`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error marking work order as pending completion:", error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to mark work order as pending completion. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsMarkingPendingCompletion(false);
-      setIsPushingUpdates(false);
-    }
-  };
-
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) {
-      return;
-    }
-
-    const { source, destination, draggableId } = result;
-
-    if (destination.droppableId.startsWith('technician-')) {
-      const technicianId = destination.droppableId.split('-')[1];
-      const technician = technicians.find(t => t.id === technicianId);
-      const workOrder = workOrders.find(wo => wo.id === draggableId);
-
-      if (technician && workOrder) {
-        const updatedWorkOrder: WorkOrder = {
-          ...workOrder,
-          technicianId: technician.id,
-          technicianName: technician.name,
-          status: 'scheduled'
-        };
-
-        setWorkOrders((prevWorkOrders) =>
-          prevWorkOrders.map((wo) =>
-            wo.id === workOrder.id ? updatedWorkOrder : wo
-          )
-        );
-
-        updateMockWorkOrder(updatedWorkOrder)
-          .then(() => {
-            toast({
-              title: "Work Order Assigned",
-              description: `Work order #${workOrder.id} has been assigned to ${technician.name}.`,
-            });
-
-            setIsPushingUpdates(true);
-            pushWorkOrderUpdateToCRM(updatedWorkOrder)
-              .then(success => {
-                if (!success) {
-                  toast({
-                    title: "CRM Update Failed",
-                    description: `Failed to push work order #${workOrder.id} assignment to the CRM.`,
-                    variant: "destructive",
-                  });
-                }
-              })
-              .catch(error => {
-                console.error("Error pushing work order update to CRM:", error);
-                toast({
-                  title: "CRM Update Failed",
-                  description: `Failed to push work order #${workOrder.id} assignment to the CRM.`,
-                  variant: "destructive",
-                });
-              })
-              .finally(() => setIsPushingUpdates(false));
-          })
-          .catch(error => {
-            console.error("Error updating work order:", error);
-            toast({
-              title: "Update Failed",
-              description: "Failed to update work order. Please try again.",
-              variant: "destructive",
-            });
-          });
-      }
-    }
-  };
-
-  const handleOpenTechnicianDialog = (technician: Technician) => {
-    setEditedTechnician(technician);
-    setEditedTechnicianStatus(technician.status);
-    setEditedTechnicianAddress(technician.current_location_address || "");
-    setEditedTechnicianLat(technician.current_location_lat);
-    setEditedTechnicianLng(technician.current_location_lng);
-    setEditedTechnicianSkills(technician.specialties ? technician.specialties.join(", ") : "");
-    setIsTechnicianDialogOpen(true);
-  };
-
-  const handleCloseTechnicianDialog = () => {
-    setIsTechnicianDialogOpen(false);
-    setEditedTechnician(null);
-  };
-
-  const handleSaveTechnician = async () => {
-    if (!editedTechnician) return;
-
-    try {
-      const updatedTechnician: Technician = {
-        ...editedTechnician,
-        status: editedTechnicianStatus,
-        specialties: editedTechnicianSkills.split(",").map((skill) => skill.trim()),
-        current_location_address: editedTechnicianAddress,
-        current_location_lat: editedTechnicianLat,
-        current_location_lng: editedTechnicianLng,
-      };
-
-      await updateMockTechnician(updatedTechnician);
-
-      setTechnicians((prevTechnicians) =>
-        prevTechnicians.map((tech) =>
-          tech.id === editedTechnician.id ? updatedTechnician : tech
-        )
-      );
-
-      handleCloseTechnicianDialog();
-
-      toast({
-        title: "Technician Updated",
-        description: `${editedTechnician.name}'s details have been updated.`,
-      });
-
-      setIsPushingUpdates(true);
-      const success = await pushTechnicianUpdateToCRM(updatedTechnician);
-      if (!success) {
-        toast({
-          title: "CRM Update Failed",
-          description: `Failed to push ${editedTechnician.name}'s details update to the CRM.`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error updating technician:", error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update technician. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPushingUpdates(false);
-    }
-  };
-
-  const geocodeAddress = (address: string): Promise<{ lat: number, lng: number } | null> => {
-    return new Promise((resolve, reject) => {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address }, (results, status) => {
-        if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
-          const location = results[0].geometry.location;
-          resolve({ lat: location.lat(), lng: location.lng() });
-        } else {
-          console.error("Geocoding failed:", status);
-          reject(null);
+      
+      setSelectedTechnicianId(currentTechnicianId);
+      
+      toast.success(
+        `Work Order #${updatedOrder.id} assigned to ${technician.name}`,
+        {
+          description: `${updatedOrder.type} at ${updatedOrder.address} - Scheduled for ${formatDate(scheduledDateTime)}`
         }
+      );
+      
+      uiToast({
+        title: "Assignment Successful",
+        description: `Work Order #${updatedOrder.id} has been assigned to ${technician.name}`,
       });
-    });
-  };
-
-  const handleAddressChange = async (address: string) => {
-    setEditedTechnicianAddress(address);
-    try {
-      const location = await geocodeAddress(address);
-      if (location) {
-        setEditedTechnicianLat(location.lat);
-        setEditedTechnicianLng(location.lng);
-      } else {
-        setEditedTechnicianLat(undefined);
-        setEditedTechnicianLng(undefined);
-      }
     } catch (error) {
-      console.error("Geocoding error:", error);
-      setEditedTechnicianLat(undefined);
-      setEditedTechnicianLng(undefined);
+      console.error("Failed to assign work order:", error);
+      uiToast({
+        title: "Error",
+        description: "Failed to assign work order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScheduleModalOpen(false);
     }
   };
 
-  useEffect(() => {
-    const filtered = technicians.filter(technician =>
-      technician.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (technician.specialties && technician.specialties.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())))
-    );
-    setFilteredTechnicians(filtered);
-  }, [technicians, searchQuery]);
+  const handleUnassignWorkOrder = async (orderId: string) => {
+    try {
+      await unassignWorkOrder(orderId);
+      toast.info(`Work Order #${orderId} unassigned`);
+    } catch (error) {
+      console.error("Failed to unassign work order:", error);
+      uiToast({
+        title: "Error",
+        description: "Failed to unassign work order. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
+  const currentTechnician = technicians.find(tech => tech.id === currentTechnicianId);
+  const currentWorkOrder = workOrders.find(order => order.id === currentWorkOrderId);
+  
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">Dispatch</h1>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-muted-foreground">Loading dispatch data...</p>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+  
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dispatch</h1>
-            <p className="text-muted-foreground">
-              Manage technicians and work orders
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={syncDataFromCRM} disabled={isSyncing}>
-              {isSyncing ? "Syncing..." : "Sync from CRM"}
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/work-orders/create")}>
-              Create Work Order
-            </Button>
+            <p className="text-muted-foreground">Assign and track technicians</p>
           </div>
         </div>
-
-        <div className="grid gap-6 md:grid-cols-4">
-          <Card className="md:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Technicians</CardTitle>
-              <Input
-                type="search"
-                placeholder="Search technicians..."
-                className="max-w-sm h-8 text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="divide-y divide-border">
-                  {filteredTechnicians.map((technician) => (
-                    <div
-                      key={technician.id}
-                      className="flex items-center justify-between p-3 hover:bg-secondary/50"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <UserRound className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium leading-none">
-                          {technician.name}
-                        </span>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-6 w-6 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleOpenTechnicianDialog(technician)}>
-                            Edit Technician
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setSelectedTechnician(technician)}>
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            View Schedule
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            View Performance
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled>
-                            Send Message (Coming Soon)
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-red-500">
-                                  Remove Technician
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently
-                                    remove{" "}
-                                    {technician.name} from our
-                                    database.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction>Continue</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+        
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex justify-between">
+                <p className="text-muted-foreground">Total Technicians</p>
+                <Badge>{technicians.length}</Badge>
+              </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex justify-between">
+                <p className="text-muted-foreground">Available</p>
+                <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">
+                  {availableTechnicians}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex justify-between">
+                <p className="text-muted-foreground">Busy</p>
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">
+                  {busyTechnicians}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex justify-between">
+                <p className="text-muted-foreground">Off Duty</p>
+                <Badge variant="outline" className="bg-gray-50 text-gray-700 hover:bg-gray-50">
+                  {offDutyTechnicians}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <DndContext 
+          sensors={sensors} 
+          onDragEnd={handleDragEnd}
+          onDragStart={handleDragStart}
+        >
+          <div className="grid gap-6">
+            <Tabs defaultValue="list">
+              <TabsList>
+                <TabsTrigger value="list">List View</TabsTrigger>
+                <TabsTrigger value="map">Map View</TabsTrigger>
+              </TabsList>
 
-          <div className="md:col-span-2 flex flex-col space-y-6">
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Technician Locations</CardTitle>
-                <Button variant="outline" size="sm">
-                  Show All
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <LoadScript googleMapsApiKey={googleMapsApiKey}>
-                  <GoogleMap
-                    mapContainerStyle={mapContainerStyle}
-                    zoom={10}
-                    center={defaultLocation}
-                    options={mapOptions}
-                  >
-                    {technicians.map((technician) => {
-                      const position = {
-                        lat: technician.current_location_lat || defaultLocation.lat, 
-                        lng: technician.current_location_lng || defaultLocation.lng
-                      };
-                      return (
-                        <Marker
-                          key={technician.id}
-                          position={position}
-                          onClick={() => setSelectedTechnician(technician)}
-                        >
-                          {selectedTechnician?.id === technician.id && (
-                            <InfoWindow onCloseClick={() => setSelectedTechnician(null)}>
-                              <div>
-                                <h3 className="font-semibold">{technician.name}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  {technician.status}
-                                </p>
-                              </div>
-                            </InfoWindow>
-                          )}
-                        </Marker>
-                      );
-                    })}
-                  </GoogleMap>
-                </LoadScript>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Work Orders</CardTitle>
-                <Select onValueChange={(value) => console.log(value)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[calc(100vh-550px)]">
-                  <DragDropContext onDragEnd={onDragEnd}>
-                    <Droppable droppableId="work-orders-list">
-                      {(provided) => (
-                        <div
-                          {...provided.droppableProps}
-                          ref={provided.innerRef}
-                          className="divide-y divide-border"
-                        >
-                          {workOrders.map((workOrder, index) => (
-                            <Draggable key={workOrder.id} draggableId={workOrder.id} index={index}>
-                              {(provided) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className="flex items-center justify-between p-3 hover:bg-secondary/50 cursor-move"
-                                >
-                                  <div className="flex items-center space-x-2">
-                                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium leading-none">
-                                      {workOrder.customerName}
-                                    </span>
-                                  </div>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" className="h-6 w-6 p-0">
-                                        <span className="sr-only">Open menu</span>
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => {
-                                        setSelectedWorkOrder(workOrder);
-                                        setShowWorkOrderDetails(true);
-                                      }}>
-                                        View Details
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => navigate(`/work-orders/${workOrder.id}`)}>
-                                        Edit Work Order
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem disabled>
-                                        Send Update (Coming Soon)
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem>
-                                        <AlertDialog>
-                                          <AlertDialogTrigger asChild>
-                                            <DropdownMenuItem className="text-red-500">
-                                              Cancel Work Order
-                                            </DropdownMenuItem>
-                                          </AlertDialogTrigger>
-                                          <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                              <AlertDialogDescription>
-                                                This action cannot be undone. This will permanently
-                                                cancel work order{" "}
-                                                {workOrder.id}
-                                                .
-                                              </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                              <AlertDialogAction>Continue</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                          </AlertDialogContent>
-                                        </AlertDialog>
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              )}
-                            </Draggable>
+              <TabsContent value="list" className="pt-4">
+                <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5" />
+                        Unassigned Work Orders
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="max-h-[700px] overflow-y-auto p-0">
+                      {unassignedWorkOrders.length > 0 ? (
+                        <div className="space-y-3 p-4">
+                          {unassignedWorkOrders.map((order) => (
+                            <DraggableWorkOrder 
+                              key={order.id} 
+                              order={order} 
+                              isActive={activeOrderId === order.id}
+                            />
                           ))}
-                          {provided.placeholder}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <Briefcase className="mx-auto h-8 w-8 text-muted-foreground" />
+                          <h3 className="mt-3 text-lg font-medium">No Unassigned Work Orders</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            All work orders have been assigned to technicians.
+                          </p>
                         </div>
                       )}
-                    </Droppable>
-                  </DragDropContext>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+
+                  <div>
+                    <h2 className="text-lg font-semibold mb-3">Technicians</h2>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Drag work orders onto technicians to assign them. Click on a technician to view their scheduled work.
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {technicians.map((technician) => (
+                        <TechnicianDropTarget
+                          key={technician.id}
+                          technician={technician}
+                          isSelected={selectedTechnicianId === technician.id}
+                          onClick={() => setSelectedTechnicianId(technician.id)}
+                          assignedCount={workOrders.filter(order => order.technicianId === technician.id).length}
+                        />
+                      ))}
+                    </div>
+
+                    {selectedTechnicianId ? (
+                      <Card className="mt-6">
+                        <CardHeader className="pb-2">
+                          <CardTitle>
+                            {technicians.find(tech => tech.id === selectedTechnicianId)?.name}'s Work Orders
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {technicianWorkOrders.length > 0 ? (
+                            <div className="space-y-3">
+                              {technicianWorkOrders.map((order) => (
+                                <div key={order.id} className="rounded-md border p-4">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-medium">#{order.id} - {order.type}</p>
+                                    <Badge
+                                      variant="outline"
+                                      className={`
+                                        ${order.status === 'scheduled' ? 'bg-amber-50 text-amber-700 hover:bg-amber-50' : ''}
+                                        ${order.status === 'in-progress' ? 'bg-blue-50 text-blue-700 hover:bg-blue-50' : ''}
+                                        ${order.status === 'pending' ? 'bg-gray-50 text-gray-700 hover:bg-gray-50' : ''}
+                                      `}
+                                    >
+                                      {order.status}
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-2 space-y-1.5 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-4 w-4 text-muted-foreground" />
+                                      <span>{order.customerName}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                                      <span>{order.address}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                      <span>{formatDate(new Date(order.scheduledDate))}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-4 w-4 text-muted-foreground" />
+                                      <span>{formatDate(new Date(order.scheduledDate), { timeOnly: true })}</span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3 flex justify-end">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => handleUnassignWorkOrder(order.id)}
+                                    >
+                                      Unassign
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <Calendar className="mx-auto h-8 w-8 text-muted-foreground" />
+                              <h3 className="mt-3 text-lg font-medium">No Assigned Work Orders</h3>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                This technician has no assigned work orders.
+                                <br />
+                                Drag work orders from the left to assign them.
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card className="mt-6">
+                        <CardContent className="p-8 text-center">
+                          <User className="mx-auto h-12 w-12 text-muted-foreground" />
+                          <h3 className="mt-4 text-lg font-medium">No Technician Selected</h3>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            Select a technician from above to view their assigned work orders.
+                            <br />
+                            Drag unassigned work orders to a technician to assign them.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="map" className="pt-4">
+                <TechLocationMap />
+              </TabsContent>
+            </Tabs>
           </div>
 
-          <Card className="md:col-span-1">
-            <CardHeader className="flex items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Technician Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {selectedTechnician ? (
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">{selectedTechnician.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedTechnician.specialties?.join(", ") || "No specialties"}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        {selectedTechnician.current_location_address || "No location"}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        (123) 456-7890
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">
-                        john.doe@example.com
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={selectedTechnician.status}
-                      onValueChange={(value) =>
-                        handleTechnicianStatusChange(selectedTechnician, value as Technician["status"])
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="available">Available</SelectItem>
-                        <SelectItem value="busy">Busy</SelectItem>
-                        <SelectItem value="off-duty">Off Duty</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label>Actions</Label>
-                    <div className="grid gap-2">
-                      <Button variant="outline" onClick={() => setShowTechnicianDetails(true)}>
-                        View Details
-                      </Button>
-                      <Button>Assign Work Order</Button>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label>Work Orders</Label>
-                    <ScrollArea className="h-24">
-                      <div className="divide-y divide-border">
-                        {workOrders
-                          .filter((wo) => wo.technicianId === selectedTechnician.id)
-                          .map((workOrder) => (
-                            <div
-                              key={workOrder.id}
-                              className="flex items-center justify-between p-2 hover:bg-secondary/50"
-                            >
-                              <span className="text-sm font-medium leading-none">
-                                {workOrder.customerName}
-                              </span>
-                              <Button variant="ghost" size="sm">
-                                View
-                              </Button>
-                            </div>
-                          ))}
+          <DragOverlay>
+            {activeOrderId ? (
+              <div className="rounded-md border p-3 bg-card shadow-md opacity-90 max-w-xs">
+                {(() => {
+                  const order = workOrders.find(o => o.id === activeOrderId);
+                  if (!order) return null;
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium">#{order.id} - {order.type}</p>
+                        <Badge
+                          variant="outline"
+                          className={`
+                            ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
+                            ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
+                            ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
+                            ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
+                          `}
+                        >
+                          {order.priority}
+                        </Badge>
                       </div>
-                    </ScrollArea>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  Select a technician to view details
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      <div className="text-sm">
+                        {order.customerName}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+
+        <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
+          <DialogContent className="sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Schedule Work Order</DialogTitle>
+              <DialogDescription>
+                Set the date and time for this work order assignment
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                {currentWorkOrder && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Work Order Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold">#{currentWorkOrder.id} - {currentWorkOrder.type}</h4>
+                        <Badge
+                          className={`mt-1
+                            ${currentWorkOrder.priority === 'low' ? 'bg-gray-100 text-gray-800' : ''}
+                            ${currentWorkOrder.priority === 'medium' ? 'bg-blue-100 text-blue-800' : ''}
+                            ${currentWorkOrder.priority === 'high' ? 'bg-amber-100 text-amber-800' : ''}
+                            ${currentWorkOrder.priority === 'emergency' ? 'bg-red-100 text-red-800' : ''}
+                          `}
+                        >
+                          {currentWorkOrder.priority}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{currentWorkOrder.customerName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{currentWorkOrder.address}</span>
+                        </div>
+                        <p className="mt-2 text-muted-foreground">{currentWorkOrder.description}</p>
+                      </div>
+                      
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="date">Date</Label>
+                            <Input
+                              id="date"
+                              type="date"
+                              value={scheduledDate}
+                              onChange={(e) => setScheduledDate(e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="time">Time</Label>
+                            <Input
+                              id="time"
+                              type="time"
+                              value={scheduledTime}
+                              onChange={(e) => setScheduledTime(e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                        
+                        {currentTechnician && (
+                          <div>
+                            <Label>Assigned To</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div
+                                className={`h-2.5 w-2.5 rounded-full
+                                  ${currentTechnician.status === "available" ? "bg-green-500" : ""}
+                                  ${currentTechnician.status === "busy" ? "bg-amber-500" : ""}
+                                  ${currentTechnician.status === "off-duty" ? "bg-gray-500" : ""}
+                                `}
+                              />
+                              <span>{currentTechnician.name}</span>
+                              <Badge
+                                variant="outline"
+                                className={`ml-auto
+                                  ${currentTechnician.status === 'available' ? 'bg-green-50 text-green-700' : ''}
+                                  ${currentTechnician.status === 'busy' ? 'bg-amber-50 text-amber-700' : ''}
+                                  ${currentTechnician.status === 'off-duty' ? 'bg-gray-50 text-gray-700' : ''}
+                                `}
+                              >
+                                {currentTechnician.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              
+              <div>
+                {currentTechnician && scheduledDate && (
+                  <TechnicianScheduleView
+                    technician={currentTechnician}
+                    workOrders={workOrders}
+                    selectedDate={new Date(`${scheduledDate}T00:00:00`)}
+                  />
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="secondary" onClick={() => setIsScheduleModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleScheduleConfirm}>
+                Schedule
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </MainLayout>
+  );
+};
+
+interface DraggableWorkOrderProps {
+  order: WorkOrder;
+  isActive: boolean;
+}
+
+const DraggableWorkOrder = ({ order, isActive }: DraggableWorkOrderProps) => {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: order.id,
+  });
+  
+  return (
+    <div 
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`rounded-md border p-3 bg-card hover:border-primary ${isActive ? 'opacity-50' : ''} cursor-grab active:cursor-grabbing`}
+      style={{ touchAction: 'none' }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="font-medium">#{order.id} - {order.type}</p>
+        <Badge
+          variant="outline"
+          className={`
+            ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
+            ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
+            ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
+            ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
+          `}
+        >
+          {order.priority}
+        </Badge>
+      </div>
+      <div className="space-y-1.5 text-sm">
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span>{order.customerName}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <span className="truncate">{order.address}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span>{formatDate(new Date(order.scheduledDate))}</span>
         </div>
       </div>
+    </div>
+  );
+};
 
-      <Dialog open={showWorkOrderDetails} onOpenChange={setShowWorkOrderDetails}>
-        <DialogContent className="sm:max-w-[625px]">
-          <DialogHeader>
-            <DialogTitle>Work Order Details</DialogTitle>
-            <DialogDescription>
-              View and manage work order details.
-            </DialogDescription>
-          </DialogHeader>
+interface TechnicianDropTargetProps {
+  technician: Technician;
+  isSelected: boolean;
+  onClick: () => void;
+  assignedCount: number;
+}
 
-          {selectedWorkOrder ? (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Customer Name</Label>
-                  <p className="text-sm font-medium">{selectedWorkOrder.customerName}</p>
-                </div>
-                <div>
-                  <Label>Address</Label>
-                  <p className="text-sm font-medium">{selectedWorkOrder.address}</p>
-                </div>
-                <div>
-                  <Label>Type</Label>
-                  <p className="text-sm font-medium">{selectedWorkOrder.type}</p>
-                </div>
-                <div>
-                  <Label>Priority</Label>
-                  <p className="text-sm font-medium">{selectedWorkOrder.priority}</p>
-                </div>
-                <div>
-                  <Label>Scheduled Date</Label>
-                  <p className="text-sm font-medium">
-                    {format(parseISO(selectedWorkOrder.scheduledDate), 'PPP')}
-                  </p>
-                </div>
-                <div>
-                  <Label>Status</Label>
-                  <Badge
-                    variant="secondary"
-                    className={
-                      selectedWorkOrder.status === "completed"
-                        ? "bg-green-500 text-white"
-                        : selectedWorkOrder.status === "pending"
-                          ? "bg-yellow-500 text-black"
-                          : "bg-blue-500 text-white"
-                    }
-                  >
-                    {selectedWorkOrder.status}
-                  </Badge>
-                </div>
-                <div>
-                  <Label>Technician</Label>
-                  <p className="text-sm font-medium">
-                    {selectedWorkOrder.technicianName || "Not assigned"}
-                  </p>
-                </div>
-                <div>
-                  <Label>Estimated Hours</Label>
-                  <p className="text-sm font-medium">
-                    {selectedWorkOrder.estimatedHours || "N/A"}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <Label>Description</Label>
-                <p className="text-sm font-medium">
-                  {selectedWorkOrder.description}
-                </p>
-              </div>
-
-              {selectedWorkOrder.notes && selectedWorkOrder.notes.length > 0 && (
-                <div>
-                  <Label>Notes</Label>
-                  <ul className="text-sm font-medium list-disc pl-5">
-                    {selectedWorkOrder.notes.map((note, index) => (
-                      <li key={index}>{note}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {selectedWorkOrder.status === "pending-completion" && (
-                <div className="bg-yellow-50 p-3 rounded-md">
-                  <p className="text-sm text-yellow-700 flex items-center">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    <span>Pending Completion: {selectedWorkOrder.pendingReason}</span>
-                  </p>
-                </div>
-              )}
-              
-              <DialogFooter className="sm:justify-start">
-                <div className="flex gap-2">
-                  {selectedWorkOrder.status !== "completed" && (
-                    <Button onClick={handleCompleteWorkOrder} disabled={isCompletingWorkOrder}>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      {isCompletingWorkOrder ? "Completing..." : "Complete Work Order"}
-                    </Button>
-                  )}
-                  
-                  {selectedWorkOrder.status !== "pending-completion" && selectedWorkOrder.status !== "completed" && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        setShowWorkOrderDetails(false);
-                        setPendingReason("");
-                        setIsMarkingPendingCompletion(false);
-                      }}
-                    >
-                      Mark as Pending
-                    </Button>
-                  )}
-                  
-                  <Button variant="ghost" onClick={() => setShowWorkOrderDetails(false)}>
-                    Close
-                  </Button>
-                </div>
-              </DialogFooter>
-            </div>
-          ) : (
-            <p className="text-center py-4 text-muted-foreground">
-              No work order selected.
-            </p>
-          )}
-        </DialogContent>
-      </Dialog>
-    </MainLayout>
+const TechnicianDropTarget = ({ technician, isSelected, onClick, assignedCount }: TechnicianDropTargetProps) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: technician.id,
+  });
+  
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`
+        rounded-lg border p-3 cursor-pointer
+        ${isSelected ? 'border-primary bg-primary/5' : ''}
+        ${isOver ? 'border-primary border-dashed bg-primary/5' : ''}
+        hover:border-primary hover:bg-primary/5
+      `}
+      onClick={onClick}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className={`
+            h-2 w-2 rounded-full
+            ${technician.status === 'available' ? 'bg-green-500' : ''}
+            ${technician.status === 'busy' ? 'bg-amber-500' : ''}
+            ${technician.status === 'off-duty' ? 'bg-gray-500' : ''}
+          `} />
+          <p className="font-medium">{technician.name}</p>
+          <Badge
+            variant="outline"
+            className={`ml-auto
+              ${technician.status === 'available' ? 'bg-green-50 text-green-700 hover:bg-green-50' : ''}
+              ${technician.status === 'busy' ? 'bg-amber-50 text-amber-700 hover:bg-amber-50' : ''}
+              ${technician.status === 'off-duty' ? 'bg-gray-50 text-gray-700 hover:bg-gray-50' : ''}
+            `}
+          >
+            {technician.status}
+          </Badge>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {technician.specialties.join(', ')}
+        </div>
+        <div className="text-xs">
+          <span className="font-medium">Assigned:</span> {assignedCount} work orders
+        </div>
+        {technician.currentLocation && (
+          <div className="text-xs truncate">
+            <MapPin className="inline-block h-3 w-3 mr-1" />
+            {technician.currentLocation.address}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

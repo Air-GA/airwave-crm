@@ -1,3 +1,4 @@
+
 import { supabase } from '../lib/supabase';
 import { WorkOrder, Technician } from '../types';
 import { toast } from '@/components/ui/use-toast';
@@ -225,11 +226,11 @@ export const pushTechnicianUpdateToCRM = async (technician: Technician): Promise
       name: technician.name,
       status: technician.status,
       skills: technician.specialties,
-      location: {
-        address: technician.current_location_address,
-        latitude: technician.current_location_lat,
-        longitude: technician.current_location_lng
-      }
+      location: technician.currentLocation ? {
+        address: technician.currentLocation.address,
+        latitude: technician.currentLocation.lat,
+        longitude: technician.currentLocation.lng
+      } : undefined
     };
 
     // Since supabase client may not have functions property in the current setup
@@ -303,12 +304,6 @@ const mapWorkOrderFromDB = (order: any): WorkOrder => {
     technicianId: order.technician_id || undefined,
     technicianName: order.technician_name || undefined,
     notes: order.notes || undefined,
-    partsUsed: order.partsUsed ? order.partsUsed.map((part: any) => ({
-      id: part.id,
-      name: part.name,
-      quantity: part.quantity,
-      cost: part.price || part.cost // Map price to cost if cost is not available
-    })) : undefined,
   };
 };
 
@@ -330,11 +325,5 @@ const mapWorkOrderToDB = (order: WorkOrder) => {
     technician_id: order.technicianId || null,
     technician_name: order.technicianName || null,
     notes: order.notes || null,
-    partsUsed: order.partsUsed ? order.partsUsed.map(part => ({
-      id: part.id,
-      name: part.name,
-      quantity: part.quantity,
-      price: part.cost // Map cost to price for the backend
-    })) : null,
   };
 };
