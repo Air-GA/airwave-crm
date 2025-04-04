@@ -112,3 +112,18 @@ export interface InventoryItem {
   unit_price?: number;
   invoiceNumber?: string;
 }
+
+export interface InventoryTransfer {
+  id: string;
+  date: string;
+  sourceLocation: string;
+  destinationLocation: string;
+  items: {
+    itemId: string;
+    itemName: string;
+    quantity: number;
+    invoiceNumber?: string;
+  }[];
+  createdBy?: string;
+  notes?: string;
+}

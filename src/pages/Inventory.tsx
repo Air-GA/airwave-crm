@@ -63,15 +63,18 @@ import {
   X,
   FileText,
   ChevronRight,
-  ChevronUp
+  ChevronUp,
+  Calendar,
+  User
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useForm, useFieldArray } from "react-hook-form";
-import { InventoryItem } from "@/types";
+import { InventoryItem, InventoryTransfer } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { format } from "date-fns";
 
 interface ExtendedInventoryItem extends InventoryItem {
   sku: string;
@@ -222,6 +225,41 @@ const Inventory = () => {
     },
   ]);
 
+  // Add mock transfers history
+  const [transferHistory, setTransferHistory] = useState<InventoryTransfer[]>([
+    {
+      id: "TR001",
+      date: "2025-04-01T09:30:00Z",
+      sourceLocation: "warehouse",
+      destinationLocation: "MU001",
+      items: [
+        { itemId: "INV001", itemName: "Air Filter - MERV 13", quantity: 5, invoiceNumber: "INV-2025-001" },
+        { itemId: "INV004", itemName: "Capacitor 45/5 MFD", quantity: 3, invoiceNumber: "INV-2025-001" }
+      ],
+      createdBy: "Admin User"
+    },
+    {
+      id: "TR002",
+      date: "2025-04-02T14:15:00Z",
+      sourceLocation: "warehouse",
+      destinationLocation: "MU002",
+      items: [
+        { itemId: "INV002", itemName: "Refrigerant R-410A (10lb)", quantity: 2, invoiceNumber: "INV-2025-002" }
+      ],
+      createdBy: "Admin User"
+    },
+    {
+      id: "TR003",
+      date: "2025-04-03T11:45:00Z",
+      sourceLocation: "MU001",
+      destinationLocation: "warehouse",
+      items: [
+        { itemId: "INV001", itemName: "Air Filter - MERV 13", quantity: 2, invoiceNumber: "INV-2025-001" }
+      ],
+      createdBy: "David Martinez"
+    }
+  ]);
+
   const mobileUnits = [
     { id: "MU001", name: "Truck 1", technicianName: "David Martinez", status: "active" },
     { id: "MU002", name: "Truck 2", technicianName: "Lisa Wong", status: "active" },
@@ -370,6 +408,26 @@ const Inventory = () => {
         });
       });
       
+      // Record the transfer in history
+      const newTransfer: InventoryTransfer = {
+        id: `TR${String(transferHistory.length + 1).padStart(3, '0')}`,
+        date: new Date().toISOString(),
+        sourceLocation: data.sourceLocation,
+        destinationLocation: data.destinationLocation,
+        items: data.items.map(item => {
+          const inventoryItem = inventoryItems.find(i => i.id === item.itemId);
+          return {
+            itemId: item.itemId,
+            itemName: inventoryItem?.name || "Unknown Item",
+            quantity: item.quantity,
+            invoiceNumber: item.invoiceNumber
+          };
+        }),
+        createdBy: "Admin User" // Could be replaced with actual user name
+      };
+      
+      setTransferHistory(prev => [newTransfer, ...prev]);
+      
       const itemNames = itemsToTransfer.map(t => t.item.name).join(", ");
       toast.success("Inventory transferred", {
         description: `Successfully transferred ${itemNames}`
@@ -382,6 +440,13 @@ const Inventory = () => {
         description: error instanceof Error ? error.message : "There was an error transferring inventory"
       });
     }
+  };
+
+  // Helper to get location name
+  const getLocationName = (locationId: string) => {
+    if (locationId === "warehouse") return "Main Warehouse";
+    const unit = mobileUnits.find(u => u.id === locationId);
+    return unit ? unit.name : locationId;
   };
 
   // Group inventory items by mobile unit and invoice number
@@ -886,20 +951,96 @@ const Inventory = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-8">
-                  <MoveRight className="h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">No recent transfers</h3>
-                  <p className="mt-2 text-sm text-muted-foreground text-center">
-                    Transfer inventory between the warehouse and mobile units to see history here.
-                  </p>
-                  <Button 
-                    className="mt-4"
-                    onClick={() => openTransferDialog()}
-                  >
-                    <MoveRight className="mr-2 h-4 w-4" />
-                    Start a Transfer
-                  </Button>
-                </div>
+                {transferHistory.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openTransferDialog()}
+                      >
+                        <MoveRight className="mr-2 h-4 w-4" />
+                        New Transfer
+                      </Button>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>From</TableHead>
+                          <TableHead>To</TableHead>
+                          <TableHead>Items</TableHead>
+                          <TableHead>Created By</TableHead>
+                          <TableHead className="w-[100px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {transferHistory.map((transfer) => (
+                          <TableRow key={transfer.id}>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                                {format(new Date(transfer.date), "MMM d, yyyy - h:mm a")}
+                              </div>
+                            </TableCell>
+                            <TableCell>{getLocationName(transfer.sourceLocation)}</TableCell>
+                            <TableCell>{getLocationName(transfer.destinationLocation)}</TableCell>
+                            <TableCell>
+                              <Collapsible>
+                                <CollapsibleTrigger className="flex items-center text-sm text-blue-600 hover:underline">
+                                  {transfer.items.length} item{transfer.items.length !== 1 ? 's' : ''}
+                                  <ChevronDown className="ml-1 h-3 w-3" />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="mt-2 space-y-1 pl-4 text-sm">
+                                  {transfer.items.map((item, idx) => (
+                                    <div key={`${transfer.id}-${idx}`} className="flex justify-between">
+                                      <span>{item.itemName}</span>
+                                      <div className="flex items-center">
+                                        <span className="font-medium">{item.quantity}</span>
+                                        {item.invoiceNumber && (
+                                          <Badge variant="outline" className="ml-2 text-xs">
+                                            {item.invoiceNumber}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                                {transfer.createdBy}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm">
+                                <FileText className="h-4 w-4" />
+                                <span className="sr-only">View Details</span>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <MoveRight className="h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium">No recent transfers</h3>
+                    <p className="mt-2 text-sm text-muted-foreground text-center">
+                      Transfer inventory between the warehouse and mobile units to see history here.
+                    </p>
+                    <Button 
+                      className="mt-4"
+                      onClick={() => openTransferDialog()}
+                    >
+                      <MoveRight className="mr-2 h-4 w-4" />
+                      Start a Transfer
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
