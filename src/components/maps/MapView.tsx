@@ -47,7 +47,7 @@ const MapView = () => {
     checkApiKey();
     
     // Re-check when settings might have changed - use a slower interval to reduce load
-    const interval = setInterval(checkApiKey, 10000);
+    const interval = setInterval(checkApiKey, 30000); // Increased from 10s to 30s to reduce frequency
     
     return () => clearInterval(interval);
   }, [showMap]);
@@ -120,7 +120,7 @@ const MapView = () => {
             </Button>
           </div>
         ) : (
-          <TechLocationMap onError={handleMapError} />
+          <TechLocationMap key="tech-map" onError={handleMapError} />
         )}
       </CardContent>
     </Card>

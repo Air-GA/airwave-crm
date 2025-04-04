@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,8 +50,9 @@ interface TechLocationMapProps {
   onError?: (error: string) => void;
 }
 
-// Global flag to prevent multiple script loads
+// Global flags to prevent multiple script loads
 let googleMapsScriptLoaded = false;
+let googleMapsInitialized = false;
 
 const TechLocationMap = ({ onError }: TechLocationMapProps) => {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("");
@@ -64,6 +64,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
   const [showApiKeyHelp, setShowApiKeyHelp] = useState<boolean>(false);
   const [scriptLoading, setScriptLoading] = useState<boolean>(false);
   const [mapInitialized, setMapInitialized] = useState<boolean>(false);
+  const [scriptLoadAttempts, setScriptLoadAttempts] = useState<number>(0);
   
   const technicians = useTechnicianStore(state => state.technicians);
   
@@ -102,10 +103,27 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
       // @ts-ignore - initMap is added to window but TS doesn't know about it
       delete window.initMap;
     }
-    
-    // Reset global flag
-    googleMapsScriptLoaded = false;
   }, []);
+
+  // Reset global state for complete reload
+  const resetMapState = useCallback(() => {
+    googleMapsScriptLoaded = false;
+    googleMapsInitialized = false;
+    setIsLoaded(false);
+    setMapInitialized(false);
+    setMap(null);
+    setError(null);
+    
+    // Clean up markers
+    markers.forEach(marker => marker.setMap(null));
+    setMarkers([]);
+    
+    // Clean up script
+    cleanupScript();
+    
+    // Force reloading by incrementing attempts counter
+    setScriptLoadAttempts(prev => prev + 1);
+  }, [cleanupScript, markers]);
 
   // Load Google Maps script
   useEffect(() => {
@@ -115,62 +133,62 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
       return;
     }
 
-    // If script is already loaded globally, don't load it again
-    if (googleMapsScriptLoaded || window.google?.maps) {
-      console.log("Google Maps already loaded, skipping script load");
+    // If script is already loaded and map is initialized, don't load it again
+    if ((googleMapsScriptLoaded && window.google?.maps) || mapInitialized) {
+      console.log("Google Maps already loaded or map initialized, skipping script load");
       setIsLoaded(true);
       setScriptLoading(false);
       return;
     }
 
-    console.log("Attempting to load Google Maps with API key, length:", apiKey.length);
-    
-    // Reset state
-    setIsLoaded(false);
-    setError(null);
-    setMap(null);
+    console.log("Attempting to load Google Maps with API key (attempt #" + (scriptLoadAttempts + 1) + ")");
     setScriptLoading(true);
-    markers.forEach(marker => marker.setMap(null));
-    setMarkers([]);
-    setMapInitialized(false);
     
-    // Set global flag to prevent multiple loads
+    // Clean up any existing script and set flags
+    cleanupScript();
     googleMapsScriptLoaded = true;
     
-    // Clean up any existing script
-    cleanupScript();
+    const uniqueCallbackName = `initMap_${Date.now()}`;
+    
+    // Define the callback function
+    // @ts-ignore - adding to window
+    window[uniqueCallbackName] = () => {
+      console.log("Google Maps API loaded successfully");
+      googleMapsInitialized = true;
+      setIsLoaded(true);
+      setScriptLoading(false);
+    };
     
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=${uniqueCallbackName}&loading=async&v=weekly`;
     script.async = true;
     script.defer = true;
     scriptRef.current = script;
     
     // Define error handling
     script.onerror = () => {
+      console.error("Failed to load Google Maps API script");
       googleMapsScriptLoaded = false;
       const errorMsg = "Failed to load Google Maps API. Please check your API key.";
       reportError(errorMsg);
       setIsLoaded(false);
       setScriptLoading(false);
-    };
-    
-    // Define the callback function
-    window.initMap = () => {
-      console.log("Google Maps API loaded successfully");
-      setIsLoaded(true);
-      setScriptLoading(false);
+      
+      // Clean up failed script
+      cleanupScript();
     };
     
     document.head.appendChild(script);
     
     return () => {
-      // Don't remove the script on component unmount to avoid reloading issues
-      // Only reset component state
-      markers.forEach(marker => marker.setMap(null));
-      setMarkers([]);
+      // Keep the script loaded on unmount to avoid reload issues
+      // Only clean up the callback
+      if (window[uniqueCallbackName]) {
+        // @ts-ignore - removing from window
+        delete window[uniqueCallbackName];
+      }
     };
-  }, [googleMapsApiKey, manualApiKey, cleanupScript, markers, reportError]);
+  }, [googleMapsApiKey, manualApiKey, cleanupScript, reportError, scriptLoadAttempts, mapInitialized]);
 
   // Initialize map with technician markers
   useEffect(() => {
@@ -301,6 +319,8 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     } catch (error) {
       console.error("Error initializing Google Maps:", error);
       reportError("Error initializing map. Please check console for details.");
+      // Reset state on initialization error
+      setMapInitialized(false);
     }
   }, [isLoaded, technicians, reportError, mapInitialized]);
 
@@ -315,6 +335,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
         reportError(errorMsg);
         setIsLoaded(false);
         setScriptLoading(false);
+        setMapInitialized(false);
       }
     };
 
@@ -329,16 +350,17 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     e.preventDefault();
     if (manualApiKey) {
       console.log("Setting new API key, length:", manualApiKey.length);
-      // Reset global state to force reloading
-      googleMapsScriptLoaded = false;
-      cleanupScript();
-      setIsLoaded(false);
-      setMapInitialized(false);
+      
+      // Reset state for fresh start
+      resetMapState();
       
       // Save the API key to settings
       const settings = getIntegrationSettings();
-      settings.googleMaps.connected = true;
-      settings.googleMaps.apiKey = manualApiKey;
+      settings.googleMaps = {
+        ...settings.googleMaps,
+        connected: true,
+        apiKey: manualApiKey
+      };
       saveIntegrationSettings(settings);
       setGoogleMapsApiKey(manualApiKey);
       
@@ -350,23 +372,30 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
   };
 
   const handleRetry = () => {
-    // Reset global state to force reloading
-    googleMapsScriptLoaded = false;
-    cleanupScript();
-    setError(null);
-    setMapInitialized(false);
-    setIsLoaded(false);
+    console.log("Manual retry requested by user");
+    
+    // Reset global state to force complete reloading
+    resetMapState();
     
     const apiKey = googleMapsApiKey || manualApiKey;
     if (apiKey) {
       console.log("Retrying with API key, length:", apiKey.length);
-      setManualApiKey(apiKey);
-      setTimeout(() => {
-        const settings = getIntegrationSettings();
-        settings.googleMaps.connected = true;
-        settings.googleMaps.apiKey = apiKey;
-        saveIntegrationSettings(settings);
-      }, 500);
+      // Update settings to ensure they're correct
+      const settings = getIntegrationSettings();
+      settings.googleMaps = {
+        ...settings.googleMaps,
+        connected: true,
+        apiKey: apiKey
+      };
+      saveIntegrationSettings(settings);
+      
+      toast.info("Reloading map", {
+        description: "Please wait while the map is being reloaded..."
+      });
+    } else {
+      toast.error("No API key available", {
+        description: "Please enter a Google Maps API key first"
+      });
     }
   };
 
