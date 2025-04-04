@@ -1,10 +1,8 @@
-
 import {
   BarChart3,
   Calendar,
   ClipboardList,
   Clock,
-  FileSpreadsheet,
   LayoutDashboard,
   MapPin,
   MessageSquare,
@@ -32,7 +30,7 @@ interface NavItem {
   icon: any;
 }
 
-// Update the navigation items to include the import data page
+// Update the navigation items to remove the import data page
 export const navigationItems = [
   {
     title: "Dashboard",
@@ -83,11 +81,6 @@ export const navigationItems = [
     title: "Timesheets",
     href: "/timesheets",
     icon: Clock,
-  },
-  {
-    title: "Import Data",
-    href: "/import-data",
-    icon: FileSpreadsheet,
   },
   {
     title: "Settings",

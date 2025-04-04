@@ -22,7 +22,6 @@ import Timesheets from "@/pages/Timesheets";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 import RoleGuard from "@/components/auth/RoleGuard";
-import ImportData from "@/pages/ImportData";
 
 const queryClient = new QueryClient();
 
@@ -51,7 +50,6 @@ function App() {
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/timesheets" element={<Timesheets />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/import-data" element={<ImportData />} />
               </Route>
 
               {/* Not found */}
