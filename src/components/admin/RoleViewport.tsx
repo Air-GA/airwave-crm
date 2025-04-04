@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,8 @@ import {
   Users,
   MessagesSquare,
   LayoutDashboard,
-  MessageCircle
+  MessageCircle,
+  MessageSquare
 } from "lucide-react";
 
 type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
@@ -60,7 +62,7 @@ export const RoleViewport = ({
   };
   
   const hasDiscordIntegration = (role: UserRole): boolean => {
-    return ['admin', 'manager', 'tech'].includes(role);
+    return ['admin', 'manager', 'tech', 'csr'].includes(role);
   };
   
   const availableRoles = getRolesForPage(currentPage);

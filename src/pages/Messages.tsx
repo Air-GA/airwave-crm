@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,8 @@ import {
   Users,
   Video,
   Laptop,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,8 +42,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const DISCORD_INVITE_LINK = "https://discord.gg/jYMrqCDf";
+const DISCORD_SERVER_ID = "1119885301872070706"; // Extracted from your invite link
 
 const Messages = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,6 +56,7 @@ const Messages = () => {
   const [discordServerName, setDiscordServerName] = useState("Air Georgia HVAC Team");
   const [discordChannelName, setDiscordChannelName] = useState("");
   const [discordShareType, setDiscordShareType] = useState<"screen" | "camera">("screen");
+  const [activeTab, setActiveTab] = useState<"direct" | "discord">("direct");
   const { userRole } = useAuth();
   
   const conversations = [
@@ -225,6 +230,10 @@ const Messages = () => {
     window.open(DISCORD_INVITE_LINK, '_blank');
     toast.success("Opening Discord server invitation");
   };
+
+  const canUseDiscord = () => {
+    return ["admin", "manager", "tech", "csr"].includes(userRole || "");
+  };
   
   return (
     <MainLayout>
@@ -245,218 +254,267 @@ const Messages = () => {
           </div>
         </div>
         
-        <div className="grid h-[calc(100vh-220px)] grid-cols-1 gap-6 md:grid-cols-[300px_1fr]">
-          <div className="flex flex-col border rounded-md overflow-hidden">
-            <div className="border-b p-3">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search messages..."
-                  className="pl-8 w-full"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <Tabs defaultValue="all" className="px-3 pt-3">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="customers">Customers</TabsTrigger>
-                <TabsTrigger value="team">Team</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            <ScrollArea className="flex-1 p-3">
-              <div className="space-y-2">
-                {filteredConversations.map((conv) => (
-                  <div
-                    key={conv.id}
-                    className={`cursor-pointer rounded-md p-2 transition-colors ${
-                      conv.id === activeConversation
-                        ? "bg-accent"
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() => setActiveConversation(conv.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={conv.avatar || undefined} alt={conv.name} />
-                        <AvatarFallback>{getInitials(conv.name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-1 overflow-hidden">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">{conv.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(conv.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        </div>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {conv.lastMessage}
-                        </p>
-                      </div>
-                      {conv.unread > 0 && (
-                        <Badge className="ml-auto" variant="default">
-                          {conv.unread}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
+        <Tabs defaultValue="direct" className="w-full" onValueChange={(value) => setActiveTab(value as "direct" | "discord")}>
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="direct">Direct Messages</TabsTrigger>
+            <TabsTrigger value="discord" disabled={!canUseDiscord()}>
+              Discord Chat
+              {!canUseDiscord() && (
+                <Badge variant="outline" className="ml-2 text-xs">
+                  Restricted
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
           
-          <Card className="flex flex-col">
-            {activeChat ? (
-              <>
-                <CardHeader className="border-b p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle>{activeChat.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {isTeamMember() ? "Team Member" : "Customer"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" title="Call">
-                        <PhoneCall className="h-4 w-4" />
-                        <span className="sr-only">Call</span>
-                      </Button>
-                      <Button variant="ghost" size="icon" title="Email">
-                        <AtSign className="h-4 w-4" />
-                        <span className="sr-only">Email</span>
-                      </Button>
-                      
-                      {isTeamMember() && (
-                        <>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            title="Discord Screen Share"
-                            onClick={() => showDiscordDialog("screen")}
-                          >
-                            <Laptop className="h-4 w-4" />
-                            <span className="sr-only">Screen Share</span>
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            title="Discord Video Call"
-                            onClick={() => showDiscordDialog("camera")}
-                          >
-                            <Video className="h-4 w-4" />
-                            <span className="sr-only">Video Call</span>
-                          </Button>
-                        </>
-                      )}
-                      
-                      {!isTeamMember() && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          title="Share Screen"
-                          onClick={() => showDiscordDialog("screen")}
-                        >
-                          <Share2 className="h-4 w-4" />
-                          <span className="sr-only">Share Screen</span>
-                        </Button>
-                      )}
-                      
-                      <Button variant="ghost" size="icon" title="Team Chat">
-                        <Users className="h-4 w-4" />
-                        <span className="sr-only">Group</span>
-                      </Button>
-                    </div>
+          <TabsContent value="direct" className="mt-0">
+            <div className="grid h-[calc(100vh-220px)] grid-cols-1 gap-6 md:grid-cols-[300px_1fr]">
+              <div className="flex flex-col border rounded-md overflow-hidden">
+                <div className="border-b p-3">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search messages..."
+                      className="pl-8 w-full"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
-                </CardHeader>
+                </div>
                 
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
-                    {activeChat.messages.map((message) => (
+                <Tabs defaultValue="all" className="px-3 pt-3">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="customers">Customers</TabsTrigger>
+                    <TabsTrigger value="team">Team</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                
+                <ScrollArea className="flex-1 p-3">
+                  <div className="space-y-2">
+                    {filteredConversations.map((conv) => (
                       <div
-                        key={message.id}
-                        className={`flex ${
-                          message.sender === "staff" ? "justify-end" : ""
+                        key={conv.id}
+                        className={`cursor-pointer rounded-md p-2 transition-colors ${
+                          conv.id === activeConversation
+                            ? "bg-accent"
+                            : "hover:bg-muted"
                         }`}
+                        onClick={() => setActiveConversation(conv.id)}
                       >
-                        {message.sender === "customer" && (
-                          <Avatar className="mr-2 h-8 w-8">
-                            <AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback>
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={conv.avatar || undefined} alt={conv.name} />
+                            <AvatarFallback>{getInitials(conv.name)}</AvatarFallback>
                           </Avatar>
-                        )}
-                        
-                        <div
-                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                            message.sender === "staff"
-                              ? "bg-primary text-primary-foreground"
-                              : message.sender === "customer"
-                              ? "bg-muted"
-                              : "bg-accent text-center italic text-muted-foreground text-sm w-full"
-                          }`}
-                        >
-                          <p>{message.content}</p>
-                          <div className="mt-1 text-xs opacity-70 text-right">
-                            {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          <div className="flex-1 space-y-1 overflow-hidden">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium">{conv.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(conv.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {conv.lastMessage}
+                            </p>
                           </div>
+                          {conv.unread > 0 && (
+                            <Badge className="ml-auto" variant="default">
+                              {conv.unread}
+                            </Badge>
+                          )}
                         </div>
-                        
-                        {message.sender === "staff" && (
-                          <Avatar className="ml-2 h-8 w-8">
-                            <AvatarFallback>AGA</AvatarFallback>
-                          </Avatar>
-                        )}
                       </div>
                     ))}
                   </div>
                 </ScrollArea>
-                
-                <CardFooter className="border-t p-4">
-                  <div className="flex w-full items-center gap-2">
-                    <Button variant="outline" size="icon">
-                      <Plus className="h-4 w-4" />
-                      <span className="sr-only">Add Attachment</span>
-                    </Button>
-                    <Input
-                      placeholder="Type your message..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <Button onClick={handleSendMessage} disabled={newMessage.trim() === ""}>
-                      <Send className="h-4 w-4" />
-                      <span className="sr-only">Send</span>
+              </div>
+              
+              <Card className="flex flex-col">
+                {activeChat ? (
+                  <>
+                    <CardHeader className="border-b p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <CardTitle>{activeChat.name}</CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                              {isTeamMember() ? "Team Member" : "Customer"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="icon" title="Call">
+                            <PhoneCall className="h-4 w-4" />
+                            <span className="sr-only">Call</span>
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Email">
+                            <AtSign className="h-4 w-4" />
+                            <span className="sr-only">Email</span>
+                          </Button>
+                          
+                          {isTeamMember() && (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                title="Discord Screen Share"
+                                onClick={() => showDiscordDialog("screen")}
+                              >
+                                <Laptop className="h-4 w-4" />
+                                <span className="sr-only">Screen Share</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                title="Discord Video Call"
+                                onClick={() => showDiscordDialog("camera")}
+                              >
+                                <Video className="h-4 w-4" />
+                                <span className="sr-only">Video Call</span>
+                              </Button>
+                            </>
+                          )}
+                          
+                          {!isTeamMember() && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Share Screen"
+                              onClick={() => showDiscordDialog("screen")}
+                            >
+                              <Share2 className="h-4 w-4" />
+                              <span className="sr-only">Share Screen</span>
+                            </Button>
+                          )}
+                          
+                          <Button variant="ghost" size="icon" title="Team Chat">
+                            <Users className="h-4 w-4" />
+                            <span className="sr-only">Group</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <ScrollArea className="flex-1 p-4">
+                      <div className="space-y-4">
+                        {activeChat.messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${
+                              message.sender === "staff" ? "justify-end" : ""
+                            }`}
+                          >
+                            {message.sender === "customer" && (
+                              <Avatar className="mr-2 h-8 w-8">
+                                <AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback>
+                              </Avatar>
+                            )}
+                            
+                            <div
+                              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                                message.sender === "staff"
+                                  ? "bg-primary text-primary-foreground"
+                                  : message.sender === "customer"
+                                  ? "bg-muted"
+                                  : "bg-accent text-center italic text-muted-foreground text-sm w-full"
+                              }`}
+                            >
+                              <p>{message.content}</p>
+                              <div className="mt-1 text-xs opacity-70 text-right">
+                                {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </div>
+                            </div>
+                            
+                            {message.sender === "staff" && (
+                              <Avatar className="ml-2 h-8 w-8">
+                                <AvatarFallback>AGA</AvatarFallback>
+                              </Avatar>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    
+                    <CardFooter className="border-t p-4">
+                      <div className="flex w-full items-center gap-2">
+                        <Button variant="outline" size="icon">
+                          <Plus className="h-4 w-4" />
+                          <span className="sr-only">Add Attachment</span>
+                        </Button>
+                        <Input
+                          placeholder="Type your message..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage();
+                            }
+                          }}
+                        />
+                        <Button onClick={handleSendMessage} disabled={newMessage.trim() === ""}>
+                          <Send className="h-4 w-4" />
+                          <span className="sr-only">Send</span>
+                        </Button>
+                      </div>
+                    </CardFooter>
+                  </>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center space-y-4 p-8">
+                    <div className="rounded-full bg-primary/10 p-8">
+                      <MessageCircle className="h-12 w-12 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-medium">Select a conversation</h3>
+                    <p className="text-center text-muted-foreground">
+                      Choose a conversation from the list or start a new one.
+                    </p>
+                    <Button>
+                      <UserPlus className="mr-2 h-4 w-4" /> New Conversation
                     </Button>
                   </div>
-                </CardFooter>
-              </>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center space-y-4 p-8">
-                <div className="rounded-full bg-primary/10 p-8">
-                  <MessageCircle className="h-12 w-12 text-primary" />
+                )}
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="discord" className="mt-0">
+            <Card className="h-[calc(100vh-220px)]">
+              <CardHeader className="border-b py-3 px-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-primary" />
+                    <CardTitle>Air Georgia HVAC Team Discord</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={joinDiscordDirectly}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" /> Open in Browser
+                    </Button>
+                  </div>
                 </div>
-                <h3 className="text-xl font-medium">Select a conversation</h3>
-                <p className="text-center text-muted-foreground">
-                  Choose a conversation from the list or start a new one.
-                </p>
-                <Button>
-                  <UserPlus className="mr-2 h-4 w-4" /> New Conversation
-                </Button>
-              </div>
-            )}
-          </Card>
-        </div>
+              </CardHeader>
+              <CardContent className="p-0 h-full">
+                <iframe 
+                  src={`https://discord.com/widget?id=${DISCORD_SERVER_ID}&theme=dark`}
+                  className="w-full h-full border-0"
+                  title="Discord Widget"
+                  allowTransparency={true}
+                  frameBorder={0}
+                  sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                ></iframe>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
         
         <Dialog open={isDiscordDialogOpen} onOpenChange={setIsDiscordDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
