@@ -641,7 +641,9 @@ const Inventory = () => {
             </TabsTrigger>
           </TabsList>
           
+          {/* All Inventory Tab Content */}
           <TabsContent value="all-inventory" className="space-y-6">
+            {/* Summary Cards */}
             <div className="grid gap-6 md:grid-cols-4">
               <Card>
                 <CardHeader className="pb-2">
@@ -690,6 +692,7 @@ const Inventory = () => {
               </Card>
             </div>
             
+            {/* Search and Filters */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -754,6 +757,7 @@ const Inventory = () => {
               </div>
             </div>
             
+            {/* Inventory Table */}
             <Card>
               <CardContent className="p-0">
                 <Table>
@@ -843,6 +847,7 @@ const Inventory = () => {
             </Card>
           </TabsContent>
           
+          {/* Warehouse Tab Content */}
           <TabsContent value="warehouse" className="space-y-6">
             <Card>
               <CardHeader>
@@ -878,7 +883,3 @@ const Inventory = () => {
                           <TableCell className="text-right">{item.inStock}</TableCell>
                           <TableCell className="text-right">{mobileUnitQty}</TableCell>
                           <TableCell className="text-right">{totalQty}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {item.minStock}
-                              <Button
