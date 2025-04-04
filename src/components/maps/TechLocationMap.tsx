@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Map, Info, ExternalLink } from "lucide-react";
 import { Technician } from '@/types';
 import { useTechnicianStore } from '@/services/technicianService';
+import { toast } from "sonner";
 
 // Sample technician data if we need fallbacks
 const sampleTechs = [
@@ -24,6 +25,7 @@ const TechLocationMap = () => {
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showApiKeyHelp, setShowApiKeyHelp] = useState<boolean>(false);
+  const [scriptLoading, setScriptLoading] = useState<boolean>(false);
   
   const technicians = useTechnicianStore(state => state.technicians);
   
@@ -35,6 +37,9 @@ const TechLocationMap = () => {
     const settings = getIntegrationSettings();
     if (settings.googleMaps.connected && settings.googleMaps.apiKey) {
       setGoogleMapsApiKey(settings.googleMaps.apiKey);
+      console.log("Found Google Maps API key in settings");
+    } else {
+      console.log("No Google Maps API key found in settings");
     }
   }, []);
 
@@ -52,14 +57,19 @@ const TechLocationMap = () => {
 
   // Load Google Maps script
   useEffect(() => {
-    console.log("Google Maps API key:", googleMapsApiKey || manualApiKey);
     const apiKey = googleMapsApiKey || manualApiKey;
-    if (!apiKey) return;
+    if (!apiKey) {
+      console.log("No API key available for Google Maps");
+      return;
+    }
 
+    console.log("Attempting to load Google Maps with API key:", apiKey.substring(0, 5) + "...");
+    
     // Reset state
     setIsLoaded(false);
     setError(null);
     setMap(null);
+    setScriptLoading(true);
     markers.forEach(marker => marker.setMap(null));
     setMarkers([]);
     
@@ -77,12 +87,14 @@ const TechLocationMap = () => {
       console.error("Failed to load Google Maps API");
       setError("Failed to load Google Maps API. Please check your API key.");
       setIsLoaded(false);
+      setScriptLoading(false);
     };
     
     // Define the callback function
     window.initMap = () => {
       console.log("Google Maps API loaded successfully");
       setIsLoaded(true);
+      setScriptLoading(false);
     };
     
     document.head.appendChild(script);
@@ -94,7 +106,10 @@ const TechLocationMap = () => {
 
   // Initialize map with technician markers
   useEffect(() => {
-    if (!isLoaded || !mapRef.current) return;
+    if (!isLoaded || !mapRef.current) {
+      console.log("Map not ready to initialize:", { isLoaded, mapRefExists: !!mapRef.current });
+      return;
+    }
     
     try {
       console.log("Initializing map with", technicians.length, "technicians");
@@ -112,6 +127,8 @@ const TechLocationMap = () => {
       const techsToShow = technicians.length > 0 && technicians.some(t => t.currentLocation)
         ? technicians
         : sampleTechs;
+
+      console.log("Using technicians for map:", techsToShow.length > 0 ? "real data" : "sample data");
 
       // Add markers for technicians
       const mapMarkers = techsToShow.map(tech => {
@@ -165,6 +182,11 @@ const TechLocationMap = () => {
 
       setMarkers(mapMarkers);
       setError(null);
+      
+      // Add a message to confirm map loaded successfully
+      toast.success("Map loaded successfully", {
+        description: `Showing ${mapMarkers.length} technician locations`
+      });
     } catch (error) {
       console.error("Error initializing Google Maps:", error);
       setError("Error initializing map. Please check console for details.");
@@ -185,6 +207,7 @@ const TechLocationMap = () => {
         console.error("Google Maps API error:", event.message);
         setError("Google Maps API error: Invalid or restricted API key. Please check your API key settings.");
         setIsLoaded(false);
+        setScriptLoading(false);
       }
     };
 
@@ -198,18 +221,21 @@ const TechLocationMap = () => {
   const handleApiKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualApiKey) {
-      console.log("Setting new API key:", manualApiKey);
+      console.log("Setting new API key:", manualApiKey.substring(0, 5) + "...");
       cleanupScript();
       setIsLoaded(false);
       
-      // Save the API key to settings if it works
+      // Save the API key to settings
       const settings = getIntegrationSettings();
       settings.googleMaps.connected = true;
       settings.googleMaps.apiKey = manualApiKey;
       saveIntegrationSettings(settings);
       setGoogleMapsApiKey(manualApiKey);
       
-      // Toast notification would be good here
+      // Notify user
+      toast.success("API Key saved", {
+        description: "Google Maps API key has been saved to your settings"
+      });
     }
   };
 
@@ -263,11 +289,39 @@ const TechLocationMap = () => {
             <Button type="submit">Load Map</Button>
           </form>
         </div>
-      ) : !isLoaded ? (
+      ) : scriptLoading ? (
         <div className="p-4 flex justify-center items-center h-[400px]">
           <div className="flex items-center space-x-2">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
             <span>Loading map...</span>
+          </div>
+        </div>
+      ) : !isLoaded ? (
+        <div className="p-4 flex justify-center items-center h-[400px]">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+            <span>Initializing map...</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                cleanupScript();
+                setError(null);
+                const apiKey = googleMapsApiKey || manualApiKey;
+                if (apiKey) {
+                  setManualApiKey(apiKey);
+                  setTimeout(() => {
+                    const settings = getIntegrationSettings();
+                    settings.googleMaps.connected = true;
+                    settings.googleMaps.apiKey = apiKey;
+                    saveIntegrationSettings(settings);
+                    window.location.reload();
+                  }, 500);
+                }
+              }}
+            >
+              Retry Loading Map
+            </Button>
           </div>
         </div>
       ) : (

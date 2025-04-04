@@ -12,17 +12,27 @@ const MapView = () => {
   
   // Check for Google Maps API key on component mount and when integration settings change
   useEffect(() => {
-    const integrations = getIntegrationSettings();
-    const hasGoogleMapsApiKey = integrations.googleMaps.connected && 
-      integrations.googleMaps.apiKey && 
-      integrations.googleMaps.apiKey.length > 0;
+    const checkApiKey = () => {
+      const integrations = getIntegrationSettings();
+      const hasGoogleMapsApiKey = integrations.googleMaps.connected && 
+        integrations.googleMaps.apiKey && 
+        integrations.googleMaps.apiKey.length > 0;
+      
+      // Auto-show map if API key is available
+      if (hasGoogleMapsApiKey && !showMap) {
+        console.log("Auto-showing map because API key is available");
+        setShowMap(true);
+      }
+      
+      setHasApiKey(hasGoogleMapsApiKey);
+    };
     
-    // Auto-show map if API key is available
-    if (hasGoogleMapsApiKey && !showMap) {
-      setShowMap(true);
-    }
+    checkApiKey();
     
-    setHasApiKey(hasGoogleMapsApiKey);
+    // Re-check when settings might have changed
+    const interval = setInterval(checkApiKey, 5000);
+    
+    return () => clearInterval(interval);
   }, [showMap]);
   
   return (
