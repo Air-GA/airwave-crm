@@ -471,7 +471,6 @@ const Inventory = () => {
               </Card>
             </div>
             
-            {/* Search and filters */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -536,7 +535,6 @@ const Inventory = () => {
               </div>
             </div>
             
-            {/* Inventory table */}
             <Card>
               <CardContent className="p-0">
                 <Table>
@@ -745,7 +743,6 @@ const Inventory = () => {
                       size="sm" 
                       className="w-full"
                       onClick={() => {
-                        // Find any item to use for the transfer dialog
                         if (inventoryItems.length > 0) {
                           const item = inventoryItems[0];
                           setSelectedItem(item);
@@ -850,7 +847,6 @@ const Inventory = () => {
         </Tabs>
       </div>
       
-      {/* Inventory Transfer Dialog */}
       <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
