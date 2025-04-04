@@ -406,7 +406,7 @@ const Dispatch = () => {
               </TabsContent>
 
               <TabsContent value="map" className="pt-4">
-                <TechLocationMap />
+                <TechLocationMap apiKey="EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA" />
               </TabsContent>
             </Tabs>
           </div>
