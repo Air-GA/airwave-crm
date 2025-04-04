@@ -1,7 +1,9 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
+// Define the available user roles
 type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
 
 interface AuthUser {
@@ -9,14 +11,6 @@ interface AuthUser {
   email: string;
   role: UserRole;
   name?: string;
-}
-
-interface UserProfile {
-  id: string;
-  role: UserRole;
-  name?: string;
-  email: string;
-  created_at?: string;
 }
 
 interface AuthContextType {
@@ -36,7 +30,7 @@ interface AuthContextType {
   login: (email: string, password: string, role?: UserRole) => Promise<void>;
   signUp: (email: string, password: string, role?: UserRole, name?: string) => Promise<void>;
   logout: () => Promise<void>;
-  createUserProfile: (userId: string, role: UserRole, email: string, name?: string) => Promise<UserProfile | null>;
+  createUserProfile: (userId: string, role: UserRole, email: string, name?: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -127,6 +121,7 @@ const getRolePermissions = (role: UserRole | null) => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // Development mode: Always set admin role and authenticated
   const [userRole, setUserRole] = useState<UserRole | null>('admin');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [user, setUser] = useState<AuthUser | null>({
@@ -139,43 +134,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const permissions = getRolePermissions(userRole);
   
-  const createUserProfile = async (userId: string, role: UserRole, email: string, name?: string): Promise<UserProfile | null> => {
-    try {
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (existingProfile) {
-        console.log('Profile already exists:', existingProfile);
-        return existingProfile as UserProfile;
-      }
-      
-      const newProfile: UserProfile = {
-        id: userId,
-        role,
-        name: name || `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
-        email,
-      };
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert(newProfile)
-        .select()
-        .single();
-        
-      if (error) {
-        console.error('Error creating profile:', error);
-        return null;
-      }
-      
-      console.log('Created new profile:', data);
-      return data as UserProfile;
-    } catch (error) {
-      console.error('Error in createUserProfile:', error);
-      return null;
-    }
+  // This is a simplified version that doesn't actually create a profile in Supabase
+  const createUserProfile = async (userId: string, role: UserRole, email: string, name?: string): Promise<any> => {
+    console.log('Development mode: Simulating profile creation', { userId, role, email, name });
+    
+    // In development mode, we just return a mock profile
+    return {
+      id: userId,
+      role,
+      name: name || `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
+      email,
+    };
   };
 
   const login = async (email: string, password: string, role: UserRole = 'admin') => {
