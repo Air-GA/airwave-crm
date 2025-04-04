@@ -1,3 +1,4 @@
+
 import { supabase } from '../lib/supabase';
 import { WorkOrder, Technician } from '../types';
 import { toast } from '@/components/ui/use-toast';
@@ -73,15 +74,32 @@ export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
     if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
       console.log("Using mock data for work orders in development environment");
       
-      // Use the imported mockWorkOrders directly instead of dynamically importing a function
-      console.log(`Returning ${mockWorkOrders.length} mock work orders`);
+      // Convert mockWorkOrders to use cost instead of price for compatibility
+      const convertedMockWorkOrders = mockWorkOrders.map(order => {
+        // Create a new object with all the properties of the original order
+        const converted = {...order};
+        
+        // Convert partsUsed if it exists
+        if (converted.partsUsed && converted.partsUsed.length > 0) {
+          converted.partsUsed = converted.partsUsed.map(part => ({
+            id: part.id,
+            name: part.name,
+            quantity: part.quantity,
+            cost: part.price // Map price to cost
+          }));
+        }
+        
+        return converted;
+      });
+      
+      console.log(`Returning ${convertedMockWorkOrders.length} converted mock work orders`);
       
       toast({
         title: "Mock Sync Complete",
-        description: `Using ${mockWorkOrders.length} mock work orders (development mode)`,
+        description: `Using ${convertedMockWorkOrders.length} mock work orders (development mode)`,
       });
       
-      return mockWorkOrders;
+      return convertedMockWorkOrders as unknown as WorkOrder[];
     }
     
     // Since supabase client may not have functions property in the current setup

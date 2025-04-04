@@ -43,9 +43,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -85,7 +85,7 @@ const Dispatch = () => {
   const [editedTechnicianSkills, setEditedTechnicianSkills] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTechnicians, setFilteredTechnicians] = useState<Technician[]>([]);
-  const [isMobile] = useIsMobile();
+  const [isMobileView] = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
 
