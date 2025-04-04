@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import Papa from "papaparse";
 import * as XLSX from 'xlsx';
 import { Customer, WorkOrder, InventoryItem } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
-import { importCustomers, importWorkOrders, importInventory } from "@/services/importService";
+import { processCustomerImport, processWorkOrderImport, processInventoryImport } from "@/services/importService";
 import { useToast } from "@/hooks/use-toast";
 
 interface CSVImporterProps {
@@ -238,37 +239,61 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       console.log(`Processing ${data.length} rows of ${type} data...`);
       
       if (type === "customers") {
-        const processedCustomers = processCustomers(data);
-        console.log(`Processed ${processedCustomers.length} customer records`);
-        const result = await importCustomers(processedCustomers);
-        onComplete(result, "customers");
-        
-        toast({
-          title: "Import successful",
-          description: `${result.length} customers have been imported successfully.`,
-        });
+        try {
+          const importedCount = await processCustomerImport(data);
+          console.log(`Successfully imported ${importedCount} customer records`);
+          onComplete(data.slice(0, importedCount), "customers");
+          
+          toast({
+            title: "Import successful",
+            description: `${importedCount} customers have been imported successfully.`,
+          });
+        } catch (error) {
+          console.error("Error processing customer import:", error);
+          toast({
+            title: "Import failed",
+            description: `Error importing customers: ${(error as Error).message}`,
+            variant: "destructive",
+          });
+        }
       } 
       else if (type === "work-orders") {
-        const processedWorkOrders = processWorkOrders(data);
-        console.log(`Processed ${processedWorkOrders.length} work order records`);
-        const result = await importWorkOrders(processedWorkOrders);
-        onComplete(result, "work-orders");
-        
-        toast({
-          title: "Import successful",
-          description: `${result.length} work orders have been imported successfully.`,
-        });
+        try {
+          const importedCount = await processWorkOrderImport(data);
+          console.log(`Successfully imported ${importedCount} work order records`);
+          onComplete(data.slice(0, importedCount), "work-orders");
+          
+          toast({
+            title: "Import successful",
+            description: `${importedCount} work orders have been imported successfully.`,
+          });
+        } catch (error) {
+          console.error("Error processing work order import:", error);
+          toast({
+            title: "Import failed",
+            description: `Error importing work orders: ${(error as Error).message}`,
+            variant: "destructive",
+          });
+        }
       }
       else if (type === "inventory") {
-        const processedInventory = processInventory(data);
-        console.log(`Processed ${processedInventory.length} inventory records`);
-        const result = await importInventory(processedInventory);
-        onComplete(result, "inventory");
-        
-        toast({
-          title: "Import successful",
-          description: `${result.length} inventory items have been imported successfully.`,
-        });
+        try {
+          const importedCount = await processInventoryImport(data);
+          console.log(`Successfully imported ${importedCount} inventory records`);
+          onComplete(data.slice(0, importedCount), "inventory");
+          
+          toast({
+            title: "Import successful",
+            description: `${importedCount} inventory items have been imported successfully.`,
+          });
+        } catch (error) {
+          console.error("Error processing inventory import:", error);
+          toast({
+            title: "Import failed",
+            description: `Error importing inventory: ${(error as Error).message}`,
+            variant: "destructive",
+          });
+        }
       }
       else {
         // Handle other import types

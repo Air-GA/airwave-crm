@@ -1,3 +1,4 @@
+
 import { Customer, WorkOrder, InventoryItem } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -11,6 +12,10 @@ export const importCustomers = async (
 ): Promise<Customer[]> => {
   try {
     console.log("Starting customer import process...");
+    
+    if (!customers || customers.length === 0) {
+      throw new Error("No valid customer data to import");
+    }
     
     // Store in localStorage for demo purposes
     const existingCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
@@ -42,6 +47,10 @@ export const importWorkOrders = async (
   try {
     console.log("Starting work order import process...");
     
+    if (!workOrders || workOrders.length === 0) {
+      throw new Error("No valid work order data to import");
+    }
+    
     // Store in localStorage for demo purposes
     const existingWorkOrders = JSON.parse(localStorage.getItem('imported_work_orders') || '[]');
     const updatedWorkOrders = [...existingWorkOrders, ...workOrders];
@@ -72,6 +81,10 @@ export const importInventory = async (
   try {
     console.log("Starting inventory import process...");
     
+    if (!inventory || inventory.length === 0) {
+      throw new Error("No valid inventory data to import");
+    }
+    
     // Store in localStorage for demo purposes
     const existingInventory = JSON.parse(localStorage.getItem('imported_inventory') || '[]');
     const updatedInventory = [...existingInventory, ...inventory];
@@ -94,8 +107,52 @@ export const importInventory = async (
 // Simplified import functions with better type safety
 export const processCustomerImport = async (customers: Partial<Customer>[]): Promise<number> => {
   try {
-    // Cast to Customer[] after validation if needed
-    const validCustomers = customers.filter(c => c.name) as Customer[];
+    if (!customers || customers.length === 0) {
+      throw new Error("No valid customer data provided");
+    }
+    
+    console.log(`Processing ${customers.length} customer records for import`);
+    
+    // Process customers to ensure they have all required fields
+    const validCustomers = customers
+      .filter(c => c.name || c.Name || c.customer_name || c.CustomerName)
+      .map(c => {
+        // Generate random coordinates near Georgia for the map view
+        const lat = 33.7490 + (Math.random() - 0.5) * 2;
+        const lng = -84.3880 + (Math.random() - 0.5) * 2;
+        
+        const id = c.id || `imported-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        return {
+          id,
+          name: c.name || c.Name || c.customer_name || c.CustomerName || "Unknown",
+          email: c.email || c.Email || "",
+          phone: c.phone || c.Phone || c.phone_number || c.PhoneNumber || "",
+          address: c.address || c.Address || c.serviceAddress || c.ServiceAddress || "",
+          serviceAddress: c.serviceAddress || c.service_address || c.ServiceAddress || c.address || c.Address || "",
+          billAddress: c.billAddress || c.billing_address || c.BillingAddress || c.address || c.Address || "",
+          type: c.type || c.Type || c.customer_type || c.CustomerType || "residential",
+          createdAt: new Date().toISOString(),
+          serviceAddresses: [
+            {
+              id: `sa-${id}-primary`,
+              address: c.serviceAddress || c.service_address || c.ServiceAddress || c.address || c.Address || "",
+              isPrimary: true
+            }
+          ],
+          notes: c.notes || c.Notes || "",
+          location: {
+            lat,
+            lng
+          }
+        } as Customer;
+      });
+    
+    if (validCustomers.length === 0) {
+      throw new Error("No valid customer records found in import data");
+    }
+    
+    console.log(`Processed ${validCustomers.length} valid customer records for import`);
     await importCustomers(validCustomers);
     return validCustomers.length;
   } catch (error) {
@@ -106,10 +163,33 @@ export const processCustomerImport = async (customers: Partial<Customer>[]): Pro
 
 export const processWorkOrderImport = async (workOrders: Partial<WorkOrder>[]): Promise<number> => {
   try {
+    if (!workOrders || workOrders.length === 0) {
+      throw new Error("No valid work order data provided");
+    }
+    
     // Filter out invalid work orders before casting
-    const validWorkOrders = workOrders.filter(wo => 
-      wo.customerId && wo.address && wo.type && wo.description
-    ) as WorkOrder[];
+    const validWorkOrders = workOrders
+      .filter(wo => wo.customerId || wo.customer_id || wo.CustomerId || wo.customerName || wo.customer_name || wo.CustomerName)
+      .map(wo => ({
+        id: wo.id || `wo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        customerId: wo.customerId || wo.customer_id || wo.CustomerId || `unknown-${Date.now()}`,
+        customerName: wo.customerName || wo.customer_name || wo.CustomerName || "Unknown Customer",
+        address: wo.address || wo.Address || "",
+        status: wo.status || wo.Status || "pending",
+        priority: wo.priority || wo.Priority || "medium",
+        type: wo.type || wo.Type || "repair",
+        description: wo.description || wo.Description || "",
+        scheduledDate: wo.scheduledDate || wo.scheduled_date || wo.ScheduledDate || new Date().toISOString(),
+        createdAt: wo.createdAt || wo.created_at || wo.CreatedAt || new Date().toISOString(),
+        technicianId: wo.technicianId || wo.technician_id || wo.TechnicianId || undefined,
+        technicianName: wo.technicianName || wo.technician_name || wo.TechnicianName || undefined,
+        completedAt: wo.completedAt || wo.completed_at || wo.CompletedAt || undefined,
+        notes: wo.notes || wo.Notes || []
+      })) as WorkOrder[];
+    
+    if (validWorkOrders.length === 0) {
+      throw new Error("No valid work order records found in import data");
+    }
     
     await importWorkOrders(validWorkOrders);
     return validWorkOrders.length;
@@ -121,10 +201,30 @@ export const processWorkOrderImport = async (workOrders: Partial<WorkOrder>[]): 
 
 export const processInventoryImport = async (inventory: Partial<InventoryItem>[]): Promise<number> => {
   try {
+    if (!inventory || inventory.length === 0) {
+      throw new Error("No valid inventory data provided");
+    }
+    
     // Filter out invalid inventory items before casting
-    const validInventory = inventory.filter(item => 
-      item.name && item.category
-    ) as InventoryItem[];
+    const validInventory = inventory
+      .filter(item => item.name || item.Name || item.sku || item.SKU)
+      .map(item => ({
+        id: item.id || `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: item.name || item.Name || `Item-${Math.random().toString(36).substr(2, 5)}`,
+        category: item.category || item.Category || "Uncategorized",
+        description: item.description || item.Description || "",
+        quantity: Number(item.quantity || item.Quantity || 0),
+        price: Number(item.price || item.Price || 0),
+        reorderLevel: Number(item.reorderLevel || item.reorder_level || item.ReorderLevel || 5),
+        supplier: item.supplier || item.Supplier || "",
+        location: item.location || item.Location || "",
+        sku: item.sku || item.SKU || `SKU-${Math.random().toString(36).substr(2, 7)}`,
+        unit_price: Number(item.unit_price || item.unitPrice || item.UnitPrice || 0),
+      })) as InventoryItem[];
+    
+    if (validInventory.length === 0) {
+      throw new Error("No valid inventory records found in import data");
+    }
     
     await importInventory(validInventory);
     return validInventory.length;
@@ -170,6 +270,11 @@ export const getImportedCustomers = (): Customer[] => {
     return processedCustomers;
   } catch (error) {
     console.error("Error getting imported customers:", error);
+    toast({
+      title: "Data Retrieval Error",
+      description: `Failed to load imported customers: ${(error as Error).message}`,
+      variant: "destructive",
+    });
     return [];
   }
 };
@@ -179,9 +284,19 @@ export const getImportedCustomers = (): Customer[] => {
  * @returns Array of imported work orders
  */
 export const getImportedWorkOrders = (): WorkOrder[] => {
-  const importedWorkOrders = JSON.parse(localStorage.getItem('imported_work_orders') || '[]');
-  console.log(`Retrieved ${importedWorkOrders.length} imported work orders from localStorage`);
-  return importedWorkOrders;
+  try {
+    const importedWorkOrders = JSON.parse(localStorage.getItem('imported_work_orders') || '[]');
+    console.log(`Retrieved ${importedWorkOrders.length} imported work orders from localStorage`);
+    return importedWorkOrders as WorkOrder[];
+  } catch (error) {
+    console.error("Error getting imported work orders:", error);
+    toast({
+      title: "Data Retrieval Error",
+      description: `Failed to load imported work orders: ${(error as Error).message}`,
+      variant: "destructive",
+    });
+    return [];
+  }
 };
 
 /**
@@ -189,17 +304,41 @@ export const getImportedWorkOrders = (): WorkOrder[] => {
  * @returns Array of imported inventory items
  */
 export const getImportedInventory = (): InventoryItem[] => {
-  const importedInventory = JSON.parse(localStorage.getItem('imported_inventory') || '[]');
-  console.log(`Retrieved ${importedInventory.length} imported inventory items from localStorage`);
-  return importedInventory;
+  try {
+    const importedInventory = JSON.parse(localStorage.getItem('imported_inventory') || '[]');
+    console.log(`Retrieved ${importedInventory.length} imported inventory items from localStorage`);
+    return importedInventory as InventoryItem[];
+  } catch (error) {
+    console.error("Error getting imported inventory:", error);
+    toast({
+      title: "Data Retrieval Error",
+      description: `Failed to load imported inventory: ${(error as Error).message}`,
+      variant: "destructive",
+    });
+    return [];
+  }
 };
 
 /**
  * Clear all imported data from localStorage
  */
 export const clearImportedData = (): void => {
-  localStorage.removeItem('imported_customers');
-  localStorage.removeItem('imported_work_orders');
-  localStorage.removeItem('imported_inventory');
-  console.log("All imported data cleared from localStorage");
+  try {
+    localStorage.removeItem('imported_customers');
+    localStorage.removeItem('imported_work_orders');
+    localStorage.removeItem('imported_inventory');
+    console.log("All imported data cleared from localStorage");
+    
+    toast({
+      title: "Data Cleared",
+      description: "All imported data has been successfully removed.",
+    });
+  } catch (error) {
+    console.error("Error clearing imported data:", error);
+    toast({
+      title: "Operation Failed",
+      description: `Failed to clear imported data: ${(error as Error).message}`,
+      variant: "destructive",
+    });
+  }
 };
