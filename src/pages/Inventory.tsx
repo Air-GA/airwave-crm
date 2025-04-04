@@ -747,10 +747,9 @@ const Inventory = () => {
                           const item = inventoryItems[0];
                           setSelectedItem(item);
                           transferForm.reset({
-                            itemId: item.id,
-                            quantity: 1,
                             sourceLocation: "warehouse",
-                            destinationLocation: unit.id
+                            destinationLocation: unit.id,
+                            items: [{ itemId: item.id, quantity: 1 }]
                           });
                           setIsTransferDialogOpen(true);
                         }
@@ -898,113 +897,4 @@ const Inventory = () => {
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select destination location" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="warehouse">Main Warehouse</SelectItem>
-                          {mobileUnits.map(unit => (
-                            <SelectItem key={unit.id} value={unit.id}>
-                              {unit.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Items to Transfer</h4>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={addItemToTransfer}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" /> Add Item
-                  </Button>
-                </div>
-
-                {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-end gap-2 p-3 bg-muted rounded-md">
-                    <FormField
-                      control={transferForm.control}
-                      name={`items.${index}.itemId`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel className={index !== 0 ? "sr-only" : ""}>Item</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select item" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {inventoryItems.map(item => (
-                                <SelectItem key={item.id} value={item.id}>
-                                  {item.name} ({item.sku})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={transferForm.control}
-                      name={`items.${index}.quantity`}
-                      render={({ field }) => (
-                        <FormItem className="w-24">
-                          <FormLabel className={index !== 0 ? "sr-only" : ""}>Qty</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={1}
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(index)}
-                        className="h-9 w-9"
-                      >
-                        <X className="h-4 w-4" />
-                        <span className="sr-only">Remove item</span>
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              <DialogFooter>
-                <Button type="submit">Transfer Inventory</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-    </MainLayout>
-  );
-};
-
-export default Inventory;
+                        <FormControl
