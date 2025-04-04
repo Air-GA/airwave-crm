@@ -529,3 +529,228 @@ export async function rescheduleMaintenanceWorkOrder(
   
   return updatedOrder;
 }
+
+export async function updateWorkOrderProgress(
+  workOrderId: string,
+  progressSteps: ProgressStep[],
+  currentStep: string,
+  progressPercentage: number
+): Promise<WorkOrder | null> {
+  try {
+    // Format for database
+    const progressData = {
+      progress_steps: progressSteps,
+      current_progress_step: currentStep,
+      progress_percentage: progressPercentage
+    };
+    
+    // Try to update in Supabase
+    const { data, error } = await supabase
+      .from('work_orders')
+      .update(progressData)
+      .eq('id', workOrderId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    if (data) {
+      const updatedOrder = {
+        id: data.id,
+        customerId: data.customer_id,
+        customerName: data.customer_name,
+        address: data.address,
+        status: data.status,
+        priority: data.priority,
+        type: data.type,
+        description: data.description,
+        scheduledDate: data.scheduled_date,
+        technicianId: data.technician_id,
+        technicianName: data.technician_name,
+        createdAt: data.created_at,
+        completedAt: data.completed_at,
+        notes: data.notes,
+        progressSteps: data.progress_steps,
+        currentProgressStep: data.current_progress_step,
+        progressPercentage: data.progress_percentage,
+        partsUsed: data.parts_used
+      };
+      
+      // Update the store
+      const store = useWorkOrderStore.getState();
+      store.updateWorkOrder(updatedOrder);
+      
+      return updatedOrder;
+    }
+  } catch (err) {
+    console.error("Error updating work order progress in database:", err);
+  }
+  
+  // Fall back to localStorage if Supabase update fails
+  try {
+    const existingWorkOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
+    const updatedWorkOrders = existingWorkOrders.map((order: WorkOrder) => {
+      if (order.id === workOrderId) {
+        return { 
+          ...order, 
+          progressSteps,
+          currentProgressStep: currentStep,
+          progressPercentage
+        };
+      }
+      return order;
+    });
+    
+    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+    
+    const updatedOrder = updatedWorkOrders.find((order: WorkOrder) => order.id === workOrderId);
+    if (updatedOrder) {
+      // Update the store
+      const store = useWorkOrderStore.getState();
+      store.updateWorkOrder(updatedOrder);
+      
+      return updatedOrder;
+    }
+  } catch (err) {
+    console.error("Error updating work order progress in localStorage:", err);
+  }
+  
+  return null;
+}
+
+/**
+ * Update work order with additional timeline events
+ */
+export async function updateWorkOrderTimeline(
+  workOrderId: string,
+  eventType: 'tech_assigned' | 'reminder_sent' | 'supplies_loaded' | 'tech_dispatched' | 'tech_arrived',
+  eventData?: any
+): Promise<WorkOrder | null> {
+  try {
+    const workOrder = await getWorkOrderById(workOrderId);
+    if (!workOrder) {
+      throw new Error(`Work order with ID ${workOrderId} not found`);
+    }
+    
+    const updates: Partial<WorkOrder> = {};
+    const timestamp = new Date().toISOString();
+    
+    // Update appropriate fields based on event type
+    switch (eventType) {
+      case 'tech_assigned':
+        updates.technicianId = eventData?.technicianId;
+        updates.technicianName = eventData?.technicianName;
+        updates.status = 'scheduled';
+        break;
+      case 'reminder_sent':
+        updates.reminderSentTime = timestamp;
+        break;
+      case 'supplies_loaded':
+        updates.suppliesLoadedTime = timestamp;
+        break;
+      case 'tech_dispatched':
+        updates.techDispatchTime = timestamp;
+        updates.status = 'in-progress';
+        break;
+      case 'tech_arrived':
+        updates.estimatedArrivalTime = timestamp;
+        break;
+    }
+    
+    // Update progress steps if they exist
+    if (workOrder.progressSteps) {
+      const progressSteps = [...workOrder.progressSteps];
+      let stepUpdated = false;
+      
+      // Map event types to progress step IDs
+      const eventStepMap: Record<string, string> = {
+        tech_assigned: 'assignment',
+        reminder_sent: 'reminder',
+        supplies_loaded: 'supplies',
+        tech_dispatched: 'enroute',
+        tech_arrived: 'arrival'
+      };
+      
+      const stepId = eventStepMap[eventType];
+      if (stepId) {
+        const stepIndex = progressSteps.findIndex(step => step.id === stepId);
+        if (stepIndex !== -1) {
+          progressSteps[stepIndex] = {
+            ...progressSteps[stepIndex],
+            status: 'completed',
+            timestamp
+          };
+          stepUpdated = true;
+        }
+      }
+      
+      if (stepUpdated) {
+        // Find the next pending step
+        const nextPendingStep = progressSteps.find(
+          step => step.status === 'pending'
+        );
+        
+        updates.progressSteps = progressSteps;
+        updates.currentProgressStep = nextPendingStep?.id || progressSteps[progressSteps.length - 1].id;
+        updates.progressPercentage = Math.round(
+          (progressSteps.filter(step => step.status === 'completed').length / progressSteps.length) * 100
+        );
+      }
+    }
+    
+    return await updateWorkOrder(workOrderId, updates);
+  } catch (error) {
+    console.error("Error updating work order timeline:", error);
+    return null;
+  }
+}
+
+/**
+ * Get a single work order by ID
+ */
+export async function getWorkOrderById(workOrderId: string): Promise<WorkOrder | null> {
+  try {
+    // Try to get from Supabase
+    const { data, error } = await supabase
+      .from('work_orders')
+      .select('*')
+      .eq('id', workOrderId)
+      .single();
+    
+    if (error) throw error;
+    
+    if (data) {
+      return {
+        id: data.id,
+        customerId: data.customer_id,
+        customerName: data.customer_name,
+        address: data.address,
+        status: data.status,
+        priority: data.priority,
+        type: data.type,
+        description: data.description,
+        scheduledDate: data.scheduled_date,
+        technicianId: data.technician_id,
+        technicianName: data.technician_name,
+        createdAt: data.created_at,
+        completedAt: data.completed_at,
+        notes: data.notes,
+        progressSteps: data.progress_steps,
+        currentProgressStep: data.current_progress_step,
+        progressPercentage: data.progress_percentage,
+        partsUsed: data.parts_used
+      };
+    }
+  } catch (err) {
+    console.error("Error fetching work order from database:", err);
+  }
+  
+  // Fall back to localStorage
+  try {
+    const workOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
+    return workOrders.find((order: WorkOrder) => order.id === workOrderId) || null;
+  } catch (err) {
+    console.error("Error fetching work order from localStorage:", err);
+    return null;
+  }
+}

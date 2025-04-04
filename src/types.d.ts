@@ -1,10 +1,9 @@
-
 export interface Customer {
   id: string;
   name: string;
   email: string;
   phone: string;
-  serviceAddresses?: ServiceAddress[]; // Changed to optional with ?
+  serviceAddresses?: ServiceAddress[];
   billAddress: string;
   notes?: string;
   type?: 'residential' | 'commercial';
@@ -15,7 +14,7 @@ export interface Customer {
     lng: number;
   };
   address?: string;
-  serviceAddress?: string; // Maintained for backward compatibility
+  serviceAddress?: string;
   maintenancePlan?: 'biannual' | 'quarterly' | 'annual' | null;
   maintenanceTimePreference?: string;
   nextMaintenanceDate?: string;
@@ -69,16 +68,33 @@ export interface WorkOrder {
     quantity: number;
     price: number;
   }[];
-  // Add these fields to support customer creation from work orders
   email?: string;
   phoneNumber?: string;
-  // Add maintenance plan related fields
   isMaintenancePlan?: boolean;
   maintenanceTimePreference?: string;
   nearbyAddresses?: string[];
-  // Syncing information
   syncedFromCRM?: boolean;
   syncTimestamp?: string;
+  progressSteps?: ProgressStep[];
+  currentProgressStep?: string;
+  progressPercentage?: number;
+  invoiceNumber?: string;
+  suppliesLoadedTime?: string;
+  estimatedArrivalTime?: string;
+  reminderSentTime?: string;
+  techDispatchTime?: string;
+}
+
+export interface ProgressStep {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
+  timestamp?: string;
+  notifyCustomer: boolean;
+  notifyTech: boolean;
+  notifyAdmin: boolean;
+  assignedTo?: string;
 }
 
 export interface InventoryItem {

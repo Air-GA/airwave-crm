@@ -4,24 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, User, AlertCircle, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
-import { WorkOrder } from "@/types";
+import { WorkOrder, ProgressStep } from "@/types";
 import { useState } from "react";
 import WorkOrderCompletionDialog from "./WorkOrderCompletionDialog";
+import WorkOrderProgressTracker from "./WorkOrderProgressTracker";
 
 interface WorkOrderDetailsPanelProps {
   workOrder: WorkOrder;
   onUnassign?: (orderId: string) => void;
   showCompletionOptions?: boolean;
   onStatusUpdate?: () => void;
+  onProgressUpdate?: (progressSteps: ProgressStep[], currentStep: string, percentage: number) => void;
 }
 
 const WorkOrderDetailsPanel = ({ 
   workOrder, 
   onUnassign, 
   showCompletionOptions = false,
-  onStatusUpdate
+  onStatusUpdate,
+  onProgressUpdate
 }: WorkOrderDetailsPanelProps) => {
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
+  const [showProgressTracker, setShowProgressTracker] = useState(false);
   
   const getStatusBadge = () => {
     switch (workOrder.status) {
@@ -53,6 +57,12 @@ const WorkOrderDetailsPanel = ({
   const handleWorkOrderStatusUpdate = () => {
     if (onStatusUpdate) {
       onStatusUpdate();
+    }
+  };
+
+  const handleProgressUpdate = (progressSteps: ProgressStep[], currentStep: string, percentage: number) => {
+    if (onProgressUpdate) {
+      onProgressUpdate(progressSteps, currentStep, percentage);
     }
   };
   
@@ -96,6 +106,14 @@ const WorkOrderDetailsPanel = ({
           )}
         </div>
         <div className="mt-3 flex flex-wrap gap-2 justify-end">
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => setShowProgressTracker(!showProgressTracker)}
+          >
+            {showProgressTracker ? "Hide Progress" : "Show Progress"}
+          </Button>
+          
           {onUnassign && (
             <Button 
               size="sm" 
@@ -117,6 +135,15 @@ const WorkOrderDetailsPanel = ({
           )}
         </div>
       </div>
+      
+      {showProgressTracker && (
+        <div className="mt-4">
+          <WorkOrderProgressTracker 
+            workOrder={workOrder} 
+            onProgressUpdate={handleProgressUpdate}
+          />
+        </div>
+      )}
       
       <WorkOrderCompletionDialog
         workOrder={workOrder}
