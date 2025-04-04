@@ -17,13 +17,14 @@ const MapView = () => {
   useEffect(() => {
     const checkApiKey = () => {
       const integrations = getIntegrationSettings();
-      const hasGoogleMapsApiKey = integrations.googleMaps.connected && 
-        integrations.googleMaps.apiKey && 
+      const hasGoogleMapsApiKey = integrations.googleMaps?.connected && 
+        integrations.googleMaps?.apiKey && 
         integrations.googleMaps.apiKey.length > 0;
       
       // Auto-show map if API key is available
       if (hasGoogleMapsApiKey && !showMap) {
-        console.log("Auto-showing map because API key is available:", integrations.googleMaps.apiKey.substring(0, 5) + "...");
+        console.log("Auto-showing map because API key is available:", 
+          integrations.googleMaps.apiKey.substring(0, 5) + "...");
         setShowMap(true);
         setApiKeyError(null);
       } else if (!hasGoogleMapsApiKey) {

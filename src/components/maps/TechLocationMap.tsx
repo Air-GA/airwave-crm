@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +10,10 @@ import { useTechnicianStore } from '@/services/technicianService';
 import { toast } from "sonner";
 
 // Sample technician data if we need fallbacks
-const sampleTechs = [
-  { id: "tech1", name: "Mike Johnson", lat: 33.7952, lng: -83.7136, status: "available" },
-  { id: "tech2", name: "Sarah Williams", lat: 33.8304, lng: -83.6909, status: "busy" },
-  { id: "tech3", name: "Robert Taylor", lat: 33.7490, lng: -83.7376, status: "available" },
+const sampleTechs: Technician[] = [
+  { id: "tech1", name: "Mike Johnson", lat: 33.7952, lng: -83.7136, status: "available", specialties: ["HVAC", "Cooling"] },
+  { id: "tech2", name: "Sarah Williams", lat: 33.8304, lng: -83.6909, status: "busy", specialties: ["Installation", "Repair"] },
+  { id: "tech3", name: "Robert Taylor", lat: 33.7490, lng: -83.7376, status: "available", specialties: ["Heating", "Maintenance"] },
 ];
 
 interface TechLocationMapProps {
