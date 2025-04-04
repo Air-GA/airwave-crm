@@ -6,7 +6,6 @@ import { MapPin, Calendar, Clock, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDraggable } from "@dnd-kit/core";
 import { Customer } from "@/types";
-import { useWorkOrderStore } from "@/services/workOrderService";
 
 export interface MaintenanceMember {
   id: string;
@@ -27,7 +26,6 @@ export const MaintenancePlanList = ({ onDragStart }: MaintenancePlanListProps) =
   const [members, setMembers] = useState<MaintenanceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [groupedMembers, setGroupedMembers] = useState<Record<string, MaintenanceMember[]>>({});
-  const workOrders = useWorkOrderStore(state => state.workOrders);
 
   // Mock data - in a real app, fetch from API/Supabase
   useEffect(() => {
@@ -87,25 +85,10 @@ export const MaintenancePlanList = ({ onDragStart }: MaintenancePlanListProps) =
           }
         ];
 
-        // Filter out customers who already have scheduled maintenance appointments
-        const filteredMembers = mockMembers.filter(member => {
-          // Check if this customer already has a scheduled maintenance appointment
-          return !workOrders.some(order => 
-            // Match by customer ID, customer name, or email
-            (order.customerId === member.customerId || 
-             order.customerName === member.customerName ||
-             (order.email && member.email && order.email === member.email)) &&
-            // Only filter out scheduled/in-progress appointments
-            (order.status === 'scheduled' || order.status === 'in-progress') &&
-            // Make sure it's a maintenance type appointment
-            order.type === 'maintenance'
-          );
-        });
-
-        setMembers(filteredMembers);
+        setMembers(mockMembers);
         
         // Group members by street address for proximity
-        const grouped = filteredMembers.reduce<Record<string, MaintenanceMember[]>>((acc, member) => {
+        const grouped = mockMembers.reduce<Record<string, MaintenanceMember[]>>((acc, member) => {
           // Extract street name from address for grouping
           const streetMatch = member.address.match(/\d+\s+([A-Za-z]+)/);
           const street = streetMatch ? streetMatch[1] : "Other";
@@ -126,7 +109,7 @@ export const MaintenancePlanList = ({ onDragStart }: MaintenancePlanListProps) =
     };
 
     fetchMaintenanceMembers();
-  }, [workOrders]); // Re-run when work orders change
+  }, []);
 
   const DraggableMemberCard = ({ member }: { member: MaintenanceMember }) => {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -186,7 +169,7 @@ export const MaintenancePlanList = ({ onDragStart }: MaintenancePlanListProps) =
           <div className="flex items-center justify-center p-4">
             <p className="text-sm text-muted-foreground">Loading members...</p>
           </div>
-        ) : Object.keys(groupedMembers).length > 0 ? (
+        ) : (
           <div className="overflow-y-auto max-h-[calc(100vh-400px)]">
             {Object.entries(groupedMembers).map(([street, streetMembers]) => (
               <div key={street} className="mb-4">
@@ -198,10 +181,6 @@ export const MaintenancePlanList = ({ onDragStart }: MaintenancePlanListProps) =
                 ))}
               </div>
             ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center p-4">
-            <p className="text-sm text-muted-foreground">No maintenance members available for scheduling</p>
           </div>
         )}
       </CardContent>

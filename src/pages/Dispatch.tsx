@@ -43,9 +43,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -85,11 +85,11 @@ const Dispatch = () => {
   const [editedTechnicianSkills, setEditedTechnicianSkills] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTechnicians, setFilteredTechnicians] = useState<Technician[]>([]);
-  const isMobileView = useIsMobile();
+  const [isMobile] = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const googleMapsApiKey = "EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA";
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapContainerStyle = {
     width: "100%",
     height: "400px",

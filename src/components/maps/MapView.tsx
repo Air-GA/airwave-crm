@@ -8,13 +8,16 @@ import { MapPin } from 'lucide-react';
 
 const MapView = () => {
   const [showMap, setShowMap] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(true); // Set to true since we now have a key
+  const [hasApiKey, setHasApiKey] = useState(false);
   
   // Check for Google Maps API key on component mount and when integration settings change
   useEffect(() => {
     const integrations = getIntegrationSettings();
-    // We now have a hardcoded API key, so always set hasApiKey to true
-    setHasApiKey(true);
+    const hasGoogleMapsApiKey = integrations.googleMaps.connected && 
+      integrations.googleMaps.apiKey && 
+      integrations.googleMaps.apiKey.length > 0;
+    
+    setHasApiKey(hasGoogleMapsApiKey);
   }, []);
   
   return (
@@ -25,14 +28,16 @@ const MapView = () => {
           Technician Location Map
         </CardTitle>
         <CardDescription>
-          View the current location of your field technicians with geofencing support
+          View the current location of your field technicians
         </CardDescription>
       </CardHeader>
       <CardContent>
         {!showMap ? (
           <div className="text-center py-8">
             <p className="mb-4">
-              Click the button below to load the map and see technician locations.
+              {hasApiKey
+                ? "Click the button below to load the map and see technician locations."
+                : "Set up Google Maps in Settings -> Integrations to enable this feature."}
             </p>
             <Button 
               onClick={() => setShowMap(true)}

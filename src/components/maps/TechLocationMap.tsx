@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { getIntegrationSettings, saveIntegrationSettings } from "@/utils/settingsStorage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Map, Info, ExternalLink } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
 
 interface TechLocation {
   id: string;
@@ -23,22 +22,24 @@ const sampleTechs: TechLocation[] = [
   { id: "tech3", name: "Robert Taylor", lat: 33.7490, lng: -83.7376, status: "available" },
 ];
 
-// Geofence webhook URLs
-const GEOFENCE_ENTRY_WEBHOOK = "https://air-ga.newleveltech.net/gps/geofence";
-const GEOFENCE_EXIT_WEBHOOK = "https://air-ga.newleveltech.net/gps/geofence";
-
 const TechLocationMap = () => {
-  // Use the provided API key directly
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA");
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("");
   const [manualApiKey, setManualApiKey] = useState<string>("");
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-  const [geofences, setGeofences] = useState<google.maps.Circle[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showApiKeyHelp, setShowApiKeyHelp] = useState<boolean>(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
+
+  // Load API key from settings
+  useEffect(() => {
+    const settings = getIntegrationSettings();
+    if (settings.googleMaps.connected && settings.googleMaps.apiKey) {
+      setGoogleMapsApiKey(settings.googleMaps.apiKey);
+    }
+  }, []);
 
   // Clean up previous script if exists
   const cleanupScript = () => {
@@ -62,8 +63,6 @@ const TechLocationMap = () => {
     setMap(null);
     markers.forEach(marker => marker.setMap(null));
     setMarkers([]);
-    geofences.forEach(circle => circle.setMap(null));
-    setGeofences([]);
     
     // Clean up any existing script
     cleanupScript();
@@ -91,55 +90,6 @@ const TechLocationMap = () => {
       cleanupScript();
     };
   }, [googleMapsApiKey, manualApiKey]);
-
-  // Function to create geofences
-  const createGeofence = (mapInstance: google.maps.Map, center: google.maps.LatLngLiteral, radius: number, label: string) => {
-    // Create the circular geofence
-    const circle = new google.maps.Circle({
-      strokeColor: '#1E88E5',
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      fillColor: '#1E88E5',
-      fillOpacity: 0.2,
-      map: mapInstance,
-      center: center,
-      radius: radius, // in meters
-    });
-
-    // Add a marker at the center with a label
-    const marker = new google.maps.Marker({
-      position: center,
-      map: mapInstance,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 0,
-      },
-      label: {
-        text: label,
-        color: '#1E88E5',
-        fontWeight: 'bold'
-      },
-    });
-
-    return { circle, marker };
-  };
-
-  // Function to simulate a geofence event (for demo purposes)
-  const simulateGeofenceEvent = (techId: string, eventType: 'entry' | 'exit', geofenceId: string) => {
-    const tech = sampleTechs.find(t => t.id === techId);
-    if (!tech) return;
-
-    const eventTypeDisplay = eventType === 'entry' ? 'entered' : 'exited';
-    const webhook = eventType === 'entry' ? GEOFENCE_ENTRY_WEBHOOK : GEOFENCE_EXIT_WEBHOOK;
-    
-    console.log(`Simulating geofence ${eventTypeDisplay} event for ${tech.name} at ${webhook}`);
-    
-    toast({
-      title: `Geofence ${eventTypeDisplay.charAt(0).toUpperCase() + eventTypeDisplay.slice(1)}`,
-      description: `${tech.name} has ${eventTypeDisplay} zone ${geofenceId}`,
-      variant: eventType === 'entry' ? 'default' : 'destructive',
-    });
-  };
 
   // Initialize map
   useEffect(() => {
@@ -184,8 +134,6 @@ const TechLocationMap = () => {
                 tech.status === "available" ? "green" : 
                 tech.status === "busy" ? "orange" : "gray"
               }; text-transform: capitalize;">${tech.status}</div>
-              <button id="simulate-entry-${tech.id}" style="margin-top: 5px; padding: 2px 5px; background-color: #3b82f6; color: white; border: none; border-radius: 3px; margin-right: 5px;">Simulate Entry</button>
-              <button id="simulate-exit-${tech.id}" style="margin-top: 5px; padding: 2px 5px; background-color: #ef4444; color: white; border: none; border-radius: 3px;">Simulate Exit</button>
             </div>
           `,
         });
@@ -195,48 +143,12 @@ const TechLocationMap = () => {
             anchor: marker,
             map: mapInstance,
           });
-          
-          // Add event listeners for simulation buttons after infowindow is opened
-          setTimeout(() => {
-            const entryButton = document.getElementById(`simulate-entry-${tech.id}`);
-            const exitButton = document.getElementById(`simulate-exit-${tech.id}`);
-            
-            if (entryButton) {
-              entryButton.addEventListener('click', () => {
-                simulateGeofenceEvent(tech.id, 'entry', 'Zone-1');
-              });
-            }
-            
-            if (exitButton) {
-              exitButton.addEventListener('click', () => {
-                simulateGeofenceEvent(tech.id, 'exit', 'Zone-1');
-              });
-            }
-          }, 300);
         });
 
         return marker;
       });
 
       setMarkers(mapMarkers);
-      
-      // Create a couple of geofence circles
-      const geofence1 = createGeofence(
-        mapInstance, 
-        { lat: 33.7956, lng: -83.7036 }, 
-        800, 
-        "Customer Area"
-      );
-      
-      const geofence2 = createGeofence(
-        mapInstance, 
-        { lat: 33.7820, lng: -83.7236 }, 
-        600, 
-        "Service Zone"
-      );
-      
-      setGeofences([geofence1.circle, geofence2.circle]);
-
       setError(null);
     } catch (error) {
       console.error("Error initializing Google Maps:", error);
@@ -248,9 +160,8 @@ const TechLocationMap = () => {
   useEffect(() => {
     return () => {
       markers.forEach(marker => marker.setMap(null));
-      geofences.forEach(circle => circle.setMap(null));
     };
-  }, [markers, geofences]);
+  }, [markers]);
 
   // Handle Google Maps API errors
   useEffect(() => {
@@ -282,11 +193,58 @@ const TechLocationMap = () => {
       setGoogleMapsApiKey(manualApiKey);
     }
   };
-  
+
   return (
     <Card className="overflow-hidden">
-      {/* We'll skip the API key input section since we have the key now */}
-      {!isLoaded ? (
+      {((!googleMapsApiKey && !manualApiKey) || error) ? (
+        <div className="p-4">
+          <Alert className="mb-4" variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>
+              {error ? "Map Error" : "Google Maps API Key Required"}
+            </AlertTitle>
+            <AlertDescription>
+              {error || "Please enter a Google Maps API key to display the map. You can also add it in the Integrations settings tab."}
+            </AlertDescription>
+          </Alert>
+          
+          <button 
+            onClick={() => setShowApiKeyHelp(!showApiKeyHelp)}
+            className="flex items-center text-sm text-primary mb-3 hover:underline"
+          >
+            <Info className="h-4 w-4 mr-1" />
+            {showApiKeyHelp ? "Hide API Key Instructions" : "How to get a Google Maps API Key"}
+          </button>
+          
+          {showApiKeyHelp && (
+            <Alert className="mb-4">
+              <AlertDescription className="text-sm space-y-2">
+                <p>To create a Google Maps API key:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Go to the <a href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center">Google Cloud Console <ExternalLink className="h-3 w-3 ml-1" /></a></li>
+                  <li>Create a new project or select an existing one</li>
+                  <li>Enable the "Maps JavaScript API"</li>
+                  <li>Create an API key in the "Credentials" section</li>
+                  <li>Under API restrictions, restrict the key to "Maps JavaScript API" only</li>
+                  <li>Optionally, restrict the key to your website domain for security</li>
+                </ol>
+                <p className="mt-1">After creating your API key, enter it below or add it in the Settings → Integrations page.</p>
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <form onSubmit={handleApiKeySubmit} className="flex flex-col space-y-2">
+            <Input
+              type="password"
+              placeholder="Enter Google Maps API Key"
+              value={manualApiKey}
+              onChange={(e) => setManualApiKey(e.target.value)}
+              required
+            />
+            <Button type="submit">Load Map</Button>
+          </form>
+        </div>
+      ) : !isLoaded ? (
         <div className="p-4 flex justify-center items-center h-[400px]">
           <div className="flex items-center space-x-2">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
@@ -295,19 +253,6 @@ const TechLocationMap = () => {
         </div>
       ) : (
         <div ref={mapRef} className="h-[400px] w-full"></div>
-      )}
-      
-      {isLoaded && (
-        <div className="p-4 bg-muted/50">
-          <h3 className="text-sm font-medium mb-2">Geofencing Information</h3>
-          <p className="text-sm text-muted-foreground">
-            Geofence entry/exit events are being monitored. Click on a technician to simulate events.
-          </p>
-          <div className="flex items-center mt-2 text-xs text-muted-foreground">
-            <Info className="h-4 w-4 mr-1" />
-            <span>Webhook endpoints configured for geofence events</span>
-          </div>
-        </div>
       )}
     </Card>
   );
