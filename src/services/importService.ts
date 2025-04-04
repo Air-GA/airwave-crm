@@ -104,17 +104,112 @@ export const importInventory = async (
   }
 };
 
+// Define interface for raw CSV/Excel data to allow for various naming conventions
+interface RawCustomerData {
+  [key: string]: any;
+  id?: string;
+  name?: string;
+  Name?: string;
+  customer_name?: string;
+  CustomerName?: string;
+  email?: string;
+  Email?: string;
+  phone?: string;
+  Phone?: string;
+  phone_number?: string;
+  PhoneNumber?: string;
+  address?: string;
+  Address?: string;
+  serviceAddress?: string;
+  service_address?: string;
+  ServiceAddress?: string;
+  billAddress?: string;
+  billing_address?: string;
+  BillingAddress?: string;
+  type?: string;
+  Type?: string;
+  customer_type?: string;
+  CustomerType?: string;
+  notes?: string;
+  Notes?: string;
+}
+
+interface RawWorkOrderData {
+  [key: string]: any;
+  id?: string;
+  customerId?: string;
+  customer_id?: string;
+  CustomerId?: string;
+  customerName?: string;
+  customer_name?: string;
+  CustomerName?: string;
+  address?: string;
+  Address?: string;
+  status?: string;
+  Status?: string;
+  priority?: string;
+  Priority?: string;
+  type?: string;
+  Type?: string;
+  description?: string;
+  Description?: string;
+  scheduledDate?: string;
+  scheduled_date?: string;
+  ScheduledDate?: string;
+  createdAt?: string;
+  created_at?: string;
+  CreatedAt?: string;
+  technicianId?: string;
+  technician_id?: string;
+  TechnicianId?: string;
+  technicianName?: string;
+  technician_name?: string;
+  TechnicianName?: string;
+  completedAt?: string;
+  completed_at?: string;
+  CompletedAt?: string;
+  notes?: string[] | string;
+  Notes?: string[] | string;
+}
+
+interface RawInventoryData {
+  [key: string]: any;
+  id?: string;
+  name?: string;
+  Name?: string;
+  category?: string;
+  Category?: string;
+  description?: string;
+  Description?: string;
+  quantity?: number | string;
+  Quantity?: number | string;
+  price?: number | string;
+  Price?: number | string;
+  reorderLevel?: number | string;
+  reorder_level?: number | string;
+  ReorderLevel?: number | string;
+  supplier?: string;
+  Supplier?: string;
+  location?: string;
+  Location?: string;
+  sku?: string;
+  SKU?: string;
+  unit_price?: number | string;
+  unitPrice?: number | string;
+  UnitPrice?: number | string;
+}
+
 // Simplified import functions with better type safety
-export const processCustomerImport = async (customers: Partial<Customer>[]): Promise<number> => {
+export const processCustomerImport = async (rawData: RawCustomerData[]): Promise<number> => {
   try {
-    if (!customers || customers.length === 0) {
+    if (!rawData || rawData.length === 0) {
       throw new Error("No valid customer data provided");
     }
     
-    console.log(`Processing ${customers.length} customer records for import`);
+    console.log(`Processing ${rawData.length} customer records for import`);
     
     // Process customers to ensure they have all required fields
-    const validCustomers = customers
+    const validCustomers = rawData
       .filter(c => c.name || c.Name || c.customer_name || c.CustomerName)
       .map(c => {
         // Generate random coordinates near Georgia for the map view
@@ -161,14 +256,14 @@ export const processCustomerImport = async (customers: Partial<Customer>[]): Pro
   }
 };
 
-export const processWorkOrderImport = async (workOrders: Partial<WorkOrder>[]): Promise<number> => {
+export const processWorkOrderImport = async (rawData: RawWorkOrderData[]): Promise<number> => {
   try {
-    if (!workOrders || workOrders.length === 0) {
+    if (!rawData || rawData.length === 0) {
       throw new Error("No valid work order data provided");
     }
     
     // Filter out invalid work orders before casting
-    const validWorkOrders = workOrders
+    const validWorkOrders = rawData
       .filter(wo => wo.customerId || wo.customer_id || wo.CustomerId || wo.customerName || wo.customer_name || wo.CustomerName)
       .map(wo => ({
         id: wo.id || `wo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -184,7 +279,7 @@ export const processWorkOrderImport = async (workOrders: Partial<WorkOrder>[]): 
         technicianId: wo.technicianId || wo.technician_id || wo.TechnicianId || undefined,
         technicianName: wo.technicianName || wo.technician_name || wo.TechnicianName || undefined,
         completedAt: wo.completedAt || wo.completed_at || wo.CompletedAt || undefined,
-        notes: wo.notes || wo.Notes || []
+        notes: Array.isArray(wo.notes || wo.Notes) ? wo.notes || wo.Notes : []
       })) as WorkOrder[];
     
     if (validWorkOrders.length === 0) {
@@ -199,14 +294,14 @@ export const processWorkOrderImport = async (workOrders: Partial<WorkOrder>[]): 
   }
 };
 
-export const processInventoryImport = async (inventory: Partial<InventoryItem>[]): Promise<number> => {
+export const processInventoryImport = async (rawData: RawInventoryData[]): Promise<number> => {
   try {
-    if (!inventory || inventory.length === 0) {
+    if (!rawData || rawData.length === 0) {
       throw new Error("No valid inventory data provided");
     }
     
     // Filter out invalid inventory items before casting
-    const validInventory = inventory
+    const validInventory = rawData
       .filter(item => item.name || item.Name || item.sku || item.SKU)
       .map(item => ({
         id: item.id || `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
