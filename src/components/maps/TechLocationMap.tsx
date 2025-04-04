@@ -11,9 +11,39 @@ import { toast } from "sonner";
 
 // Sample technician data if we need fallbacks
 const sampleTechs: Technician[] = [
-  { id: "tech1", name: "Mike Johnson", lat: 33.7952, lng: -83.7136, status: "available", specialties: ["HVAC", "Cooling"] },
-  { id: "tech2", name: "Sarah Williams", lat: 33.8304, lng: -83.6909, status: "busy", specialties: ["Installation", "Repair"] },
-  { id: "tech3", name: "Robert Taylor", lat: 33.7490, lng: -83.7376, status: "available", specialties: ["Heating", "Maintenance"] },
+  { 
+    id: "tech1", 
+    name: "Mike Johnson", 
+    status: "available", 
+    specialties: ["HVAC", "Cooling"],
+    currentLocation: {
+      lat: 33.7952, 
+      lng: -83.7136,
+      address: "Monroe, GA"
+    }
+  },
+  { 
+    id: "tech2", 
+    name: "Sarah Williams", 
+    status: "busy", 
+    specialties: ["Installation", "Repair"],
+    currentLocation: {
+      lat: 33.8304, 
+      lng: -83.6909,
+      address: "Downtown Monroe, GA"
+    }
+  },
+  { 
+    id: "tech3", 
+    name: "Robert Taylor", 
+    status: "available", 
+    specialties: ["Heating", "Maintenance"],
+    currentLocation: {
+      lat: 33.7490, 
+      lng: -83.7376,
+      address: "East Monroe, GA"
+    }
+  },
 ];
 
 interface TechLocationMapProps {
@@ -140,14 +170,15 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
 
       // Use real technicians if available, otherwise use sample data
       const techsToShow = technicians.length > 0 
-        ? technicians.filter(t => t.currentLocation || (t as any).lat) 
+        ? technicians.filter(t => t.currentLocation) 
         : sampleTechs;
 
       console.log("Using technicians for map:", techsToShow.map(t => ({
         name: t.name,
         hasCurrentLocation: !!t.currentLocation,
-        lat: t.currentLocation?.lat || (t as any).lat,
-        lng: t.currentLocation?.lng || (t as any).lng
+        lat: t.currentLocation?.lat,
+        lng: t.currentLocation?.lng,
+        address: t.currentLocation?.address
       })));
 
       if (techsToShow.length === 0) {
@@ -161,9 +192,15 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
       // Add markers for technicians
       const mapMarkers = techsToShow.map(tech => {
         // Get location from technician data
-        const location = tech.currentLocation 
-          ? { lat: tech.currentLocation.lat, lng: tech.currentLocation.lng }
-          : { lat: (tech as any).lat || 33.7956, lng: (tech as any).lng || -83.7136 };
+        if (!tech.currentLocation) {
+          console.log(`Technician ${tech.name} has no location data, skipping marker`);
+          return null;
+        }
+        
+        const location = { 
+          lat: tech.currentLocation.lat, 
+          lng: tech.currentLocation.lng 
+        };
         
         console.log(`Creating marker for ${tech.name} at position:`, location);
         
@@ -187,7 +224,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
         });
 
         // Add info window
-        const address = tech.currentLocation?.address || "Location not specified";
+        const address = tech.currentLocation.address || "Location not specified";
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div style="padding: 8px;">
@@ -209,7 +246,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
         });
 
         return marker;
-      });
+      }).filter(Boolean) as google.maps.Marker[];
 
       setMarkers(mapMarkers);
       setError(null);
