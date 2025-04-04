@@ -1,5 +1,5 @@
 
-import { mockWorkOrders } from '@/data/mockData';
+import { workOrders } from '@/data/mockData';
 import { WorkOrder } from '@/types';
 import { useWorkOrderStore } from './workOrderService';
 
@@ -20,7 +20,7 @@ export async function syncWorkOrdersFromCRM(): Promise<WorkOrder[]> {
     // Simulate successful response
     const response = {
       success: true,
-      data: mockWorkOrders.map(order => ({
+      data: workOrders.map(order => ({
         ...order,
         syncedFromCRM: true,
         syncTimestamp: new Date().toISOString()
@@ -108,7 +108,7 @@ export async function getMaintenancePlansFromCRM() {
   await new Promise(resolve => setTimeout(resolve, 1000));
   
   // Return mock maintenance data
-  return mockWorkOrders.filter(order => 
+  return workOrders.filter(order => 
     order.type === 'maintenance' && 
     order.isMaintenancePlan === true
   );
