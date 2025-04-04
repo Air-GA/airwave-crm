@@ -1,11 +1,40 @@
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  serviceAddresses?: ServiceAddress[]; // Changed to optional with ?
+  billAddress: string;
+  notes?: string;
+  type?: 'residential' | 'commercial';
+  createdAt?: string;
+  lastService?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  address?: string;
+  serviceAddress?: string; // Maintained for backward compatibility
+}
+
+export interface ServiceAddress {
+  id: string;
+  address: string;
+  isPrimary?: boolean;
+  notes?: string;
+}
+
 export interface Technician {
   id: string;
   name: string;
   status: 'available' | 'busy' | 'off-duty';
-  specialties?: string[];
-  current_location_lat?: number;
-  current_location_lng?: number;
-  current_location_address?: string;
+  specialties: string[];
+  currentLocation?: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
 }
 
 export interface WorkOrder {
@@ -13,49 +42,41 @@ export interface WorkOrder {
   customerId: string;
   customerName: string;
   address: string;
-  type: 'installation' | 'maintenance' | 'repair' | 'inspection';
+  type: 'repair' | 'maintenance' | 'installation' | 'inspection';
   description: string;
   priority: 'low' | 'medium' | 'high' | 'emergency';
-  status: 'pending' | 'scheduled' | 'in-progress' | 'pending-completion' | 'completed' | 'cancelled';
+  status: 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'pending-completion' | 'cancelled';
   scheduledDate: string;
+  createdAt: string;
+  completedDate?: string;
+  estimatedHours?: number;
   technicianId?: string;
   technicianName?: string;
-  createdAt: string;
-  completedAt?: string;
-  completedDate?: string;
-  pendingReason?: string;
   notes?: string[];
-  partsUsed?: Array<{
+  pendingReason?: string;
+  completionRequired?: boolean;
+  completedAt?: string;
+  partsUsed?: {
     id: string;
     name: string;
     quantity: number;
-    cost: number;
-  }>;
-  estimatedHours?: number;
-  phoneNumber?: string;
+    price: number;
+  }[];
+  // Add these fields to support customer creation from work orders
   email?: string;
+  phoneNumber?: string;
 }
 
-export interface Customer {
+export interface InventoryItem {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  serviceAddress?: string;
-  billAddress?: string;
-  type: 'residential' | 'commercial' | 'industrial';
-  createdAt: string;
-  serviceAddresses?: Array<{
-    id: string;
-    address: string;
-    isPrimary?: boolean;
-    notes?: string;
-  }>;
-  maintenancePlan?: {
-    active: boolean;
-    type: 'biannual' | 'annual' | 'quarterly';
-    nextServiceDate?: string;
-    preferredTimeSlot?: string;
-  };
+  category: string;
+  description: string;
+  quantity: number;
+  price: number;
+  reorderLevel: number;
+  supplier: string;
+  location: string;
+  sku?: string;
+  unit_price?: number;
 }

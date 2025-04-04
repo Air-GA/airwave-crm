@@ -1,10 +1,8 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 
-// Define the available user roles
-type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
+type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer';
 
 interface AuthUser {
   id: string;
@@ -17,7 +15,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthUser | null;
   userRole: UserRole | null;
-  session: Session | null;
   permissions: {
     canViewProfitNumbers: boolean;
     canEditData: boolean;
@@ -27,10 +24,8 @@ interface AuthContextType {
     canViewTechnicianData: boolean;
     canDispatchTechnicians: boolean;
   };
-  login: (email: string, password: string, role?: UserRole) => Promise<void>;
-  signUp: (email: string, password: string, role?: UserRole, name?: string) => Promise<void>;
-  logout: () => Promise<void>;
-  createUserProfile: (userId: string, role: UserRole, email: string, name?: string) => Promise<any>;
+  login: (role: UserRole) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -121,92 +116,70 @@ const getRolePermissions = (role: UserRole | null) => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // Development mode: Always set admin role and authenticated
+  // For demo purposes, we're setting a default role
+  // In a real app, this would come from a login process
   const [userRole, setUserRole] = useState<UserRole | null>('admin');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [user, setUser] = useState<AuthUser | null>({
-    id: 'dev-user-id',
-    email: 'dev@example.com',
+    id: '1',
+    email: 'admin@air-ga.net',
     role: 'admin',
-    name: 'Development User'
+    name: 'Admin User'
   });
-  const [session, setSession] = useState<Session | null>(null);
 
   const permissions = getRolePermissions(userRole);
-  
-  // This is a simplified version that doesn't actually create a profile in Supabase
-  const createUserProfile = async (userId: string, role: UserRole, email: string, name?: string): Promise<any> => {
-    console.log('Development mode: Simulating profile creation', { userId, role, email, name });
-    
-    // In development mode, we just return a mock profile
-    return {
-      id: userId,
-      role,
-      name: name || `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
-      email,
-    };
-  };
 
-  const login = async (email: string, password: string, role: UserRole = 'admin') => {
-    try {
-      setUser({
-        id: 'dev-user-id',
-        email: email || 'dev@example.com',
-        role: role,
-        name: `${role.charAt(0).toUpperCase() + role.slice(1)} Dev User`
-      });
-      setUserRole(role);
-      setIsAuthenticated(true);
-      console.log('Development login successful with role:', role);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  };
-
-  const signUp = async (email: string, password: string, role: UserRole = 'user', name?: string) => {
-    console.log('Development signup - no actual account created');
-    setUser({
-      id: 'dev-user-id',
-      email: email || 'dev@example.com',
-      role: role,
-      name: name || `${role.charAt(0).toUpperCase() + role.slice(1)} Dev User`
-    });
+  const login = (role: UserRole) => {
+    // In a real app, you would verify credentials with Supabase here
     setUserRole(role);
     setIsAuthenticated(true);
+    setUser({
+      id: '1',
+      email: `${role}@air-ga.net`,
+      role: role,
+      name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`
+    });
   };
 
-  const logout = async () => {
-    try {
-      setUserRole('admin');
-      setUser({
-        id: 'dev-user-id',
-        email: 'dev@example.com',
-        role: 'admin',
-        name: 'Development User'
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
+  const logout = () => {
+    // In a real app, you would sign out from Supabase here
+    setUserRole(null);
+    setIsAuthenticated(false);
+    setUser(null);
   };
 
+  // In a real app with Supabase, we would check for an existing session here
   useEffect(() => {
-    console.log('Development mode: Authentication bypassed');
+    // For demo purposes, we're setting a default role
+    // This would be replaced with a real session check
+    // Example:
+    // async function getInitialSession() {
+    //   const { data: { session } } = await supabase.auth.getSession();
+    //   if (session) {
+    //     // Get user profile data to determine role
+    //     const { data } = await supabase
+    //       .from('profiles')
+    //       .select('role')
+    //       .eq('id', session.user.id)
+    //       .single();
+    //
+    //     if (data) {
+    //       setUserRole(data.role as UserRole);
+    //       setUser({
+    //         id: session.user.id,
+    //         email: session.user.email || '',
+    //         role: data.role as UserRole,
+    //         name: data.name
+    //       });
+    //       setIsAuthenticated(true);
+    //     }
+    //   }
+    // }
+    // getInitialSession();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      user, 
-      userRole, 
-      session,
-      permissions, 
-      login, 
-      signUp,
-      logout,
-      createUserProfile
-    }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, userRole, permissions, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

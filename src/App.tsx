@@ -1,5 +1,5 @@
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -21,7 +21,7 @@ import Notifications from "@/pages/Notifications";
 import Timesheets from "@/pages/Timesheets";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
-import { RoleGuard } from "@/components/guards/RoleGuard";
+import RoleGuard from "@/components/auth/RoleGuard";
 import ImportData from "@/pages/ImportData";
 
 const queryClient = new QueryClient();
@@ -34,24 +34,25 @@ function App() {
           <ThemeProvider defaultTheme="light" storageKey="hvac-ui-theme">
             <Routes>
               <Route path="/" element={<Index />} />
-              {/* Redirect login to homepage during development */}
-              <Route path="/login" element={<Navigate to="/" replace />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
-              {/* All routes are accessible during development */}
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/work-orders" element={<WorkOrders />} />
-              <Route path="/work-orders/create" element={<CreateWorkOrder />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/dispatch" element={<Dispatch />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/invoices" element={<Invoices />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/timesheets" element={<Timesheets />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/import-data" element={<ImportData />} />
+              {/* Protected routes */}
+              <Route element={<RoleGuard allowedRoles={["user", "admin"]} />}>
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/work-orders" element={<WorkOrders />} />
+                <Route path="/work-orders/create" element={<CreateWorkOrder />} />
+                <Route path="/schedule" element={<Schedule />} />
+                <Route path="/dispatch" element={<Dispatch />} />
+                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/timesheets" element={<Timesheets />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/import-data" element={<ImportData />} />
+              </Route>
 
               {/* Not found */}
               <Route path="*" element={<NotFound />} />
