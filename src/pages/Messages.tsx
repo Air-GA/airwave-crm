@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,8 @@ import {
   UserPlus, 
   Users,
   Video,
-  Laptop 
+  Laptop,
+  ExternalLink
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,18 +41,19 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
+const DISCORD_INVITE_LINK = "https://discord.gg/jYMrqCDf";
+
 const Messages = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [activeConversation, setActiveConversation] = useState<string | null>("c1");
   const [isDiscordDialogOpen, setIsDiscordDialogOpen] = useState(false);
-  const [discordInviteLink, setDiscordInviteLink] = useState("");
-  const [discordServerName, setDiscordServerName] = useState("");
+  const [discordInviteLink, setDiscordInviteLink] = useState(DISCORD_INVITE_LINK);
+  const [discordServerName, setDiscordServerName] = useState("Air Georgia HVAC Team");
   const [discordChannelName, setDiscordChannelName] = useState("");
   const [discordShareType, setDiscordShareType] = useState<"screen" | "camera">("screen");
   const { userRole } = useAuth();
   
-  // Mock data for conversations
   const conversations = [
     {
       id: "c1",
@@ -172,18 +173,14 @@ const Messages = () => {
     }
   ];
   
-  // Find the active conversation
   const activeChat = conversations.find((conv) => conv.id === activeConversation);
   
-  // Filter conversations based on search
   const filteredConversations = conversations.filter((conv) =>
     conv.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   const handleSendMessage = () => {
     if (newMessage.trim() !== "") {
-      // In a real app, you would add the message to the conversation and send it to the server
-      // For this demo, we'll just clear the input
       toast.success("Message sent");
       setNewMessage("");
     }
@@ -203,8 +200,6 @@ const Messages = () => {
       return;
     }
 
-    // In a real implementation, you would use the Discord API
-    // For now, we'll just open the invite link and show a success message
     window.open(discordInviteLink, '_blank');
     
     const shareText = discordShareType === "screen" 
@@ -213,21 +208,22 @@ const Messages = () => {
       
     toast.success(`${shareText} initiated via Discord with ${activeChat?.name}`);
     
-    // Add a system message to the conversation about the Discord share
-    // In a real app, you would update the conversation in the database
-    
     setIsDiscordDialogOpen(false);
   };
 
   const isTeamMember = () => {
-    // Check if the active chat is with a team member
-    // This is a simplified check - in a real app, you would check the user's role or department
     return activeChat?.name.includes("Tech") || activeChat?.name.includes("Team");
   };
 
   const showDiscordDialog = (type: "screen" | "camera") => {
     setDiscordShareType(type);
+    setDiscordInviteLink(DISCORD_INVITE_LINK);
     setIsDiscordDialogOpen(true);
+  };
+
+  const joinDiscordDirectly = () => {
+    window.open(DISCORD_INVITE_LINK, '_blank');
+    toast.success("Opening Discord server invitation");
   };
   
   return (
@@ -238,13 +234,18 @@ const Messages = () => {
             <h1 className="text-3xl font-bold tracking-tight">Messages</h1>
             <p className="text-muted-foreground">Communicate with customers and team members</p>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> New Message
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={joinDiscordDirectly} className="flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Join Discord
+            </Button>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> New Message
+            </Button>
+          </div>
         </div>
         
         <div className="grid h-[calc(100vh-220px)] grid-cols-1 gap-6 md:grid-cols-[300px_1fr]">
-          {/* Conversations sidebar */}
           <div className="flex flex-col border rounded-md overflow-hidden">
             <div className="border-b p-3">
               <div className="relative">
@@ -307,7 +308,6 @@ const Messages = () => {
             </ScrollArea>
           </div>
           
-          {/* Conversation */}
           <Card className="flex flex-col">
             {activeChat ? (
               <>
@@ -334,7 +334,6 @@ const Messages = () => {
                         <span className="sr-only">Email</span>
                       </Button>
                       
-                      {/* Discord integration buttons */}
                       {isTeamMember() && (
                         <>
                           <Button 
@@ -358,7 +357,6 @@ const Messages = () => {
                         </>
                       )}
                       
-                      {/* Customer-facing share button - separate from team communication */}
                       {!isTeamMember() && (
                         <Button 
                           variant="ghost" 
@@ -460,7 +458,6 @@ const Messages = () => {
           </Card>
         </div>
         
-        {/* Discord integration dialog */}
         <Dialog open={isDiscordDialogOpen} onOpenChange={setIsDiscordDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -468,23 +465,34 @@ const Messages = () => {
                 {discordShareType === "screen" ? "Start Discord Screen Share" : "Start Discord Video Call"}
               </DialogTitle>
               <DialogDescription>
-                Share your Discord server details to initiate a {discordShareType === "screen" ? "screen sharing session" : "video call"} with {activeChat?.name}.
+                Connect to our official Discord server to initiate a {discordShareType === "screen" ? "screen sharing session" : "video call"} with {activeChat?.name}.
               </DialogDescription>
             </DialogHeader>
             
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="discord-server">Discord Server Name</Label>
-                <Input
-                  id="discord-server"
-                  value={discordServerName}
-                  onChange={(e) => setDiscordServerName(e.target.value)}
-                  placeholder="HVAC Tech Support"
-                />
+                <Label htmlFor="discord-server">Discord Server</Label>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="discord-server"
+                    value={discordServerName}
+                    onChange={(e) => setDiscordServerName(e.target.value)}
+                    className="flex-1"
+                    readOnly
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={joinDiscordDirectly}
+                    title="Open Discord Invitation"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="discord-channel">Discord Channel Name (optional)</Label>
+                <Label htmlFor="discord-channel">Discord Channel (optional)</Label>
                 <Input
                   id="discord-channel"
                   value={discordChannelName}
@@ -493,17 +501,9 @@ const Messages = () => {
                 />
               </div>
               
-              <div className="grid gap-2">
-                <Label htmlFor="discord-invite">Discord Invite Link</Label>
-                <Input
-                  id="discord-invite"
-                  value={discordInviteLink}
-                  onChange={(e) => setDiscordInviteLink(e.target.value)}
-                  placeholder="https://discord.gg/your-invite-code"
-                />
-                <p className="text-sm text-muted-foreground">
-                  You can generate an invite link from your Discord server settings.
-                  Make sure to set appropriate permissions for the invite.
+              <div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  You'll be joining our official Air Georgia HVAC Discord server at <a href={DISCORD_INVITE_LINK} target="_blank" className="text-blue-500 hover:underline">https://discord.gg/jYMrqCDf</a>
                 </p>
               </div>
             </div>

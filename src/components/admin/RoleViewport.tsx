@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +7,8 @@ import {
   X, 
   Users,
   MessagesSquare,
-  LayoutDashboard
+  LayoutDashboard,
+  MessageCircle
 } from "lucide-react";
 
 type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
@@ -26,10 +26,7 @@ export const RoleViewport = ({
 }: RoleViewportProps) => {
   const { userRole } = useAuth();
   
-  // Define which roles can access which pages
-  // This mapping could be stored in a more central location in a real app
   const getRolesForPage = (pageName: string): UserRole[] => {
-    // Common roles that can access most pages
     const baseRoles: UserRole[] = ['manager', 'csr'];
     
     switch(pageName.toLowerCase()) {
@@ -50,7 +47,6 @@ export const RoleViewport = ({
       case 'reports':
         return ['manager', 'hr', 'user'];
       case 'messages':
-        // All roles can access messages, but they'll see different interfaces and capabilities
         return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
       case 'notifications':
         return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
@@ -61,6 +57,10 @@ export const RoleViewport = ({
       default:
         return baseRoles;
     }
+  };
+  
+  const hasDiscordIntegration = (role: UserRole): boolean => {
+    return ['admin', 'manager', 'tech'].includes(role);
   };
   
   const availableRoles = getRolesForPage(currentPage);
@@ -95,6 +95,11 @@ export const RoleViewport = ({
               <div className="flex items-center">
                 <Users className="h-4 w-4 mr-2" />
                 <span className="font-medium capitalize">{expanded} View</span>
+                {currentPage.toLowerCase() === 'messages' && hasDiscordIntegration(expanded) && (
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">
+                    Discord Enabled
+                  </Badge>
+                )}
               </div>
               <button 
                 onClick={() => onRoleSelect(null)} 
@@ -122,6 +127,11 @@ export const RoleViewport = ({
                   <div className="flex items-center">
                     <Users className="h-4 w-4 mr-2" />
                     <span className="font-medium capitalize">{role} View</span>
+                    {currentPage.toLowerCase() === 'messages' && hasDiscordIntegration(role) && (
+                      <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 text-xs">
+                        Discord Enabled
+                      </Badge>
+                    )}
                   </div>
                   <button 
                     onClick={() => onRoleSelect(role)} 
