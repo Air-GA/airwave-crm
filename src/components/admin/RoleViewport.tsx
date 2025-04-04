@@ -3,8 +3,8 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { 
-  ArrowsMaximize, 
-  ArrowsMinimize,
+  Maximize, 
+  Minimize,
   X, 
   Users,
   MessagesSquare,
@@ -57,7 +57,7 @@ export const RoleViewport = ({
                 onClick={() => onRoleSelect(null)} 
                 className="p-1 rounded hover:bg-muted/80"
               >
-                <ArrowsMinimize className="h-4 w-4" />
+                <Minimize className="h-4 w-4" />
               </button>
             </div>
             <div className="h-[calc(100%-40px)] w-full">
@@ -84,7 +84,7 @@ export const RoleViewport = ({
                     onClick={() => onRoleSelect(role)} 
                     className="p-1 rounded hover:bg-muted/80"
                   >
-                    <ArrowsMaximize className="h-4 w-4" />
+                    <Maximize className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="relative h-full w-full">
