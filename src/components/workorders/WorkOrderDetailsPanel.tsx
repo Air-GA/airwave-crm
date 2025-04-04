@@ -1,130 +1,114 @@
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, User, AlertCircle, CheckCircle2 } from "lucide-react";
-import { formatDate } from "@/lib/date-utils";
+import React, { useState } from "react";
+import { 
+  Button, 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue,
+  Textarea
+} from "@/components/ui";
 import { WorkOrder } from "@/types";
-import { useState } from "react";
-import WorkOrderCompletionDialog from "./WorkOrderCompletionDialog";
+import { updateWorkOrder } from "@/services/workOrderService";
 
 interface WorkOrderDetailsPanelProps {
   workOrder: WorkOrder;
-  onUnassign?: (orderId: string) => void;
-  showCompletionOptions?: boolean;
+  onUnassign?: (id: string) => Promise<void>;
   onStatusUpdate?: () => void;
+  showCompletionOptions?: boolean;
 }
 
-const WorkOrderDetailsPanel = ({ 
-  workOrder, 
-  onUnassign, 
-  showCompletionOptions = false,
-  onStatusUpdate
-}: WorkOrderDetailsPanelProps) => {
-  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
-  
-  const getStatusBadge = () => {
-    switch (workOrder.status) {
-      case "completed":
-        return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">Completed</Badge>;
-      case "pending-completion":
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">Pending Completion</Badge>;
-      case "in-progress":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-50">In Progress</Badge>;
-      case "scheduled":
-        return <Badge variant="outline" className="bg-sky-50 text-sky-700 hover:bg-sky-50">Scheduled</Badge>;
-      case "pending":
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700 hover:bg-gray-50">Pending</Badge>;
-      case "cancelled":
-        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50">Cancelled</Badge>;
-      default:
-        return null;
+const WorkOrderDetailsPanel: React.FC<WorkOrderDetailsPanelProps> = ({
+  workOrder,
+  onUnassign,
+  onStatusUpdate,
+  showCompletionOptions = false
+}) => {
+  const [completionNotes, setCompletionNotes] = useState("");
+  const [pendingReason, setPendingReason] = useState("");
+
+  const handleStatusChange = async (newStatus: WorkOrder['status']) => {
+    try {
+      await updateWorkOrder(workOrder.id, { status: newStatus });
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (error) {
+      console.error("Error updating work order status:", error);
     }
   };
-  
-  const handleOpenCompletionDialog = () => {
-    setIsCompletionDialogOpen(true);
-  };
-  
-  const handleCompletionDialogClose = () => {
-    setIsCompletionDialogOpen(false);
-  };
-  
-  const handleWorkOrderStatusUpdate = () => {
-    if (onStatusUpdate) {
-      onStatusUpdate();
+
+  const handleUnassign = async () => {
+    if (onUnassign) {
+      await onUnassign(workOrder.id);
     }
   };
   
   return (
-    <>
-      <div className="rounded-md border p-4">
-        <div className="flex items-center justify-between">
-          <p className="font-medium">#{workOrder.id} - {workOrder.type}</p>
-          {getStatusBadge()}
-        </div>
-        <div className="mt-2 space-y-1.5 text-sm">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span>{workOrder.customerName}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span>{workOrder.address}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>{formatDate(new Date(workOrder.scheduledDate))}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span>{formatDate(new Date(workOrder.scheduledDate), { timeOnly: true })}</span>
-          </div>
-          
-          {workOrder.status === "pending-completion" && workOrder.pendingReason && (
-            <div className="mt-1 flex items-start gap-1.5 text-sm text-amber-600 bg-amber-50 p-2 rounded-md">
-              <AlertCircle className="h-4 w-4 mt-0.5" />
-              <span>Pending: {workOrder.pendingReason}</span>
-            </div>
-          )}
-          
-          {workOrder.status === "completed" && (
-            <div className="mt-1 flex items-start gap-1.5 text-sm text-green-600">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Completed: {workOrder.completedDate ? formatDate(new Date(workOrder.completedDate)) : "N/A"}</span>
-            </div>
-          )}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2 justify-end">
-          {onUnassign && (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onUnassign(workOrder.id)}
-            >
-              Unassign
-            </Button>
-          )}
-          
-          {showCompletionOptions && workOrder.status !== "completed" && (
-            <Button 
-              size="sm" 
-              onClick={handleOpenCompletionDialog}
-              variant={workOrder.status === "pending-completion" ? "outline" : "default"}
-            >
-              {workOrder.status === "pending-completion" ? "Update Status" : "Complete Work Order"}
-            </Button>
-          )}
-        </div>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold">Work Order Details</h3>
+        <p className="text-sm text-muted-foreground">
+          Manage work order details and status.
+        </p>
       </div>
-      
-      <WorkOrderCompletionDialog
-        workOrder={workOrder}
-        isOpen={isCompletionDialogOpen}
-        onClose={handleCompletionDialogClose}
-        onComplete={handleWorkOrderStatusUpdate}
-      />
-    </>
+
+      <div>
+        <p><strong>Customer:</strong> {workOrder.customerName}</p>
+        <p><strong>Address:</strong> {workOrder.address}</p>
+        <p><strong>Type:</strong> {workOrder.type}</p>
+        <p><strong>Priority:</strong> {workOrder.priority}</p>
+        <p><strong>Scheduled Date:</strong> {workOrder.scheduledDate}</p>
+        <p><strong>Status:</strong> {workOrder.status}</p>
+      </div>
+
+      {showCompletionOptions && (
+        <>
+          <div>
+            <label htmlFor="completionNotes" className="block text-sm font-medium text-gray-700">
+              Completion Notes
+            </label>
+            <div className="mt-1">
+              <Textarea
+                id="completionNotes"
+                rows={3}
+                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border-gray-300 rounded-md"
+                placeholder="Add completion notes..."
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="pendingReason" className="block text-sm font-medium text-gray-700">
+              Pending Reason
+            </label>
+            <div className="mt-1">
+              <Textarea
+                id="pendingReason"
+                rows={3}
+                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border-gray-300 rounded-md"
+                placeholder="Reason for pending completion..."
+                value={pendingReason}
+                onChange={(e) => setPendingReason(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => handleStatusChange('cancelled')}>
+              Cancel Work Order
+            </Button>
+            {workOrder.technicianId && (
+              <Button variant="destructive" onClick={handleUnassign}>
+                Unassign Technician
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 
