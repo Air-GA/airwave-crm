@@ -1,4 +1,3 @@
-
 import { Technician, WorkOrder } from "@/types";
 
 // Mock technicians data
@@ -8,22 +7,18 @@ export const mockTechnicians: Technician[] = [
     name: "John Smith",
     status: "available",
     specialties: ["HVAC", "Heating"],
-    currentLocation: {
-      lat: 33.7490,
-      lng: -84.3880,
-      address: "Atlanta, GA"
-    }
+    current_location_lat: 33.7490,
+    current_location_lng: -84.3880,
+    current_location_address: "Atlanta, GA"
   },
   {
     id: "2",
     name: "Sarah Wilson",
     status: "busy",
     specialties: ["Cooling", "Installation"],
-    currentLocation: {
-      lat: 33.7590,
-      lng: -84.3920,
-      address: "Midtown, Atlanta, GA"
-    }
+    current_location_lat: 33.7590,
+    current_location_lng: -84.3920,
+    current_location_address: "Midtown, Atlanta, GA"
   }
 ];
 
@@ -43,8 +38,7 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "1",
     technicianName: "John Smith",
     estimatedHours: 2,
-    notes: ["Customer reported loud noise", "Unit is 5 years old"],
-    completionRequired: true
+    notes: ["Customer reported loud noise", "Unit is 5 years old"]
   },
   {
     id: "wo2",
@@ -60,8 +54,7 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "2",
     technicianName: "Sarah Wilson",
     estimatedHours: 1,
-    notes: ["Regular maintenance"],
-    completionRequired: true
+    notes: ["Regular maintenance"]
   },
   {
     id: "wo3",
@@ -78,8 +71,7 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianName: "John Smith",
     estimatedHours: 3,
     notes: ["Customer complained of no heat", "Need to order parts"],
-    pendingReason: "Waiting for parts to arrive",
-    completionRequired: true
+    pendingReason: "Waiting for parts to arrive"
   },
   {
     id: "wo4",
@@ -96,8 +88,7 @@ export const mockWorkOrders: WorkOrder[] = [
     technicianId: "2",
     technicianName: "Sarah Wilson",
     estimatedHours: 4,
-    notes: ["Installation completed successfully"],
-    completionRequired: true
+    notes: ["Installation completed successfully"]
   }
 ];
 

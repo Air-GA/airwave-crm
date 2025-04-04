@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -273,6 +272,7 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       description: item.description || item.Description || "",
       quantity: Number(item.quantity || item.Quantity || 0),
       price: Number(item.price || item.Price || 0),
+      cost: Number(item.cost || item.Cost || item.price || item.Price || 0),
       reorderLevel: Number(item.reorderLevel || item.reorder_level || item.ReorderLevel || 5),
       supplier: item.supplier || item.Supplier || "",
       location: item.location || item.Location || "",
@@ -323,4 +323,3 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
 };
 
 export default CSVImporter;
-

@@ -1,4 +1,3 @@
-
 import { supabase } from '../lib/supabase';
 import { WorkOrder, Technician } from '../types';
 import { toast } from '@/components/ui/use-toast';
@@ -226,11 +225,11 @@ export const pushTechnicianUpdateToCRM = async (technician: Technician): Promise
       name: technician.name,
       status: technician.status,
       skills: technician.specialties,
-      location: technician.currentLocation ? {
-        address: technician.currentLocation.address,
-        latitude: technician.currentLocation.lat,
-        longitude: technician.currentLocation.lng
-      } : undefined
+      location: {
+        address: technician.current_location_address,
+        latitude: technician.current_location_lat,
+        longitude: technician.current_location_lng
+      }
     };
 
     // Since supabase client may not have functions property in the current setup
