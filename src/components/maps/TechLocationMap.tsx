@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,8 @@ const sampleTechs: TechLocation[] = [
 ];
 
 const TechLocationMap = () => {
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("");
+  // Use the provided API key directly
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA");
   const [manualApiKey, setManualApiKey] = useState<string>("");
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -33,12 +33,9 @@ const TechLocationMap = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
 
-  // Load API key from settings
+  // We'll skip loading API key from settings since we have it hardcoded
   useEffect(() => {
-    const settings = getIntegrationSettings();
-    if (settings.googleMaps.connected && settings.googleMaps.apiKey) {
-      setGoogleMapsApiKey(settings.googleMaps.apiKey);
-    }
+    // Keep the API key we already have
   }, []);
 
   // Clean up previous script if exists
@@ -193,58 +190,11 @@ const TechLocationMap = () => {
       setGoogleMapsApiKey(manualApiKey);
     }
   };
-
+  
   return (
     <Card className="overflow-hidden">
-      {((!googleMapsApiKey && !manualApiKey) || error) ? (
-        <div className="p-4">
-          <Alert className="mb-4" variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>
-              {error ? "Map Error" : "Google Maps API Key Required"}
-            </AlertTitle>
-            <AlertDescription>
-              {error || "Please enter a Google Maps API key to display the map. You can also add it in the Integrations settings tab."}
-            </AlertDescription>
-          </Alert>
-          
-          <button 
-            onClick={() => setShowApiKeyHelp(!showApiKeyHelp)}
-            className="flex items-center text-sm text-primary mb-3 hover:underline"
-          >
-            <Info className="h-4 w-4 mr-1" />
-            {showApiKeyHelp ? "Hide API Key Instructions" : "How to get a Google Maps API Key"}
-          </button>
-          
-          {showApiKeyHelp && (
-            <Alert className="mb-4">
-              <AlertDescription className="text-sm space-y-2">
-                <p>To create a Google Maps API key:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-2">
-                  <li>Go to the <a href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center">Google Cloud Console <ExternalLink className="h-3 w-3 ml-1" /></a></li>
-                  <li>Create a new project or select an existing one</li>
-                  <li>Enable the "Maps JavaScript API"</li>
-                  <li>Create an API key in the "Credentials" section</li>
-                  <li>Under API restrictions, restrict the key to "Maps JavaScript API" only</li>
-                  <li>Optionally, restrict the key to your website domain for security</li>
-                </ol>
-                <p className="mt-1">After creating your API key, enter it below or add it in the Settings → Integrations page.</p>
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <form onSubmit={handleApiKeySubmit} className="flex flex-col space-y-2">
-            <Input
-              type="password"
-              placeholder="Enter Google Maps API Key"
-              value={manualApiKey}
-              onChange={(e) => setManualApiKey(e.target.value)}
-              required
-            />
-            <Button type="submit">Load Map</Button>
-          </form>
-        </div>
-      ) : !isLoaded ? (
+      {/* We'll skip the API key input section since we have the key now */}
+      {!isLoaded ? (
         <div className="p-4 flex justify-center items-center h-[400px]">
           <div className="flex items-center space-x-2">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>

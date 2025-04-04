@@ -1,4 +1,3 @@
-
 import { supabase } from '../lib/supabase';
 import { WorkOrder, Technician } from '../types';
 import { toast } from '@/components/ui/use-toast';
@@ -99,7 +98,7 @@ export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
         description: `Using ${convertedMockWorkOrders.length} mock work orders (development mode)`,
       });
       
-      return convertedMockWorkOrders as unknown as WorkOrder[];
+      return convertedMockWorkOrders as WorkOrder[];
     }
     
     // Since supabase client may not have functions property in the current setup
