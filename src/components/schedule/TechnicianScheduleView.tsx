@@ -15,6 +15,8 @@ interface TechnicianScheduleViewProps {
   showAllAppointments?: boolean;
   onWorkOrderClick?: (workOrder: WorkOrder) => void;
   isLoading?: boolean;
+  onDropMaintenance?: (data: any, technicianId: string | null, date: Date) => void;
+  className?: string;
 }
 
 const TechnicianScheduleView = ({
@@ -23,7 +25,9 @@ const TechnicianScheduleView = ({
   selectedDate,
   showAllAppointments = false,
   onWorkOrderClick,
-  isLoading = false
+  isLoading = false,
+  onDropMaintenance,
+  className
 }: TechnicianScheduleViewProps) => {
   const storeWorkOrders = useWorkOrderStore(state => state.workOrders);
   
@@ -83,7 +87,7 @@ const TechnicianScheduleView = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${className}`}>
       {!showAllAppointments && technician && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
