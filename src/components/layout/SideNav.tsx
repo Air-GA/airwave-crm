@@ -1,3 +1,4 @@
+
 import {
   BarChart3,
   Calendar,
@@ -133,7 +134,7 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
       
       {/* Desktop sidebar */}
       <Sidebar 
-        className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
+        className="hidden md:block md:w-64 md:flex-shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
         collapsible="none"
       >
         <SidebarHeader className="flex h-16 items-center px-4 border-b border-sidebar-border">
