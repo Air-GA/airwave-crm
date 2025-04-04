@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,10 @@ import {
   Edit,
   AlertTriangle,
   MoveRight,
-  X
+  X,
+  FileText,
+  ChevronRight,
+  ChevronUp
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,16 +71,19 @@ import { toast } from "sonner";
 import { useForm, useFieldArray } from "react-hook-form";
 import { InventoryItem } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ExtendedInventoryItem extends InventoryItem {
   sku: string;
   minStock: number;
   inStock: number;
   lastRestocked?: string;
+  invoiceNumber?: string;
   mobileUnits: {
     unitId: string;
     name: string;
     quantity: number;
+    invoiceNumber?: string;
   }[];
 }
 
@@ -92,11 +99,20 @@ interface TransferFormData {
   items: TransferItemData[];
 }
 
+interface InvoiceGroup {
+  invoiceNumber: string;
+  items: {
+    item: ExtendedInventoryItem;
+    quantity: number;
+  }[];
+}
+
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all-inventory");
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ExtendedInventoryItem | null>(null);
+  const [expandedInvoices, setExpandedInvoices] = useState<Record<string, boolean>>({});
   const { permissions } = useAuth();
   
   const transferForm = useForm<TransferFormData>({
@@ -128,8 +144,8 @@ const Inventory = () => {
       quantity: 54,
       reorderLevel: 20,
       mobileUnits: [
-        { unitId: "MU001", name: "Truck 1", quantity: 5 },
-        { unitId: "MU003", name: "Truck 3", quantity: 3 }
+        { unitId: "MU001", name: "Truck 1", quantity: 5, invoiceNumber: "INV-2023-001" },
+        { unitId: "MU003", name: "Truck 3", quantity: 3, invoiceNumber: "INV-2023-002" }
       ]
     },
     {
@@ -147,7 +163,7 @@ const Inventory = () => {
       quantity: 12,
       reorderLevel: 15,
       mobileUnits: [
-        { unitId: "MU002", name: "Truck 2", quantity: 2 },
+        { unitId: "MU002", name: "Truck 2", quantity: 2, invoiceNumber: "INV-2023-003" },
       ]
     },
     {
@@ -165,7 +181,7 @@ const Inventory = () => {
       quantity: 8,
       reorderLevel: 5,
       mobileUnits: [
-        { unitId: "MU001", name: "Truck 1", quantity: 1 },
+        { unitId: "MU001", name: "Truck 1", quantity: 1, invoiceNumber: "INV-2023-001" },
       ]
     },
     {
@@ -183,9 +199,9 @@ const Inventory = () => {
       quantity: 32,
       reorderLevel: 20,
       mobileUnits: [
-        { unitId: "MU001", name: "Truck 1", quantity: 8 },
-        { unitId: "MU002", name: "Truck 2", quantity: 5 },
-        { unitId: "MU003", name: "Truck 3", quantity: 7 }
+        { unitId: "MU001", name: "Truck 1", quantity: 8, invoiceNumber: "INV-2023-001" },
+        { unitId: "MU002", name: "Truck 2", quantity: 5, invoiceNumber: "INV-2023-003" },
+        { unitId: "MU003", name: "Truck 3", quantity: 7, invoiceNumber: "INV-2023-002" }
       ]
     },
     {
@@ -252,6 +268,13 @@ const Inventory = () => {
     append({ itemId: "", quantity: 1, invoiceNumber: "" });
   };
 
+  const toggleInvoiceExpand = (invoiceNumber: string) => {
+    setExpandedInvoices(prev => ({
+      ...prev,
+      [invoiceNumber]: !prev[invoiceNumber]
+    }));
+  };
+
   const handleTransferInventory = async (data: TransferFormData) => {
     if (data.sourceLocation === data.destinationLocation) {
       toast.error("Invalid transfer", {
@@ -296,7 +319,8 @@ const Inventory = () => {
         
         return {
           item: inventoryItem,
-          quantity: item.quantity
+          quantity: item.quantity,
+          invoiceNumber: item.invoiceNumber
         };
       });
       
@@ -307,6 +331,7 @@ const Inventory = () => {
           
           let updatedItem = { ...item };
           const quantity = transferItem.quantity;
+          const invoiceNumber = transferItem.invoiceNumber;
           
           if (data.sourceLocation === "warehouse") {
             updatedItem.inStock -= quantity;
@@ -323,7 +348,7 @@ const Inventory = () => {
             updatedItem.inStock += quantity;
           } else {
             const existingUnitIndex = updatedItem.mobileUnits.findIndex(
-              unit => unit.unitId === data.destinationLocation
+              unit => unit.unitId === data.destinationLocation && unit.invoiceNumber === invoiceNumber
             );
             
             if (existingUnitIndex >= 0) {
@@ -334,7 +359,8 @@ const Inventory = () => {
                 updatedItem.mobileUnits.push({
                   unitId: targetUnit.id,
                   name: targetUnit.name,
-                  quantity: quantity
+                  quantity: quantity,
+                  invoiceNumber: invoiceNumber
                 });
               }
             }
@@ -356,6 +382,33 @@ const Inventory = () => {
         description: error instanceof Error ? error.message : "There was an error transferring inventory"
       });
     }
+  };
+
+  // Group inventory items by mobile unit and invoice number
+  const getInvoiceGroupsByMobileUnit = (unitId: string) => {
+    const itemsByInvoice: Record<string, InvoiceGroup> = {};
+    
+    inventoryItems.forEach(item => {
+      item.mobileUnits.forEach(unit => {
+        if (unit.unitId === unitId && unit.invoiceNumber) {
+          const invoiceNumber = unit.invoiceNumber;
+          
+          if (!itemsByInvoice[invoiceNumber]) {
+            itemsByInvoice[invoiceNumber] = {
+              invoiceNumber,
+              items: []
+            };
+          }
+          
+          itemsByInvoice[invoiceNumber].items.push({
+            item,
+            quantity: unit.quantity
+          });
+        }
+      });
+    });
+    
+    return Object.values(itemsByInvoice);
   };
 
   return (
@@ -673,73 +726,100 @@ const Inventory = () => {
           
           <TabsContent value="mobile-units" className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {mobileUnits.map((unit) => (
-                <Card key={unit.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-base">
-                      <Truck className="mr-2 h-5 w-5" />
-                      {unit.name}
-                      {unit.status === "maintenance" && (
-                        <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700">
-                          Maintenance
-                        </Badge>
+              {mobileUnits.map((unit) => {
+                const invoiceGroups = getInvoiceGroupsByMobileUnit(unit.id);
+                
+                return (
+                  <Card key={unit.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-base">
+                        <Truck className="mr-2 h-5 w-5" />
+                        {unit.name}
+                        {unit.status === "maintenance" && (
+                          <Badge variant="outline" className="ml-2 bg-amber-50 text-amber-700">
+                            Maintenance
+                          </Badge>
+                        )}
+                        {unit.status === "inactive" && (
+                          <Badge variant="outline" className="ml-2 bg-gray-100 text-gray-500">
+                            Inactive
+                          </Badge>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-3">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Technician: {unit.technicianName}
+                      </p>
+                      
+                      <h4 className="text-sm font-medium mb-2">Inventory Items by Invoice</h4>
+                      
+                      {invoiceGroups.length > 0 ? (
+                        <div className="space-y-3">
+                          {invoiceGroups.map((group) => (
+                            <Collapsible 
+                              key={group.invoiceNumber}
+                              open={expandedInvoices[group.invoiceNumber]}
+                              onOpenChange={() => toggleInvoiceExpand(group.invoiceNumber)}
+                              className="border rounded-md"
+                            >
+                              <CollapsibleTrigger className="flex w-full items-center justify-between p-2 hover:bg-muted/50">
+                                <div className="flex items-center">
+                                  <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
+                                  <span className="font-medium">{group.invoiceNumber}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Badge variant="outline">
+                                    {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                                  </Badge>
+                                  {expandedInvoices[group.invoiceNumber] ? (
+                                    <ChevronUp className="h-4 w-4 ml-2" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 ml-2" />
+                                  )}
+                                </div>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="border-t px-2 py-1">
+                                <ul className="space-y-1">
+                                  {group.items.map((entry, idx) => (
+                                    <li key={`${entry.item.id}-${idx}`} className="text-sm flex justify-between py-1">
+                                      <span>{entry.item.name}</span>
+                                      <span className="font-medium">{entry.quantity}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No inventory items</p>
                       )}
-                      {unit.status === "inactive" && (
-                        <Badge variant="outline" className="ml-2 bg-gray-100 text-gray-500">
-                          Inactive
-                        </Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-3">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Technician: {unit.technicianName}
-                    </p>
-                    
-                    <h4 className="text-sm font-medium mb-2">Inventory Items</h4>
-                    <ul className="space-y-1">
-                      {inventoryItems
-                        .filter(item => item.mobileUnits.some(mu => mu.unitId === unit.id))
-                        .map(item => {
-                          const mobileUnit = item.mobileUnits.find(mu => mu.unitId === unit.id);
-                          return (
-                            <li key={item.id} className="text-sm flex justify-between">
-                              <span>{item.name}</span>
-                              <span className="font-medium">{mobileUnit?.quantity}</span>
-                            </li>
-                          );
-                        })
-                      }
-                      {!inventoryItems.some(item => 
-                        item.mobileUnits.some(mu => mu.unitId === unit.id)
-                      ) && (
-                        <li className="text-sm text-muted-foreground">No inventory items</li>
-                      )}
-                    </ul>
-                  </CardContent>
-                  <div className="px-6 py-3 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => {
-                        if (inventoryItems.length > 0) {
-                          const item = inventoryItems[0];
-                          setSelectedItem(item);
-                          transferForm.reset({
-                            sourceLocation: "warehouse",
-                            destinationLocation: unit.id,
-                            items: [{ itemId: item.id, quantity: 1, invoiceNumber: "" }]
-                          });
-                          setIsTransferDialogOpen(true);
-                        }
-                      }}
-                    >
-                      Add Inventory
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+                    </CardContent>
+                    <div className="px-6 py-3 border-t">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => {
+                          if (inventoryItems.length > 0) {
+                            const item = inventoryItems[0];
+                            setSelectedItem(item);
+                            transferForm.reset({
+                              sourceLocation: "warehouse",
+                              destinationLocation: unit.id,
+                              items: [{ itemId: item.id, quantity: 1, invoiceNumber: "" }]
+                            });
+                            setIsTransferDialogOpen(true);
+                          }
+                        }}
+                      >
+                        Add Inventory
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </TabsContent>
           

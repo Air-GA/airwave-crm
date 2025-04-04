@@ -110,4 +110,5 @@ export interface InventoryItem {
   location: string;
   sku?: string;
   unit_price?: number;
+  invoiceNumber?: string;
 }
