@@ -11,7 +11,7 @@ import {
   LayoutDashboard
 } from "lucide-react";
 
-type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer';
+type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
 
 interface RoleViewportProps {
   currentPage: string;
@@ -24,7 +24,45 @@ export const RoleViewport = ({
   onRoleSelect,
   expanded
 }: RoleViewportProps) => {
-  const availableRoles: UserRole[] = ['manager', 'csr', 'sales', 'hr', 'tech'];
+  const { userRole } = useAuth();
+  
+  // Define which roles can access which pages
+  // This mapping could be stored in a more central location in a real app
+  const getRolesForPage = (pageName: string): UserRole[] => {
+    // Common roles that can access most pages
+    const baseRoles: UserRole[] = ['manager', 'csr'];
+    
+    switch(pageName.toLowerCase()) {
+      case 'dashboard':
+        return ['manager', 'csr', 'sales', 'hr', 'tech', 'user'];
+      case 'customers':
+        return ['manager', 'csr', 'sales', 'user'];
+      case 'work orders':
+        return ['manager', 'csr', 'tech', 'user'];
+      case 'schedule':
+        return ['manager', 'csr', 'tech', 'hr', 'user'];
+      case 'dispatch':
+        return ['manager', 'csr', 'tech', 'user'];
+      case 'inventory':
+        return ['manager', 'csr', 'tech', 'user'];
+      case 'invoices':
+        return ['manager', 'csr', 'sales', 'user'];
+      case 'reports':
+        return ['manager', 'hr', 'user'];
+      case 'messages':
+        return ['manager', 'csr', 'sales', 'hr', 'tech', 'user'];
+      case 'notifications':
+        return ['manager', 'csr', 'sales', 'hr', 'tech', 'user'];
+      case 'timesheets':
+        return ['manager', 'hr', 'user'];
+      case 'settings':
+        return ['manager', 'user'];
+      default:
+        return baseRoles;
+    }
+  };
+  
+  const availableRoles = getRolesForPage(currentPage);
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
