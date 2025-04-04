@@ -45,6 +45,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -88,7 +89,6 @@ const Dispatch = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Google Maps configuration
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const mapContainerStyle = {
     width: "100%",
@@ -102,7 +102,6 @@ const Dispatch = () => {
     zoomControl: true,
   };
 
-  // Load initial data
   useEffect(() => {
     loadData();
   }, []);
@@ -124,7 +123,6 @@ const Dispatch = () => {
     }
   };
 
-  // Sync data from CRM
   const syncDataFromCRM = async () => {
     setIsSyncing(true);
     try {
@@ -150,7 +148,6 @@ const Dispatch = () => {
     }
   };
 
-  // Update technician status
   const handleTechnicianStatusChange = async (technician: Technician, status: Technician["status"]) => {
     try {
       const updatedTechnician: Technician = { ...technician, status };
@@ -161,7 +158,6 @@ const Dispatch = () => {
         )
       );
 
-      // Optimistically update the UI
       setTechnicians((prevTechnicians) =>
         prevTechnicians.map((tech) =>
           tech.id === technician.id ? { ...tech, status: status } : tech
@@ -173,7 +169,6 @@ const Dispatch = () => {
         description: `${technician.name}'s status has been updated to ${status}.`,
       });
 
-      // Push the update to the CRM
       setIsPushingUpdates(true);
       const success = await pushTechnicianUpdateToCRM(updatedTechnician);
       if (!success) {
@@ -195,7 +190,6 @@ const Dispatch = () => {
     }
   };
 
-  // Update work order status
   const handleWorkOrderStatusChange = async (workOrder: WorkOrder, status: WorkOrder["status"]) => {
     try {
       const updatedWorkOrder: WorkOrder = { ...workOrder, status };
@@ -206,7 +200,6 @@ const Dispatch = () => {
         )
       );
 
-      // Optimistically update the UI
       setWorkOrders((prevWorkOrders) =>
         prevWorkOrders.map((wo) =>
           wo.id === workOrder.id ? { ...wo, status: status } : wo
@@ -218,7 +211,6 @@ const Dispatch = () => {
         description: `Work order #${workOrder.id} status has been updated to ${status}.`,
       });
 
-      // Push the update to the CRM
       setIsPushingUpdates(true);
       const success = await pushWorkOrderUpdateToCRM(updatedWorkOrder);
       if (!success) {
@@ -240,23 +232,19 @@ const Dispatch = () => {
     }
   };
 
-  // Complete work order
   const handleCompleteWorkOrder = async () => {
     if (!selectedWorkOrder) return;
 
     setIsCompletingWorkOrder(true);
     try {
-      // Call the mock service to complete the work order
       const updatedWorkOrder = await completeMockWorkOrder(selectedWorkOrder.id, completionNotes);
 
-      // Update the work order in the local state
       setWorkOrders((prevWorkOrders) =>
         prevWorkOrders.map((wo) =>
           wo.id === selectedWorkOrder.id ? updatedWorkOrder : wo
         )
       );
 
-      // Close the dialog and reset the state
       setShowWorkOrderDetails(false);
       setCompletionNotes("");
 
@@ -265,7 +253,6 @@ const Dispatch = () => {
         description: `Work order #${selectedWorkOrder.id} has been marked as completed.`,
       });
 
-      // Push the update to the CRM
       setIsPushingUpdates(true);
       const success = await pushWorkOrderUpdateToCRM(updatedWorkOrder);
       if (!success) {
@@ -288,23 +275,19 @@ const Dispatch = () => {
     }
   };
 
-  // Mark work order as pending completion
   const handleMarkPendingCompletion = async () => {
     if (!selectedWorkOrder) return;
 
     setIsMarkingPendingCompletion(true);
     try {
-      // Call the mock service to mark the work order as pending completion
       const updatedWorkOrder = await markWorkOrderPendingCompletion(selectedWorkOrder.id, pendingReason);
 
-      // Update the work order in the local state
       setWorkOrders((prevWorkOrders) =>
         prevWorkOrders.map((wo) =>
           wo.id === selectedWorkOrder.id ? updatedWorkOrder : wo
         )
       );
 
-      // Close the dialog and reset the state
       setShowWorkOrderDetails(false);
       setPendingReason("");
 
@@ -313,7 +296,6 @@ const Dispatch = () => {
         description: `Work order #${selectedWorkOrder.id} has been marked as pending completion.`,
       });
 
-      // Push the update to the CRM
       setIsPushingUpdates(true);
       const success = await pushWorkOrderUpdateToCRM(updatedWorkOrder);
       if (!success) {
@@ -336,7 +318,6 @@ const Dispatch = () => {
     }
   };
 
-  // Handle drag and drop
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) {
       return;
@@ -344,29 +325,25 @@ const Dispatch = () => {
 
     const { source, destination, draggableId } = result;
 
-    // Check if the destination is the technician's droppable area
     if (destination.droppableId.startsWith('technician-')) {
       const technicianId = destination.droppableId.split('-')[1];
       const technician = technicians.find(t => t.id === technicianId);
       const workOrder = workOrders.find(wo => wo.id === draggableId);
 
       if (technician && workOrder) {
-        // Update the work order with the new technician
         const updatedWorkOrder: WorkOrder = {
           ...workOrder,
           technicianId: technician.id,
           technicianName: technician.name,
-          status: 'scheduled' // Automatically set status to scheduled when assigned
+          status: 'scheduled'
         };
 
-        // Update the work order in the local state
         setWorkOrders((prevWorkOrders) =>
           prevWorkOrders.map((wo) =>
             wo.id === workOrder.id ? updatedWorkOrder : wo
           )
         );
 
-        // Update the work order in the mock service
         updateMockWorkOrder(updatedWorkOrder)
           .then(() => {
             toast({
@@ -374,7 +351,6 @@ const Dispatch = () => {
               description: `Work order #${workOrder.id} has been assigned to ${technician.name}.`,
             });
 
-            // Push the update to the CRM
             setIsPushingUpdates(true);
             pushWorkOrderUpdateToCRM(updatedWorkOrder)
               .then(success => {
@@ -408,7 +384,6 @@ const Dispatch = () => {
     }
   };
 
-  // Technician dialog functions
   const handleOpenTechnicianDialog = (technician: Technician) => {
     setEditedTechnician(technician);
     setEditedTechnicianStatus(technician.status);
@@ -428,7 +403,6 @@ const Dispatch = () => {
     if (!editedTechnician) return;
 
     try {
-      // Prepare updated technician object
       const updatedTechnician: Technician = {
         ...editedTechnician,
         status: editedTechnicianStatus,
@@ -438,17 +412,14 @@ const Dispatch = () => {
         current_location_lng: editedTechnicianLng,
       };
 
-      // Update the technician in the mock service
       await updateMockTechnician(updatedTechnician);
 
-      // Update the technician in the local state
       setTechnicians((prevTechnicians) =>
         prevTechnicians.map((tech) =>
           tech.id === editedTechnician.id ? updatedTechnician : tech
         )
       );
 
-      // Close the dialog
       handleCloseTechnicianDialog();
 
       toast({
@@ -456,7 +427,6 @@ const Dispatch = () => {
         description: `${editedTechnician.name}'s details have been updated.`,
       });
 
-      // Push the update to the CRM
       setIsPushingUpdates(true);
       const success = await pushTechnicianUpdateToCRM(updatedTechnician);
       if (!success) {
@@ -478,7 +448,6 @@ const Dispatch = () => {
     }
   };
 
-  // Geocoding function
   const geocodeAddress = (address: string): Promise<{ lat: number, lng: number } | null> => {
     return new Promise((resolve, reject) => {
       const geocoder = new google.maps.Geocoder();
@@ -494,7 +463,6 @@ const Dispatch = () => {
     });
   };
 
-  // Handle address change
   const handleAddressChange = async (address: string) => {
     setEditedTechnicianAddress(address);
     try {
@@ -513,7 +481,6 @@ const Dispatch = () => {
     }
   };
 
-  // Filter technicians based on search query
   useEffect(() => {
     const filtered = technicians.filter(technician =>
       technician.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -525,7 +492,6 @@ const Dispatch = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dispatch</h1>
@@ -543,9 +509,7 @@ const Dispatch = () => {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="grid gap-6 md:grid-cols-4">
-          {/* Technician List */}
           <Card className="md:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Technicians</CardTitle>
@@ -627,9 +591,7 @@ const Dispatch = () => {
             </CardContent>
           </Card>
 
-          {/* Map & Work Order List */}
           <div className="md:col-span-2 flex flex-col space-y-6">
-            {/* Google Map */}
             <Card>
               <CardHeader className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium">Technician Locations</CardTitle>
@@ -646,8 +608,6 @@ const Dispatch = () => {
                     options={mapOptions}
                   >
                     {technicians.map((technician) => {
-                      // Update references from currentLocation to current_location_*
-                      // Within the Dispatch.tsx file, replace:
                       const position = {
                         lat: technician.current_location_lat || defaultLocation.lat, 
                         lng: technician.current_location_lng || defaultLocation.lng
@@ -676,7 +636,6 @@ const Dispatch = () => {
               </CardContent>
             </Card>
 
-            {/* Work Order List */}
             <Card>
               <CardHeader className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium">Work Orders</CardTitle>
@@ -778,7 +737,6 @@ const Dispatch = () => {
             </Card>
           </div>
 
-          {/* Technician Details & Actions */}
           <Card className="md:col-span-1">
             <CardHeader className="flex items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -877,7 +835,6 @@ const Dispatch = () => {
         </div>
       </div>
 
-      {/* Work Order Details Dialog */}
       <Dialog open={showWorkOrderDetails} onOpenChange={setShowWorkOrderDetails}>
         <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
@@ -921,4 +878,90 @@ const Dispatch = () => {
                         ? "bg-green-500 text-white"
                         : selectedWorkOrder.status === "pending"
                           ? "bg-yellow-500 text-black"
-                          : selected
+                          : "bg-blue-500 text-white"
+                    }
+                  >
+                    {selectedWorkOrder.status}
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Technician</Label>
+                  <p className="text-sm font-medium">
+                    {selectedWorkOrder.technicianName || "Not assigned"}
+                  </p>
+                </div>
+                <div>
+                  <Label>Estimated Hours</Label>
+                  <p className="text-sm font-medium">
+                    {selectedWorkOrder.estimatedHours || "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <Label>Description</Label>
+                <p className="text-sm font-medium">
+                  {selectedWorkOrder.description}
+                </p>
+              </div>
+
+              {selectedWorkOrder.notes && selectedWorkOrder.notes.length > 0 && (
+                <div>
+                  <Label>Notes</Label>
+                  <ul className="text-sm font-medium list-disc pl-5">
+                    {selectedWorkOrder.notes.map((note, index) => (
+                      <li key={index}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {selectedWorkOrder.status === "pending-completion" && (
+                <div className="bg-yellow-50 p-3 rounded-md">
+                  <p className="text-sm text-yellow-700 flex items-center">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    <span>Pending Completion: {selectedWorkOrder.pendingReason}</span>
+                  </p>
+                </div>
+              )}
+              
+              <DialogFooter className="sm:justify-start">
+                <div className="flex gap-2">
+                  {selectedWorkOrder.status !== "completed" && (
+                    <Button onClick={handleCompleteWorkOrder} disabled={isCompletingWorkOrder}>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      {isCompletingWorkOrder ? "Completing..." : "Complete Work Order"}
+                    </Button>
+                  )}
+                  
+                  {selectedWorkOrder.status !== "pending-completion" && selectedWorkOrder.status !== "completed" && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setShowWorkOrderDetails(false);
+                        setPendingReason("");
+                        setIsMarkingPendingCompletion(false);
+                      }}
+                    >
+                      Mark as Pending
+                    </Button>
+                  )}
+                  
+                  <Button variant="ghost" onClick={() => setShowWorkOrderDetails(false)}>
+                    Close
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
+          ) : (
+            <p className="text-center py-4 text-muted-foreground">
+              No work order selected.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
+};
+
+export default Dispatch;
