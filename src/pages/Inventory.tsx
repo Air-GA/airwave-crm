@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -59,12 +58,13 @@ import {
   Bell,
   Edit,
   AlertTriangle,
-  MoveRight
+  MoveRight,
+  X
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { InventoryItem } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -82,11 +82,15 @@ interface ExtendedInventoryItem extends InventoryItem {
 }
 
 // Types for form data
-interface TransferFormData {
+interface TransferItemData {
   itemId: string;
   quantity: number;
+}
+
+interface TransferFormData {
   sourceLocation: string;
   destinationLocation: string;
+  items: TransferItemData[];
 }
 
 const Inventory = () => {
@@ -99,11 +103,16 @@ const Inventory = () => {
   // Transfer inventory form
   const transferForm = useForm<TransferFormData>({
     defaultValues: {
-      itemId: "",
-      quantity: 1,
       sourceLocation: "warehouse",
-      destinationLocation: ""
+      destinationLocation: "",
+      items: [{ itemId: "", quantity: 1 }]
     }
+  });
+  
+  // Field array for multiple item transfers
+  const { fields, append, remove } = useFieldArray({
+    control: transferForm.control,
+    name: "items"
   });
 
   // Mock data for inventory items
@@ -233,24 +242,29 @@ const Inventory = () => {
   };
 
   // Open transfer dialog
-  const openTransferDialog = (item: ExtendedInventoryItem) => {
+  const openTransferDialog = (item: ExtendedInventoryItem | null = null) => {
     setSelectedItem(item);
     
-    // Reset form with default values based on the selected item
+    // Reset form with default values
     transferForm.reset({
-      itemId: item.id,
-      quantity: 1,
       sourceLocation: "warehouse",
-      destinationLocation: ""
+      destinationLocation: "",
+      items: [{ 
+        itemId: item ? item.id : "",
+        quantity: 1 
+      }]
     });
     
     setIsTransferDialogOpen(true);
   };
 
+  // Add another item to transfer
+  const addItemToTransfer = () => {
+    append({ itemId: "", quantity: 1 });
+  };
+
   // Handle inventory transfer
   const handleTransferInventory = async (data: TransferFormData) => {
-    if (!selectedItem) return;
-    
     // Validate transfer data
     if (data.sourceLocation === data.destinationLocation) {
       toast.error("Invalid transfer", {
@@ -259,102 +273,107 @@ const Inventory = () => {
       return;
     }
 
-    if (data.quantity <= 0) {
+    if (data.items.some(item => !item.itemId)) {
+      toast.error("Invalid items", {
+        description: "All items must be selected"
+      });
+      return;
+    }
+
+    if (data.items.some(item => item.quantity <= 0)) {
       toast.error("Invalid quantity", {
-        description: "Quantity must be greater than zero"
+        description: "All quantities must be greater than zero"
       });
       return;
     }
 
     try {
-      // Check if we have enough inventory in the source location
-      let sourceQty = 0;
+      // For each item in the transfer
+      const itemsToTransfer = data.items.map(item => {
+        const inventoryItem = inventoryItems.find(invItem => invItem.id === item.itemId);
+        if (!inventoryItem) {
+          throw new Error(`Item ${item.itemId} not found`);
+        }
+        
+        // Check if we have enough inventory in the source location
+        let sourceQty = 0;
+        
+        if (data.sourceLocation === "warehouse") {
+          sourceQty = inventoryItem.inStock;
+        } else {
+          const mobileUnit = inventoryItem.mobileUnits.find(unit => unit.unitId === data.sourceLocation);
+          sourceQty = mobileUnit?.quantity || 0;
+        }
+        
+        if (sourceQty < item.quantity) {
+          throw new Error(`Only ${sourceQty} units of ${inventoryItem.name} available at source location`);
+        }
+        
+        return {
+          item: inventoryItem,
+          quantity: item.quantity
+        };
+      });
       
-      if (data.sourceLocation === "warehouse") {
-        sourceQty = selectedItem.inStock;
-      } else {
-        const mobileUnit = selectedItem.mobileUnits.find(unit => unit.unitId === data.sourceLocation);
-        sourceQty = mobileUnit?.quantity || 0;
-      }
-      
-      if (sourceQty < data.quantity) {
-        toast.error("Insufficient inventory", {
-          description: `Only ${sourceQty} units available at source location`
-        });
-        return;
-      }
-      
-      // Update inventory data
+      // Update inventory data for all valid items
       setInventoryItems(currentItems => {
         return currentItems.map(item => {
-          if (item.id === selectedItem.id) {
-            let updatedItem = { ...item };
+          const transferItem = itemsToTransfer.find(t => t.item.id === item.id);
+          if (!transferItem) return item;
+          
+          let updatedItem = { ...item };
+          const quantity = transferItem.quantity;
+          
+          // Remove from source
+          if (data.sourceLocation === "warehouse") {
+            updatedItem.inStock -= quantity;
+          } else {
+            updatedItem.mobileUnits = updatedItem.mobileUnits.map(unit => {
+              if (unit.unitId === data.sourceLocation) {
+                return { ...unit, quantity: unit.quantity - quantity };
+              }
+              return unit;
+            });
+          }
+          
+          // Add to destination
+          if (data.destinationLocation === "warehouse") {
+            updatedItem.inStock += quantity;
+          } else {
+            const existingUnitIndex = updatedItem.mobileUnits.findIndex(
+              unit => unit.unitId === data.destinationLocation
+            );
             
-            // Remove from source
-            if (data.sourceLocation === "warehouse") {
-              updatedItem.inStock -= data.quantity;
-              updatedItem.quantity -= data.quantity; // Update total quantity
+            if (existingUnitIndex >= 0) {
+              // Update existing unit
+              updatedItem.mobileUnits[existingUnitIndex].quantity += quantity;
             } else {
-              updatedItem.mobileUnits = updatedItem.mobileUnits.map(unit => {
-                if (unit.unitId === data.sourceLocation) {
-                  return { ...unit, quantity: unit.quantity - data.quantity };
-                }
-                return unit;
-              });
-            }
-            
-            // Add to destination
-            if (data.destinationLocation === "warehouse") {
-              updatedItem.inStock += data.quantity;
-              updatedItem.quantity += data.quantity; // Should remain the same since we're just moving
-            } else {
-              const existingUnitIndex = updatedItem.mobileUnits.findIndex(
-                unit => unit.unitId === data.destinationLocation
-              );
-              
-              if (existingUnitIndex >= 0) {
-                // Update existing unit
-                updatedItem.mobileUnits[existingUnitIndex].quantity += data.quantity;
-              } else {
-                // Add to new unit
-                const targetUnit = mobileUnits.find(unit => unit.id === data.destinationLocation);
-                if (targetUnit) {
-                  updatedItem.mobileUnits.push({
-                    unitId: targetUnit.id,
-                    name: targetUnit.name,
-                    quantity: data.quantity
-                  });
-                }
+              // Add to new unit
+              const targetUnit = mobileUnits.find(unit => unit.id === data.destinationLocation);
+              if (targetUnit) {
+                updatedItem.mobileUnits.push({
+                  unitId: targetUnit.id,
+                  name: targetUnit.name,
+                  quantity: quantity
+                });
               }
             }
-            
-            return updatedItem;
           }
-          return item;
+          
+          return updatedItem;
         });
       });
       
+      const itemNames = itemsToTransfer.map(t => t.item.name).join(", ");
       toast.success("Inventory transferred", {
-        description: `${data.quantity} units of ${selectedItem.name} transferred successfully`
+        description: `Successfully transferred ${itemNames}`
       });
-      
-      // In a real app, you would update the database here
-      // For example:
-      // await supabase
-      //   .from('inventory_transactions')
-      //   .insert({
-      //     item_id: data.itemId,
-      //     source_location: data.sourceLocation,
-      //     destination_location: data.destinationLocation,
-      //     quantity: data.quantity,
-      //     transaction_date: new Date().toISOString()
-      //   });
       
       setIsTransferDialogOpen(false);
     } catch (error) {
       console.error("Transfer error:", error);
       toast.error("Transfer failed", {
-        description: "There was an error transferring inventory"
+        description: error instanceof Error ? error.message : "There was an error transferring inventory"
       });
     }
   };
@@ -819,12 +838,7 @@ const Inventory = () => {
                   </p>
                   <Button 
                     className="mt-4"
-                    onClick={() => {
-                      // Open transfer dialog with first item
-                      if (inventoryItems.length > 0) {
-                        openTransferDialog(inventoryItems[0]);
-                      }
-                    }}
+                    onClick={() => openTransferDialog()}
                   >
                     <MoveRight className="mr-2 h-4 w-4" />
                     Start a Transfer
@@ -838,102 +852,153 @@ const Inventory = () => {
       
       {/* Inventory Transfer Dialog */}
       <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Transfer Inventory</DialogTitle>
             <DialogDescription>
-              Move inventory between the warehouse and mobile units.
+              Move multiple inventory items between the warehouse and mobile units.
             </DialogDescription>
           </DialogHeader>
           
           <Form {...transferForm}>
             <form onSubmit={transferForm.handleSubmit(handleTransferInventory)} className="space-y-4">
-              {selectedItem && (
-                <div className="bg-muted p-3 rounded-md mb-4">
-                  <h4 className="font-medium">{selectedItem.name}</h4>
-                  <p className="text-sm text-muted-foreground">{selectedItem.sku}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={transferForm.control}
+                  name="sourceLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source Location</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select source location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="warehouse">Main Warehouse</SelectItem>
+                          {mobileUnits.map(unit => (
+                            <SelectItem key={unit.id} value={unit.id}>
+                              {unit.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={transferForm.control}
+                  name="destinationLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Destination Location</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select destination location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="warehouse">Main Warehouse</SelectItem>
+                          {mobileUnits.map(unit => (
+                            <SelectItem key={unit.id} value={unit.id}>
+                              {unit.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">Items to Transfer</h4>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addItemToTransfer}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add Item
+                  </Button>
                 </div>
-              )}
-              
-              <FormField
-                control={transferForm.control}
-                name="sourceLocation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Source Location</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select source location" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="warehouse">Main Warehouse</SelectItem>
-                        {selectedItem?.mobileUnits.map(unit => (
-                          <SelectItem key={unit.unitId} value={unit.unitId}>
-                            {unit.name} ({unit.quantity} available)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={transferForm.control}
-                name="destinationLocation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Destination Location</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select destination location" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="warehouse">Main Warehouse</SelectItem>
-                        {mobileUnits.map(unit => (
-                          <SelectItem key={unit.id} value={unit.id}>
-                            {unit.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={transferForm.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Number of items to transfer
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
+                {fields.map((field, index) => (
+                  <div key={field.id} className="flex items-end gap-2 p-3 bg-muted rounded-md">
+                    <FormField
+                      control={transferForm.control}
+                      name={`items.${index}.itemId`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel className={index !== 0 ? "sr-only" : ""}>Item</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select item" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {inventoryItems.map(item => (
+                                <SelectItem key={item.id} value={item.id}>
+                                  {item.name} ({item.sku})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={transferForm.control}
+                      name={`items.${index}.quantity`}
+                      render={({ field }) => (
+                        <FormItem className="w-24">
+                          <FormLabel className={index !== 0 ? "sr-only" : ""}>Qty</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={1}
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {fields.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        className="h-9 w-9"
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Remove item</span>
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
               
               <DialogFooter>
                 <Button type="submit">Transfer Inventory</Button>
