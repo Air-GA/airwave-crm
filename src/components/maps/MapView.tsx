@@ -3,15 +3,18 @@ import { useState, useEffect } from 'react';
 import TechLocationMap from './TechLocationMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getIntegrationSettings } from "@/utils/settingsStorage";
+import { getIntegrationSettings, saveIntegrationSettings } from "@/utils/settingsStorage";
 import { MapPin, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Hard-coded API key from user
+const DEFAULT_API_KEY = 'EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA';
+
 const MapView = () => {
   const [showMap, setShowMap] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(true); // Default to true since we have a hard-coded key
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -19,22 +22,27 @@ const MapView = () => {
   useEffect(() => {
     const checkApiKey = () => {
       try {
+        // Store the provided API key in settings if not already present
         const integrations = getIntegrationSettings();
-        const hasGoogleMapsApiKey = integrations.googleMaps?.connected && 
-          integrations.googleMaps?.apiKey && 
-          integrations.googleMaps?.apiKey.length > 0;
-        
-        // Auto-show map if API key is available
-        if (hasGoogleMapsApiKey && !showMap) {
-          console.log("Auto-showing map because API key is available");
-          setShowMap(true);
-          setApiKeyError(null);
-        } else if (!hasGoogleMapsApiKey) {
-          console.log("No Google Maps API key found in settings");
-          setApiKeyError("No Google Maps API key configured. Please add your API key in Settings → Integrations.");
+        if (!integrations.googleMaps?.apiKey) {
+          integrations.googleMaps = {
+            ...integrations.googleMaps,
+            connected: true,
+            apiKey: DEFAULT_API_KEY,
+          };
+          saveIntegrationSettings(integrations);
+          console.log("Saved default Google Maps API key to settings");
         }
         
-        setHasApiKey(!!hasGoogleMapsApiKey);
+        // Always set hasApiKey to true since we have a default
+        setHasApiKey(true);
+        
+        // Auto-show map
+        if (!showMap) {
+          console.log("Auto-showing map with default API key");
+          setShowMap(true);
+          setApiKeyError(null);
+        }
       } catch (error) {
         console.error("Error checking API key:", error);
       } finally {
@@ -102,9 +110,7 @@ const MapView = () => {
         {!showMap ? (
           <div className="text-center py-8">
             <p className="mb-4">
-              {hasApiKey
-                ? "Click the button below to load the map and see technician locations."
-                : "Set up Google Maps in Settings -> Integrations to enable this feature."}
+              Click the button below to load the map and see technician locations.
             </p>
             <Button 
               onClick={() => {
@@ -113,13 +119,12 @@ const MapView = () => {
                   description: "Please wait while the map is being loaded..."
                 });
               }}
-              disabled={!hasApiKey}
             >
               Show Map
             </Button>
           </div>
         ) : (
-          <TechLocationMap key={`tech-map-${Date.now()}`} onError={handleMapError} />
+          <TechLocationMap key={`tech-map-${Date.now()}`} onError={handleMapError} defaultApiKey={DEFAULT_API_KEY} />
         )}
       </CardContent>
     </Card>

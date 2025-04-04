@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getIntegrationSettings, saveIntegrationSettings } from "@/utils/settingsStorage";
+import { getIntegrationSettings } from "@/utils/settingsStorage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Map, Info, ExternalLink, RefreshCw } from "lucide-react";
 import { Technician } from '@/types';
@@ -48,13 +48,14 @@ const sampleTechs: Technician[] = [
 
 interface TechLocationMapProps {
   onError?: (error: string) => void;
+  defaultApiKey?: string;
 }
 
 // Track script loading state
 let googleMapsScriptLoaded = false;
 let googleMapsInitialized = false;
 
-const TechLocationMap = ({ onError }: TechLocationMapProps) => {
+const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("");
   const [manualApiKey, setManualApiKey] = useState<string>("");
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
@@ -81,9 +82,16 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     setScriptLoading(false);
   }, [onError]);
 
-  // Load API key from settings
+  // Load API key from settings or use default
   useEffect(() => {
     try {
+      // Use default key if provided, otherwise try to get from settings
+      if (defaultApiKey) {
+        console.log("Using provided default API key");
+        setGoogleMapsApiKey(defaultApiKey);
+        return;
+      }
+      
       const settings = getIntegrationSettings();
       if (settings.googleMaps?.connected && settings.googleMaps?.apiKey) {
         const apiKey = settings.googleMaps.apiKey;
@@ -95,7 +103,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     } catch (err) {
       console.error("Error loading API key from settings:", err);
     }
-  }, []);
+  }, [defaultApiKey]);
 
   // Clean up previous script and prepare for new load
   const cleanupScript = useCallback(() => {
@@ -144,9 +152,11 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     setScriptLoadAttempts(prev => prev + 1);
   }, [cleanupScript]);
 
-  // Load Google Maps script
+  // Load Google Maps script with error handling
   useEffect(() => {
-    const apiKey = googleMapsApiKey || manualApiKey;
+    // Use stored key, explicitly provided key, or fallback to default key
+    const apiKey = googleMapsApiKey || manualApiKey || defaultApiKey;
+    
     if (!apiKey) {
       console.log("No API key available for Google Maps");
       return;
@@ -164,7 +174,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
       return;
     }
 
-    console.log(`Loading Google Maps script (attempt #${scriptLoadAttempts + 1}) with API key: ${apiKey.substring(0, 4)}...`);
+    console.log(`Loading Google Maps script (attempt #${scriptLoadAttempts + 1}) with API key length: ${apiKey.length}`);
     setScriptLoading(true);
     
     // Clean up any existing script first
@@ -224,7 +234,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
       // Keep callback function around in case it's called late
       // but we'll be ready for the next render
     };
-  }, [googleMapsApiKey, manualApiKey, scriptLoadAttempts, cleanupScript, reportError, isLoaded, mapInitialized, map, scriptLoading]);
+  }, [googleMapsApiKey, manualApiKey, defaultApiKey, scriptLoadAttempts, cleanupScript, reportError, isLoaded, mapInitialized, map, scriptLoading]);
 
   // Initialize map function
   const initializeMap = useCallback(() => {
@@ -362,7 +372,11 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
   // Handle API key submission
   const handleApiKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualApiKey || manualApiKey.trim() === '') {
+    
+    // Try to use the default key if manual input is empty
+    const keyToUse = manualApiKey.trim() ? manualApiKey : defaultApiKey;
+    
+    if (!keyToUse) {
       toast.error("Please enter a valid API key");
       return;
     }
@@ -372,24 +386,12 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     // Reset state for fresh start
     resetMapState();
     
-    // Save the API key to settings
-    try {
-      const settings = getIntegrationSettings();
-      settings.googleMaps = {
-        ...settings.googleMaps,
-        connected: true,
-        apiKey: manualApiKey
-      };
-      saveIntegrationSettings(settings);
-      setGoogleMapsApiKey(manualApiKey);
-      
-      toast.success("API Key saved", {
-        description: "Google Maps API key has been saved to your settings"
-      });
-    } catch (err) {
-      console.error("Error saving API key to settings:", err);
-      toast.error("Failed to save API key to settings");
-    }
+    // Use the key directly
+    setGoogleMapsApiKey(keyToUse);
+    
+    toast.success("API Key applied", {
+      description: "Attempting to load map with the provided API key"
+    });
   };
 
   // Manual retry handler
@@ -406,7 +408,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
 
   return (
     <Card className="overflow-hidden">
-      {((!googleMapsApiKey && !manualApiKey) || error) ? (
+      {((!googleMapsApiKey && !manualApiKey && !defaultApiKey) || error) ? (
         <div className="p-4">
           <Alert className="mb-4" variant={error ? "destructive" : "default"}>
             <AlertCircle className="h-4 w-4" />
@@ -449,7 +451,6 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
               placeholder="Enter Google Maps API Key"
               value={manualApiKey}
               onChange={(e) => setManualApiKey(e.target.value)}
-              required
             />
             <Button type="submit">Load Map</Button>
           </form>
