@@ -11,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Customer, ServiceAddress, customers as initialCustomers } from "@/data/mockData";
+import { customers as initialCustomers } from "@/data/mockData";
+import { Customer as MockCustomer, ServiceAddress } from "@/data/mockData";
+import { Customer } from "@/types";
 import { getImportedCustomers } from "@/services/importService";
 import { ChevronDown, FileEdit, Plus, Search, UserRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -34,39 +36,23 @@ const Customers = () => {
     const importedCustomers = getImportedCustomers();
     console.log(`Loaded ${importedCustomers.length} imported customers`);
     
-    const processedMockCustomers = initialCustomers.map(customer => {
-      if (!customer.serviceAddresses) {
-        return {
-          ...customer,
-          serviceAddresses: [
-            { 
-              id: `legacy-${customer.id}`, 
-              address: customer.serviceAddress || '', 
-              isPrimary: true 
-            }
-          ]
-        };
-      }
+    const processedMockCustomers: Customer[] = initialCustomers.map(mockCustomer => {
+      const customer: Customer = {
+        ...mockCustomer,
+        address: mockCustomer.address,
+        serviceAddress: mockCustomer.serviceAddress,
+        serviceAddresses: mockCustomer.serviceAddresses || [
+          { 
+            id: `legacy-${mockCustomer.id}`, 
+            address: mockCustomer.serviceAddress || '', 
+            isPrimary: true 
+          }
+        ]
+      };
       return customer;
     });
     
-    const processedImportedCustomers = importedCustomers.map(customer => {
-      if (!customer.serviceAddresses) {
-        return {
-          ...customer,
-          serviceAddresses: [
-            { 
-              id: `imported-${customer.id}`, 
-              address: customer.serviceAddress || '', 
-              isPrimary: true 
-            }
-          ]
-        };
-      }
-      return customer;
-    });
-    
-    const allCustomers = [...processedMockCustomers, ...processedImportedCustomers];
+    const allCustomers: Customer[] = [...processedMockCustomers, ...importedCustomers];
     console.log(`Total customers loaded: ${allCustomers.length}`);
     setCustomers(allCustomers);
   }, []);

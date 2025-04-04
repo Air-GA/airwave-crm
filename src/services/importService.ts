@@ -139,9 +139,39 @@ export const processInventoryImport = async (inventory: Partial<InventoryItem>[]
  * @returns Array of imported customers
  */
 export const getImportedCustomers = (): Customer[] => {
-  const importedCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
-  console.log(`Retrieved ${importedCustomers.length} imported customers from localStorage`);
-  return importedCustomers;
+  try {
+    const importedCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
+    console.log(`Retrieved ${importedCustomers.length} imported customers from localStorage`);
+    
+    // Ensure all customers have the required properties to match Customer type
+    const processedCustomers = importedCustomers.map((customer: any) => {
+      // Make sure each customer conforms to our expected Customer type
+      return {
+        id: customer.id || `imported-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: customer.name || 'Unknown',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        serviceAddress: customer.serviceAddress || customer.address || '',
+        address: customer.address || customer.serviceAddress || '',  // Ensure address is always defined
+        billAddress: customer.billAddress || customer.address || '',
+        type: customer.type || 'residential',
+        createdAt: customer.createdAt || new Date().toISOString(),
+        lastService: customer.lastService || '',
+        serviceAddresses: customer.serviceAddresses || [
+          {
+            id: `sa-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            address: customer.serviceAddress || customer.address || '',
+            isPrimary: true
+          }
+        ]
+      } as Customer;
+    });
+    
+    return processedCustomers;
+  } catch (error) {
+    console.error("Error getting imported customers:", error);
+    return [];
+  }
 };
 
 /**
