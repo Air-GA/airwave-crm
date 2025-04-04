@@ -1,3 +1,4 @@
+
 import {
   BarChart3,
   Calendar,
@@ -119,8 +120,8 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
           <img 
-            src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-            alt="Air Georgia Heating & Air Conditioning" 
+            src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" 
+            alt="Air Georgia Home Comfort Systems" 
             className="h-10 w-auto" 
           />
           <button onClick={handleClose}>
@@ -137,8 +138,8 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
       >
         <SidebarHeader className="flex h-16 items-center px-4 border-b border-sidebar-border">
           <img 
-            src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-            alt="Air Georgia Heating & Air Conditioning" 
+            src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" 
+            alt="Air Georgia Home Comfort Systems" 
             className="h-10 w-auto" 
           />
         </SidebarHeader>

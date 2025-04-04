@@ -53,8 +53,8 @@ const TopBar = ({ setSidebarOpen, children }: TopBarProps) => {
       <div className="w-full flex items-center justify-between gap-4">
         <div>
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Air Georgia Heating & Air Conditioning" className="h-8 w-8" />
-            <h1 className="hidden text-xl font-semibold md:block">Air Georgia Heating & Air Conditioning</h1>
+            <img src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" alt="Air Georgia Home Comfort Systems" className="h-8 w-8" />
+            <h1 className="hidden text-xl font-semibold md:block">Air Georgia Home Comfort Systems</h1>
           </Link>
         </div>
         

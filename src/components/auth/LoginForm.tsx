@@ -55,7 +55,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Login to Air Georgia</CardTitle>
+        <CardTitle>Login to Air Georgia Home Comfort Systems</CardTitle>
         <CardDescription>
           Enter your credentials to access your account
         </CardDescription>

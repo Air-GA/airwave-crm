@@ -6,8 +6,8 @@ const Login = () => {
     <div className="flex min-h-screen flex-col justify-center bg-gray-50 py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <img 
-          src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-          alt="Air Georgia Heating & Air Conditioning" 
+          src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" 
+          alt="Air Georgia Home Comfort Systems" 
           className="mx-auto h-16 w-auto" 
         />
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
