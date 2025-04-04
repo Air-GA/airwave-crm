@@ -38,7 +38,7 @@ const MainLayout = ({ children, pageName }: MainLayoutProps) => {
             <AdminViewToggle currentPage={getPageName()} />
           </TopBar>
           
-          <main className="flex-1 overflow-auto bg-background p-4 md:p-6">
+          <main className="flex-1 overflow-auto bg-background p-3 md:p-5">
             <div className="mx-auto max-w-7xl">
               {children}
             </div>
