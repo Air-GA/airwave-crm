@@ -227,8 +227,6 @@ const Inventory = () => {
 
   // Edit minimum stock level
   const handleEditMinStock = (itemId: string) => {
-    // In a real app, you would open a dialog to edit the value
-    // For this demo, we'll just show a toast
     if (!permissions.canEditData) {
       toast.error("Permission denied", {
         description: "You do not have permission to edit inventory settings."
@@ -245,7 +243,6 @@ const Inventory = () => {
   const openTransferDialog = (item: ExtendedInventoryItem | null = null) => {
     setSelectedItem(item);
     
-    // Reset form with default values
     transferForm.reset({
       sourceLocation: "warehouse",
       destinationLocation: "",
@@ -265,7 +262,6 @@ const Inventory = () => {
 
   // Handle inventory transfer
   const handleTransferInventory = async (data: TransferFormData) => {
-    // Validate transfer data
     if (data.sourceLocation === data.destinationLocation) {
       toast.error("Invalid transfer", {
         description: "Source and destination cannot be the same"
@@ -288,14 +284,12 @@ const Inventory = () => {
     }
 
     try {
-      // For each item in the transfer
       const itemsToTransfer = data.items.map(item => {
         const inventoryItem = inventoryItems.find(invItem => invItem.id === item.itemId);
         if (!inventoryItem) {
           throw new Error(`Item ${item.itemId} not found`);
         }
         
-        // Check if we have enough inventory in the source location
         let sourceQty = 0;
         
         if (data.sourceLocation === "warehouse") {
@@ -315,7 +309,6 @@ const Inventory = () => {
         };
       });
       
-      // Update inventory data for all valid items
       setInventoryItems(currentItems => {
         return currentItems.map(item => {
           const transferItem = itemsToTransfer.find(t => t.item.id === item.id);
@@ -324,7 +317,6 @@ const Inventory = () => {
           let updatedItem = { ...item };
           const quantity = transferItem.quantity;
           
-          // Remove from source
           if (data.sourceLocation === "warehouse") {
             updatedItem.inStock -= quantity;
           } else {
@@ -336,7 +328,6 @@ const Inventory = () => {
             });
           }
           
-          // Add to destination
           if (data.destinationLocation === "warehouse") {
             updatedItem.inStock += quantity;
           } else {
@@ -345,10 +336,8 @@ const Inventory = () => {
             );
             
             if (existingUnitIndex >= 0) {
-              // Update existing unit
               updatedItem.mobileUnits[existingUnitIndex].quantity += quantity;
             } else {
-              // Add to new unit
               const targetUnit = mobileUnits.find(unit => unit.id === data.destinationLocation);
               if (targetUnit) {
                 updatedItem.mobileUnits.push({
@@ -421,7 +410,6 @@ const Inventory = () => {
               <MoveRight className="mr-2 h-4 w-4" /> Transfers
             </TabsTrigger>
           </TabsList>
-          
           
           <TabsContent value="all-inventory" className="space-y-6">
             <div className="grid gap-6 md:grid-cols-4">
@@ -625,7 +613,6 @@ const Inventory = () => {
             </Card>
           </TabsContent>
           
-          
           <TabsContent value="warehouse" className="space-y-6">
             <Card>
               <CardHeader>
@@ -692,7 +679,6 @@ const Inventory = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          
           
           <TabsContent value="mobile-units" className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -766,7 +752,6 @@ const Inventory = () => {
             </div>
           </TabsContent>
           
-          
           <TabsContent value="alerts" className="space-y-6">
             <Card>
               <CardHeader>
@@ -820,7 +805,6 @@ const Inventory = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          
           
           <TabsContent value="transfers" className="space-y-6">
             <Card>
@@ -900,4 +884,113 @@ const Inventory = () => {
                       <FormLabel>Destination Location</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select destination location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="warehouse">Main Warehouse</SelectItem>
+                          {mobileUnits.map(unit => (
+                            <SelectItem key={unit.id} value={unit.id}>
+                              {unit.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="space-y-4">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="grid grid-cols-3 gap-4 items-end">
+                    <FormField
+                      control={transferForm.control}
+                      name={`items.${index}.itemId`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Item</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select item" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {inventoryItems.map(item => (
+                                <SelectItem key={item.id} value={item.id}>
+                                  {item.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={transferForm.control}
+                      name={`items.${index}.quantity`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={1}
+                              onChange={e => field.onChange(Number(e.target.value))}
+                              value={field.value}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => remove(index)}
+                      className="h-10 w-10"
+                      disabled={fields.length === 1}
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Remove item</span>
+                    </Button>
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addItemToTransfer}
+                  className="mt-2"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Another Item
+                </Button>
+              </div>
+
+              <DialogFooter className="mt-6">
+                <Button type="submit">Transfer Inventory</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
+};
+
+export default Inventory;
