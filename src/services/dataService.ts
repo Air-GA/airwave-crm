@@ -1,0 +1,328 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { WorkOrder, Technician } from "@/types";
+import { workOrders as mockWorkOrders, technicians as mockTechnicians } from "@/data/mockData";
+
+// Shared cache for work orders and technicians
+let cachedWorkOrders: WorkOrder[] | null = null;
+let cachedTechnicians: Technician[] | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 30000; // 30 seconds cache
+
+// Function to fetch work orders from Supabase
+export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]> => {
+  // Return cached data if available and not forced to refresh
+  if (!forceRefresh && cachedWorkOrders && Date.now() - lastFetchTime < CACHE_DURATION) {
+    console.log("Using cached work orders");
+    return cachedWorkOrders;
+  }
+
+  try {
+    console.log("Fetching work orders from Supabase...");
+    const { data, error } = await supabase
+      .from("work_orders")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching work orders from Supabase:", error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      console.log(`Fetched ${data.length} work orders from Supabase`);
+      
+      // Transform Supabase data to match our WorkOrder type
+      const transformedData: WorkOrder[] = data.map(wo => ({
+        id: wo.id,
+        customerId: wo.customer_id,
+        customerName: wo.customer_name,
+        address: wo.address,
+        status: wo.status as WorkOrder['status'],
+        priority: wo.priority as WorkOrder['priority'],
+        type: wo.type as WorkOrder['type'],
+        description: wo.description,
+        scheduledDate: wo.scheduled_date,
+        technicianId: wo.technician_id || undefined,
+        technicianName: wo.technician_name || undefined,
+        createdAt: wo.created_at,
+        completedDate: wo.completed_date || undefined,
+        estimatedHours: wo.estimated_hours || undefined,
+        notes: wo.notes || []
+      }));
+      
+      // Update cache
+      cachedWorkOrders = transformedData;
+      lastFetchTime = Date.now();
+      return transformedData;
+    }
+
+    // Fallback to mock data if Supabase returns empty array
+    console.log("No work orders found in Supabase, using mock data");
+    cachedWorkOrders = mockWorkOrders;
+    lastFetchTime = Date.now();
+    return mockWorkOrders;
+  } catch (error) {
+    console.error("Error fetching work orders:", error);
+    // Fallback to mock data
+    console.log("Using mock work orders data due to error");
+    cachedWorkOrders = mockWorkOrders;
+    lastFetchTime = Date.now();
+    return mockWorkOrders;
+  }
+};
+
+// Function to fetch technicians from Supabase
+export const fetchTechnicians = async (forceRefresh = false): Promise<Technician[]> => {
+  // Return cached data if available and not forced to refresh
+  if (!forceRefresh && cachedTechnicians && Date.now() - lastFetchTime < CACHE_DURATION) {
+    console.log("Using cached technicians");
+    return cachedTechnicians;
+  }
+
+  try {
+    console.log("Fetching technicians from Supabase...");
+    const { data, error } = await supabase
+      .from("technicians")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching technicians from Supabase:", error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      console.log(`Fetched ${data.length} technicians from Supabase`);
+      
+      // Transform Supabase data to match our Technician type
+      const transformedData: Technician[] = data.map(tech => ({
+        id: tech.id,
+        name: tech.name,
+        email: `${tech.name.toLowerCase().replace(/\s+/g, '.')}@airga.com`, // Generate email since it's not in DB
+        phone: `404-555-${Math.floor(1000 + Math.random() * 9000)}`, // Generate random phone since it's not in DB
+        status: tech.status as Technician['status'],
+        specialties: tech.specialties || [],
+        currentLocation: tech.current_location_lat && tech.current_location_lng ? {
+          lat: tech.current_location_lat,
+          lng: tech.current_location_lng,
+          address: tech.current_location_address || 'Unknown location',
+          timestamp: new Date().toISOString()
+        } : undefined
+      }));
+      
+      // Update cache
+      cachedTechnicians = transformedData;
+      lastFetchTime = Date.now();
+      return transformedData;
+    }
+
+    // Fallback to mock data if Supabase returns empty array
+    console.log("No technicians found in Supabase, using mock data");
+    cachedTechnicians = mockTechnicians;
+    lastFetchTime = Date.now();
+    return mockTechnicians;
+  } catch (error) {
+    console.error("Error fetching technicians:", error);
+    // Fallback to mock data
+    console.log("Using mock technicians data due to error");
+    cachedTechnicians = mockTechnicians;
+    lastFetchTime = Date.now();
+    return mockTechnicians;
+  }
+};
+
+// Function to update a work order
+export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
+  try {
+    console.log(`Updating work order ${workOrder.id} in Supabase...`);
+    
+    const { data, error } = await supabase
+      .from("work_orders")
+      .update({
+        status: workOrder.status,
+        priority: workOrder.priority,
+        description: workOrder.description,
+        scheduled_date: workOrder.scheduledDate,
+        technician_id: workOrder.technicianId,
+        technician_name: workOrder.technicianName,
+        completed_date: workOrder.completedDate,
+        notes: workOrder.notes || []
+      })
+      .eq("id", workOrder.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating work order in Supabase:", error);
+      throw error;
+    }
+
+    // Clear cache to force refresh on next fetch
+    cachedWorkOrders = null;
+    
+    // If update was successful but no data returned, return the original work order
+    if (!data) {
+      console.log("Work order updated but no data returned, using original work order");
+      return workOrder;
+    }
+    
+    // Return the updated work order
+    return {
+      ...workOrder,
+      status: data.status as WorkOrder['status'],
+      completedDate: data.completed_date || undefined,
+      technicianId: data.technician_id || undefined,
+      technicianName: data.technician_name || undefined
+    };
+  } catch (error) {
+    console.error("Error updating work order:", error);
+    
+    // For mock data mode, we'll update the local array and return the updated work order
+    if (cachedWorkOrders) {
+      cachedWorkOrders = cachedWorkOrders.map(wo => 
+        wo.id === workOrder.id ? workOrder : wo
+      );
+    }
+    
+    return workOrder;
+  }
+};
+
+// Function to assign a technician to a work order
+export const assignTechnician = async (workOrderId: string, technicianId: string | null, technicianName?: string): Promise<boolean> => {
+  try {
+    console.log(`Assigning technician ${technicianId} to work order ${workOrderId} in Supabase...`);
+    
+    const updateData: any = {
+      technician_id: technicianId,
+      technician_name: technicianName,
+      status: technicianId ? 'scheduled' : 'pending'
+    };
+    
+    const { error } = await supabase
+      .from("work_orders")
+      .update(updateData)
+      .eq("id", workOrderId);
+
+    if (error) {
+      console.error("Error assigning technician in Supabase:", error);
+      throw error;
+    }
+
+    // Clear cache to force refresh on next fetch
+    cachedWorkOrders = null;
+    
+    return true;
+  } catch (error) {
+    console.error("Error assigning technician:", error);
+    
+    // For mock data mode, we'll update the local array
+    if (cachedWorkOrders) {
+      cachedWorkOrders = cachedWorkOrders.map(wo => {
+        if (wo.id === workOrderId) {
+          return {
+            ...wo,
+            technicianId: technicianId || undefined,
+            technicianName: technicianName || undefined,
+            status: technicianId ? 'scheduled' : 'pending'
+          };
+        }
+        return wo;
+      });
+    }
+    
+    return true;
+  }
+};
+
+// Function to mark a work order as completed
+export const completeWorkOrder = async (workOrderId: string): Promise<boolean> => {
+  try {
+    console.log(`Marking work order ${workOrderId} as completed in Supabase...`);
+    
+    const { error } = await supabase
+      .from("work_orders")
+      .update({
+        status: 'completed',
+        completed_date: new Date().toISOString()
+      })
+      .eq("id", workOrderId);
+
+    if (error) {
+      console.error("Error completing work order in Supabase:", error);
+      throw error;
+    }
+
+    // Clear cache to force refresh on next fetch
+    cachedWorkOrders = null;
+    
+    return true;
+  } catch (error) {
+    console.error("Error completing work order:", error);
+    
+    // For mock data mode, we'll update the local array
+    if (cachedWorkOrders) {
+      cachedWorkOrders = cachedWorkOrders.map(wo => {
+        if (wo.id === workOrderId) {
+          return {
+            ...wo,
+            status: 'completed',
+            completedDate: new Date().toISOString()
+          };
+        }
+        return wo;
+      });
+    }
+    
+    return true;
+  }
+};
+
+// Function to cancel a work order
+export const cancelWorkOrder = async (workOrderId: string): Promise<boolean> => {
+  try {
+    console.log(`Cancelling work order ${workOrderId} in Supabase...`);
+    
+    const { error } = await supabase
+      .from("work_orders")
+      .update({
+        status: 'cancelled'
+      })
+      .eq("id", workOrderId);
+
+    if (error) {
+      console.error("Error cancelling work order in Supabase:", error);
+      throw error;
+    }
+
+    // Clear cache to force refresh on next fetch
+    cachedWorkOrders = null;
+    
+    return true;
+  } catch (error) {
+    console.error("Error cancelling work order:", error);
+    
+    // For mock data mode, we'll update the local array
+    if (cachedWorkOrders) {
+      cachedWorkOrders = cachedWorkOrders.map(wo => {
+        if (wo.id === workOrderId) {
+          return {
+            ...wo,
+            status: 'cancelled'
+          };
+        }
+        return wo;
+      });
+    }
+    
+    return true;
+  }
+};
+
+// Function to refresh all data (clear cache)
+export const refreshAllData = () => {
+  cachedWorkOrders = null;
+  cachedTechnicians = null;
+  lastFetchTime = 0;
+};

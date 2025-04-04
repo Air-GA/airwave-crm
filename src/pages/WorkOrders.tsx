@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { WorkOrder, workOrders } from "@/data/mockData";
+import { WorkOrder } from "@/types";
 import { technicians } from "@/data/mockData";
 import { AlertCircle, Calendar, Check, ChevronDown, ClipboardCheck, Eye, Filter, MapPin, MoreHorizontal, MoveHorizontal, Plus, Search, UserRound, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -39,6 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SyncButton } from '@/components/SyncButton';
 import { syncWorkOrdersFromCRM } from '@/services/crmSyncService';
 import { useQueryClient } from '@tanstack/react-query';
+import { fetchWorkOrders, assignTechnician, completeWorkOrder, cancelWorkOrder, fetchTechnicians } from "@/services/dataService";
 
 const WorkOrders = () => {
   const isMobile = useIsMobile();
@@ -50,10 +51,42 @@ const WorkOrders = () => {
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [technicianFilter, setTechnicianFilter] = useState<string>("all");
   const [showUnassignedOnly, setShowUnassignedOnly] = useState<boolean>(false);
-  const [localWorkOrders, setLocalWorkOrders] = useState<WorkOrder[]>(workOrders);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [availableTechnicians, setAvailableTechnicians] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  const filteredWorkOrders = localWorkOrders.filter(order => {
+  useEffect(() => {
+    loadWorkOrders();
+  }, []);
+
+  const loadWorkOrders = async () => {
+    setIsLoading(true);
+    try {
+      const orders = await fetchWorkOrders();
+      setWorkOrders(orders);
+      
+      const techNames = Array.from(
+        new Set(
+          orders
+            .filter(order => order.technicianName)
+            .map(order => order.technicianName as string)
+        )
+      );
+      setAvailableTechnicians(techNames);
+    } catch (error) {
+      console.error("Error loading work orders:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load work orders. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredWorkOrders = workOrders.filter(order => {
     const matchesSearch = !searchQuery || 
       order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -93,14 +126,6 @@ const WorkOrders = () => {
     return matchesSearch && matchesStatus && matchesPriority && matchesDate && matchesTechnician && matchesUnassigned;
   });
   
-  const availableTechnicians = Array.from(
-    new Set(
-      localWorkOrders
-        .filter(order => order.technicianName)
-        .map(order => order.technicianName) as string[]
-    )
-  );
-  
   const clearFilters = () => {
     setStatusFilter("all");
     setPriorityFilter("all");
@@ -109,81 +134,126 @@ const WorkOrders = () => {
     setShowUnassignedOnly(false);
   };
 
-  const cancelWorkOrder = (workOrderId: string) => {
-    setLocalWorkOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === workOrderId 
-          ? { ...order, status: 'cancelled' } 
-          : order
-      )
-    );
-    toast({
-      title: "Work Order Cancelled",
-      description: `Work order #${workOrderId} has been cancelled.`,
-    });
-  };
-
-  const markAsCompleted = (workOrderId: string) => {
-    setLocalWorkOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === workOrderId 
-          ? { ...order, status: 'completed', completedDate: new Date().toISOString() } 
-          : order
-      )
-    );
-    toast({
-      title: "Work Order Completed",
-      description: `Work order #${workOrderId} has been marked as completed.`,
-    });
-  };
-  
-  const reassignWorkOrder = (workOrderId: string, technicianId: string | null) => {
-    setLocalWorkOrders(prevOrders => 
-      prevOrders.map(order => {
-        if (order.id === workOrderId) {
-          if (technicianId) {
-            const tech = technicians.find(t => t.id === technicianId);
-            return { 
-              ...order, 
-              technicianId: technicianId,
-              technicianName: tech ? tech.name : undefined,
-              status: technicianId ? 'scheduled' : 'pending'
-            };
-          } else {
-            return {
-              ...order,
-              technicianId: undefined,
-              technicianName: undefined,
-              status: 'pending'
-            };
-          }
-        }
-        return order;
-      })
-    );
-    
-    if (technicianId) {
-      const tech = technicians.find(t => t.id === technicianId);
-      if (tech) {
+  const handleCancelWorkOrder = async (workOrderId: string) => {
+    try {
+      const success = await cancelWorkOrder(workOrderId);
+      if (success) {
+        setWorkOrders(prevOrders => 
+          prevOrders.map(order => 
+            order.id === workOrderId 
+              ? { ...order, status: 'cancelled' } 
+              : order
+          )
+        );
         toast({
-          title: "Work Order Reassigned",
-          description: `Work order #${workOrderId} has been assigned to ${tech.name}.`,
+          title: "Work Order Cancelled",
+          description: `Work order #${workOrderId} has been cancelled.`,
         });
       }
-    } else {
+    } catch (error) {
+      console.error("Error cancelling work order:", error);
       toast({
-        title: "Work Order Unassigned",
-        description: `Technician has been removed from work order #${workOrderId}.`,
+        title: "Error",
+        description: "Failed to cancel work order. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMarkAsCompleted = async (workOrderId: string) => {
+    try {
+      const success = await completeWorkOrder(workOrderId);
+      if (success) {
+        setWorkOrders(prevOrders => 
+          prevOrders.map(order => 
+            order.id === workOrderId 
+              ? { ...order, status: 'completed', completedDate: new Date().toISOString() } 
+              : order
+          )
+        );
+        toast({
+          title: "Work Order Completed",
+          description: `Work order #${workOrderId} has been marked as completed.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error completing work order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark work order as completed. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleReassignWorkOrder = async (workOrderId: string, technicianId: string | null) => {
+    try {
+      const tech = technicianId ? technicians.find(t => t.id === technicianId) : null;
+      const techName = tech ? tech.name : undefined;
+      
+      const success = await assignTechnician(workOrderId, technicianId, techName);
+      
+      if (success) {
+        setWorkOrders(prevOrders => 
+          prevOrders.map(order => {
+            if (order.id === workOrderId) {
+              return { 
+                ...order, 
+                technicianId: technicianId || undefined,
+                technicianName: techName,
+                status: technicianId ? 'scheduled' : 'pending'
+              };
+            }
+            return order;
+          })
+        );
+        
+        if (technicianId && techName) {
+          toast({
+            title: "Work Order Reassigned",
+            description: `Work order #${workOrderId} has been assigned to ${techName}.`,
+          });
+        } else {
+          toast({
+            title: "Work Order Unassigned",
+            description: `Technician has been removed from work order #${workOrderId}.`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error reassigning work order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reassign work order. Please try again.",
+        variant: "destructive",
       });
     }
   };
   
   const handleSyncWorkOrders = async () => {
-    const syncedOrders = await syncWorkOrdersFromCRM();
-    if (syncedOrders.length > 0) {
-      queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+    setIsLoading(true);
+    try {
+      const syncedOrders = await syncWorkOrdersFromCRM();
+      if (syncedOrders.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+        await loadWorkOrders();
+        toast({
+          title: "Sync Completed",
+          description: `${syncedOrders.length} work orders synced from CRM.`,
+        });
+      }
+      return syncedOrders;
+    } catch (error) {
+      console.error("Error syncing work orders:", error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync work orders from CRM. Please try again.",
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setIsLoading(false);
     }
-    return syncedOrders;
   };
 
   return (
@@ -477,19 +547,25 @@ const WorkOrders = () => {
           </div>
         )}
         
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredWorkOrders.map(workOrder => (
-            <WorkOrderCard 
-              key={workOrder.id} 
-              workOrder={workOrder} 
-              onCancel={cancelWorkOrder}
-              onComplete={markAsCompleted}
-              onReassign={reassignWorkOrder}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredWorkOrders.map(workOrder => (
+              <WorkOrderCard 
+                key={workOrder.id} 
+                workOrder={workOrder} 
+                onCancel={handleCancelWorkOrder}
+                onComplete={handleMarkAsCompleted}
+                onReassign={handleReassignWorkOrder}
+              />
+            ))}
+          </div>
+        )}
         
-        {filteredWorkOrders.length === 0 && (
+        {!isLoading && filteredWorkOrders.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <ClipboardCheck className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">No work orders found</h3>
@@ -555,7 +631,7 @@ const WorkOrderCard = ({ workOrder, onCancel, onComplete, onReassign }: WorkOrde
               </Badge>
             </div>
             <CardTitle className="mt-2 text-lg font-medium">
-              #{workOrder.id} - {workOrder.type.charAt(0).toUpperCase() + workOrder.type.slice(1)}
+              #{workOrder.id.substring(0, 8)} - {workOrder.type.charAt(0).toUpperCase() + workOrder.type.slice(1)}
             </CardTitle>
           </div>
           <DropdownMenu>
@@ -567,7 +643,7 @@ const WorkOrderCard = ({ workOrder, onCancel, onComplete, onReassign }: WorkOrde
             <DropdownMenuContent align="end">
               <DropdownMenuItem>View Details</DropdownMenuItem>
               <DropdownMenuItem>Edit Work Order</DropdownMenuItem>
-              <DropdownMenuItem>Assign Technician</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowReassignDialog(true)}>Assign Technician</DropdownMenuItem>
               <DropdownMenuSeparator />
               {workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (
                 <>
