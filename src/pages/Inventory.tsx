@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -76,7 +75,8 @@ import {
   ChevronUp,
   Calendar,
   User,
-  Trash2
+  Trash2,
+  Phone
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
@@ -345,7 +345,6 @@ const Inventory = () => {
     }));
   };
 
-  // Updated to show removal dialog instead of directly removing
   const openRemovalDialog = (unitId: string, itemId: string, invoiceNumber?: string) => {
     if (!permissions.canEditData) {
       toast.error("Permission denied", {
@@ -371,7 +370,6 @@ const Inventory = () => {
       invoiceNumber
     });
 
-    // Reset removal quantity to either 1 or the total if it's only 1
     setRemovalQuantity(unitItem.quantity > 1 ? 1 : unitItem.quantity);
   };
 
@@ -384,7 +382,6 @@ const Inventory = () => {
         return currentItems.map(item => {
           if (item.id === itemId) {
             if (removeAll) {
-              // Remove the entire unit entry if removing all
               const updatedMobileUnits = item.mobileUnits.filter(
                 unit => !(unit.unitId === unitId && (!invoiceNumber || unit.invoiceNumber === invoiceNumber))
               );
@@ -393,7 +390,6 @@ const Inventory = () => {
                 mobileUnits: updatedMobileUnits
               };
             } else {
-              // Reduce the quantity
               const updatedMobileUnits = item.mobileUnits.map(unit => {
                 if (unit.unitId === unitId && (!invoiceNumber || unit.invoiceNumber === invoiceNumber)) {
                   return {
@@ -642,9 +638,7 @@ const Inventory = () => {
             </TabsTrigger>
           </TabsList>
           
-          {/* All Inventory Tab Content */}
           <TabsContent value="all-inventory" className="space-y-6">
-            {/* Summary Cards */}
             <div className="grid gap-6 md:grid-cols-4">
               <Card>
                 <CardHeader className="pb-2">
@@ -693,7 +687,6 @@ const Inventory = () => {
               </Card>
             </div>
             
-            {/* Search and Filters */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -758,7 +751,6 @@ const Inventory = () => {
               </div>
             </div>
             
-            {/* Inventory Table */}
             <Card>
               <CardContent className="p-0">
                 <Table>
@@ -848,7 +840,6 @@ const Inventory = () => {
             </Card>
           </TabsContent>
           
-          {/* Warehouse Tab Content */}
           <TabsContent value="warehouse" className="space-y-6">
             <Card>
               <CardHeader>
@@ -904,7 +895,6 @@ const Inventory = () => {
             </Card>
           </TabsContent>
           
-          {/* Mobile Units Tab Content */}
           <TabsContent value="mobile-units" className="space-y-6">
             {mobileUnits.map(unit => (
               <Card key={unit.id} className="mb-6">
@@ -1002,7 +992,6 @@ const Inventory = () => {
             ))}
           </TabsContent>
           
-          {/* Alerts Tab Content */}
           <TabsContent value="alerts" className="space-y-6">
             <Card>
               <CardHeader>
@@ -1062,7 +1051,6 @@ const Inventory = () => {
             </Card>
           </TabsContent>
           
-          {/* Transfers Tab Content */}
           <TabsContent value="transfers" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
@@ -1142,7 +1130,6 @@ const Inventory = () => {
         </Tabs>
       </div>
       
-      {/* Transfer Dialog */}
       <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1321,7 +1308,6 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Item Removal Dialog */}
       <AlertDialog open={removalDialog.isOpen} onOpenChange={closeRemovalDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

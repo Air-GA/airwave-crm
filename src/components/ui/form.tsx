@@ -59,6 +59,8 @@ const useFormField = () => {
       formDescriptionId: `${itemContext?.id || "form"}-form-item-description`,
       formMessageId: `${itemContext?.id || "form"}-form-item-message`,
       invalid: false,
+      // Add error property as undefined to avoid TypeScript errors
+      error: undefined
     }
   }
 
