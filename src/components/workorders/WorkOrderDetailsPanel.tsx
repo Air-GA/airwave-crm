@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Button, 
@@ -5,9 +6,9 @@ import {
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
-  SelectValue,
-  Textarea
-} from "@/components/ui";
+  SelectValue
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { WorkOrder } from "@/types";
 import { updateWorkOrder } from "@/services/workOrderService";
 
