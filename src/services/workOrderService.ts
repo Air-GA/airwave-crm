@@ -1,4 +1,4 @@
-import { WorkOrder, Customer } from '@/types';
+import { WorkOrder, Customer, ProgressStep } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
 import { customers as mockCustomers, workOrders as mockWorkOrders } from '@/data/mockData';
