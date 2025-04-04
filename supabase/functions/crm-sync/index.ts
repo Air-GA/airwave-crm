@@ -20,6 +20,14 @@ const CRM_API_KEY = Deno.env.get("CRM_API_KEY") || "";
 // Utility function to call your existing CRM API
 async function callCrmApi(endpoint: string, method = "GET", body?: any) {
   try {
+    console.log(`Calling CRM API: ${CRM_API_BASE_URL}${endpoint}`);
+    
+    // In development or when CRM isn't configured, use mock data
+    if (!CRM_API_BASE_URL || !CRM_API_KEY) {
+      console.log("No CRM API configuration found, returning mock data");
+      return getMockData(endpoint);
+    }
+    
     const response = await fetch(`${CRM_API_BASE_URL}${endpoint}`, {
       method,
       headers: {
@@ -30,7 +38,8 @@ async function callCrmApi(endpoint: string, method = "GET", body?: any) {
     });
     
     if (!response.ok) {
-      throw new Error(`CRM API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text().catch(() => "No error details");
+      throw new Error(`CRM API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
     
     return await response.json();
@@ -38,6 +47,101 @@ async function callCrmApi(endpoint: string, method = "GET", body?: any) {
     console.error("Error calling CRM API:", error);
     throw error;
   }
+}
+
+// Function to provide mock data when CRM API is not available
+function getMockData(endpoint: string) {
+  console.log(`Generating mock data for endpoint: ${endpoint}`);
+  
+  if (endpoint === "/technicians") {
+    return [
+      {
+        id: "tech-001",
+        name: "John Smith",
+        status: "available",
+        skills: ["HVAC", "Plumbing", "Electrical"],
+        location: {
+          address: "123 Main St, City, State",
+          latitude: 37.7749,
+          longitude: -122.4194
+        }
+      },
+      {
+        id: "tech-002",
+        name: "Alice Johnson",
+        status: "busy",
+        skills: ["Plumbing", "Carpentry"],
+        location: {
+          address: "456 Oak Ave, Town, State",
+          latitude: 37.7748,
+          longitude: -122.4208
+        }
+      },
+      {
+        id: "tech-003",
+        name: "Bob Williams",
+        status: "off-duty",
+        skills: ["Electrical", "Security Systems"],
+        location: null
+      }
+    ];
+  } else if (endpoint === "/work-orders") {
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    return [
+      {
+        id: "wo-001",
+        customerId: "cust-001",
+        customerName: "Sarah Parker",
+        address: "789 Pine St, City, State",
+        type: "repair",
+        description: "Air conditioner not cooling",
+        priority: "high",
+        status: "scheduled",
+        scheduledDate: today.toISOString(),
+        createdAt: yesterday.toISOString(),
+        technicianId: "tech-001",
+        technicianName: "John Smith",
+        estimatedHours: 2
+      },
+      {
+        id: "wo-002",
+        customerId: "cust-002",
+        customerName: "Michael Brown",
+        address: "101 Elm St, City, State",
+        type: "maintenance",
+        description: "Annual HVAC maintenance",
+        priority: "medium",
+        status: "pending",
+        scheduledDate: tomorrow.toISOString(),
+        createdAt: yesterday.toISOString(),
+        estimatedHours: 1.5
+      },
+      {
+        id: "wo-003",
+        customerId: "cust-003",
+        customerName: "Emily Davis",
+        address: "202 Cedar Ave, City, State",
+        type: "installation",
+        description: "Install new water heater",
+        priority: "medium",
+        status: "in-progress",
+        scheduledDate: today.toISOString(),
+        createdAt: yesterday.toISOString(),
+        completedDate: null,
+        technicianId: "tech-002",
+        technicianName: "Alice Johnson",
+        estimatedHours: 3
+      }
+    ];
+  }
+  
+  // Default empty response
+  return [];
 }
 
 // Handler for the edge function
@@ -48,14 +152,22 @@ serve(async (req) => {
   }
   
   try {
-    const url = new URL(req.url);
-    const action = url.pathname.split("/").pop();
+    console.log("CRM sync function called:", req.url);
+    
     const body = req.method !== "GET" ? await req.json() : undefined;
+    console.log("Request body:", body);
+    
+    if (!body || !body.action) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request, action parameter is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     let result;
     
     // Route to different sync functions based on the action parameter
-    switch (action) {
+    switch (body.action) {
       case "sync-technicians":
         result = await syncTechnicians();
         break;
@@ -67,7 +179,7 @@ serve(async (req) => {
         break;
       default:
         return new Response(
-          JSON.stringify({ error: "Invalid action specified" }),
+          JSON.stringify({ error: `Invalid action specified: ${body.action}` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
@@ -80,7 +192,10 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in CRM sync:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
@@ -220,6 +335,8 @@ async function pushUpdate(data: any) {
 
 // Helper functions to map between CRM and Supabase schemas
 function mapStatus(crmStatus: string): 'available' | 'busy' | 'off-duty' {
+  if (!crmStatus) return 'off-duty';
+  
   const statusMap: Record<string, 'available' | 'busy' | 'off-duty'> = {
     'available': 'available',
     'active': 'available',
@@ -236,6 +353,8 @@ function mapStatus(crmStatus: string): 'available' | 'busy' | 'off-duty' {
 }
 
 function mapOrderType(crmType: string): 'repair' | 'maintenance' | 'installation' | 'inspection' {
+  if (!crmType) return 'maintenance';
+  
   const typeMap: Record<string, 'repair' | 'maintenance' | 'installation' | 'inspection'> = {
     'repair': 'repair',
     'fix': 'repair',
@@ -252,6 +371,8 @@ function mapOrderType(crmType: string): 'repair' | 'maintenance' | 'installation
 }
 
 function mapPriority(crmPriority: string): 'low' | 'medium' | 'high' | 'emergency' {
+  if (!crmPriority) return 'medium';
+  
   const priorityMap: Record<string, 'low' | 'medium' | 'high' | 'emergency'> = {
     'low': 'low',
     'normal': 'medium',
@@ -266,6 +387,8 @@ function mapPriority(crmPriority: string): 'low' | 'medium' | 'high' | 'emergenc
 }
 
 function mapOrderStatus(crmStatus: string): 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled' {
+  if (!crmStatus) return 'pending';
+  
   const statusMap: Record<string, 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled'> = {
     'pending': 'pending',
     'new': 'pending',
