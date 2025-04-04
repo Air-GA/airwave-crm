@@ -34,29 +34,29 @@ export const RoleViewport = ({
     
     switch(pageName.toLowerCase()) {
       case 'dashboard':
-        return ['manager', 'csr', 'sales', 'hr', 'tech', 'user'];
+        return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
       case 'customers':
         return ['manager', 'csr', 'sales', 'user'];
       case 'work orders':
-        return ['manager', 'csr', 'tech', 'user'];
+        return ['manager', 'csr', 'tech', 'customer', 'user'];
       case 'schedule':
-        return ['manager', 'csr', 'tech', 'hr', 'user'];
+        return ['manager', 'csr', 'tech', 'hr', 'customer', 'user'];
       case 'dispatch':
         return ['manager', 'csr', 'tech', 'user'];
       case 'inventory':
         return ['manager', 'csr', 'tech', 'user'];
       case 'invoices':
-        return ['manager', 'csr', 'sales', 'user'];
+        return ['manager', 'csr', 'sales', 'customer', 'user'];
       case 'reports':
         return ['manager', 'hr', 'user'];
       case 'messages':
-        return ['manager', 'csr', 'sales', 'hr', 'tech', 'user'];
+        return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
       case 'notifications':
-        return ['manager', 'csr', 'sales', 'hr', 'tech', 'user'];
+        return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
       case 'timesheets':
-        return ['manager', 'hr', 'user'];
+        return ['manager', 'hr', 'tech', 'user'];
       case 'settings':
-        return ['manager', 'user'];
+        return ['manager', 'customer', 'user'];
       default:
         return baseRoles;
     }

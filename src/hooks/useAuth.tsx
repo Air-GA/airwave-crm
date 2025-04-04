@@ -9,6 +9,7 @@ interface AuthUser {
   email: string;
   role: UserRole;
   name?: string;
+  associatedIds?: string[]; // IDs of records this user is associated with (e.g., customer IDs for sales)
 }
 
 interface AuthContextType {
@@ -23,6 +24,11 @@ interface AuthContextType {
     canViewHRInfo: boolean;
     canViewTechnicianData: boolean;
     canDispatchTechnicians: boolean;
+    // Added more granular permissions
+    canViewOnlyAssociatedCustomers: boolean;
+    canViewCustomerPaymentHistory: boolean;
+    canViewFuturePaymentPlans: boolean;
+    canViewOnlyOwnWorkOrders: boolean;
   };
   login: (role: UserRole) => void;
   logout: () => void;
@@ -41,6 +47,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: true,
         canViewTechnicianData: true,
         canDispatchTechnicians: true,
+        canViewOnlyAssociatedCustomers: false, // Admin sees all customers
+        canViewCustomerPaymentHistory: true,
+        canViewFuturePaymentPlans: true,
+        canViewOnlyOwnWorkOrders: false, // Admin sees all work orders
       };
     case 'manager':
       return {
@@ -51,6 +61,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: true,
         canViewTechnicianData: true,
         canDispatchTechnicians: true,
+        canViewOnlyAssociatedCustomers: false, // Managers see all customers
+        canViewCustomerPaymentHistory: true,
+        canViewFuturePaymentPlans: true,
+        canViewOnlyOwnWorkOrders: false, // Managers see all work orders
       };
     case 'csr':
       return {
@@ -61,6 +75,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: false,
         canViewTechnicianData: false,
         canDispatchTechnicians: true,
+        canViewOnlyAssociatedCustomers: false, // CSRs see all customers
+        canViewCustomerPaymentHistory: true,
+        canViewFuturePaymentPlans: true,
+        canViewOnlyOwnWorkOrders: false, // CSRs see all work orders
       };
     case 'sales':
       return {
@@ -71,6 +89,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: false,
         canViewTechnicianData: false,
         canDispatchTechnicians: false,
+        canViewOnlyAssociatedCustomers: true, // Sales only see customers they sold to
+        canViewCustomerPaymentHistory: true,
+        canViewFuturePaymentPlans: true,
+        canViewOnlyOwnWorkOrders: true, // Sales only see own work orders
       };
     case 'hr':
       return {
@@ -81,6 +103,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: true,
         canViewTechnicianData: false,
         canDispatchTechnicians: false,
+        canViewOnlyAssociatedCustomers: false, // HR doesn't see customers
+        canViewCustomerPaymentHistory: false,
+        canViewFuturePaymentPlans: false,
+        canViewOnlyOwnWorkOrders: false, // HR doesn't see work orders
       };
     case 'tech':
       return {
@@ -91,6 +117,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: false,
         canViewTechnicianData: true,
         canDispatchTechnicians: false,
+        canViewOnlyAssociatedCustomers: false, // Techs see all customers
+        canViewCustomerPaymentHistory: false,
+        canViewFuturePaymentPlans: false,
+        canViewOnlyOwnWorkOrders: true, // Techs only see own work orders
       };
     case 'customer':
       return {
@@ -101,6 +131,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: false,
         canViewTechnicianData: false,
         canDispatchTechnicians: false,
+        canViewOnlyAssociatedCustomers: false, // Not applicable for customer
+        canViewCustomerPaymentHistory: true, // Customers can see their payment history
+        canViewFuturePaymentPlans: true, // Customers can see future payment plans
+        canViewOnlyOwnWorkOrders: true, // Customers only see own work orders
       };
     case 'user':
       return {
@@ -111,6 +145,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: false,
         canViewTechnicianData: false,
         canDispatchTechnicians: false,
+        canViewOnlyAssociatedCustomers: false,
+        canViewCustomerPaymentHistory: true,
+        canViewFuturePaymentPlans: true,
+        canViewOnlyOwnWorkOrders: false,
       };
     default:
       return {
@@ -121,6 +159,10 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewHRInfo: false,
         canViewTechnicianData: false,
         canDispatchTechnicians: false,
+        canViewOnlyAssociatedCustomers: false,
+        canViewCustomerPaymentHistory: false,
+        canViewFuturePaymentPlans: false,
+        canViewOnlyOwnWorkOrders: false,
       };
   }
 };
@@ -134,7 +176,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     id: '1',
     email: 'admin@air-ga.net',
     role: 'admin',
-    name: 'Admin User'
+    name: 'Admin User',
+    associatedIds: [] // In a real app, this would be populated with actual IDs
   });
 
   useEffect(() => {
@@ -145,10 +188,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (rolePreview && ['admin', 'manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'].includes(rolePreview)) {
       // If this is a preview iframe, use the role from query params
       if (user && user.role === 'admin') {
+        // Create mock associated IDs for role preview
+        let mockAssociatedIds: string[] = [];
+        
+        // For sales, create mock customer IDs
+        if (rolePreview === 'sales') {
+          mockAssociatedIds = ['customer-123', 'customer-456']; // Mock customer IDs
+        }
+        // For customer, create a mock ID representing themselves
+        else if (rolePreview === 'customer') {
+          mockAssociatedIds = ['customer-789']; // The customer's own ID
+        }
+        // For tech, create mock work order IDs they're assigned to
+        else if (rolePreview === 'tech') {
+          mockAssociatedIds = ['workorder-123', 'workorder-456']; // Mock work order IDs
+        }
+        
         const previewUser = { 
           ...user, 
           role: rolePreview,
-          name: `${rolePreview.charAt(0).toUpperCase() + rolePreview.slice(1)} View`
+          name: `${rolePreview.charAt(0).toUpperCase() + rolePreview.slice(1)} View`,
+          associatedIds: mockAssociatedIds
         };
         setUser(previewUser);
         setUserRole(rolePreview);
@@ -160,13 +220,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (role: UserRole) => {
     // In a real app, you would verify credentials with Supabase here
+    // and fetch associated IDs based on the user's role
+    let mockAssociatedIds: string[] = [];
+    
+    // Set up mock associated IDs based on role
+    if (role === 'sales') {
+      mockAssociatedIds = ['customer-123', 'customer-456']; // Mock customer IDs for sales
+    } else if (role === 'customer') {
+      mockAssociatedIds = ['customer-789']; // Customer's own ID
+    } else if (role === 'tech') {
+      mockAssociatedIds = ['workorder-123', 'workorder-456']; // Work orders assigned to tech
+    }
+    
     setUserRole(role);
     setIsAuthenticated(true);
     setUser({
       id: '1',
       email: `${role}@air-ga.net`,
       role: role,
-      name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`
+      name: `${role.charAt(0).toUpperCase() + role.slice(1)} User`,
+      associatedIds: mockAssociatedIds
     });
   };
 

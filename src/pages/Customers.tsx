@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { CustomerCard } from "@/components/customers/CustomerCard";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 const Customers = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { permissions, user, userRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [customers, setCustomers] = useState<Customer[]>(() => {
     // Map any existing customers to ensure they have serviceAddresses property
@@ -44,6 +46,29 @@ const Customers = () => {
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  
+  // Filter customers based on user role and permissions
+  const [filteredCustomersByRole, setFilteredCustomersByRole] = useState<Customer[]>([]);
+  
+  useEffect(() => {
+    // Filter customers based on user role and permissions
+    let roleFilteredCustomers = [...customers];
+    
+    // For sales, only show customers they are associated with
+    if (permissions.canViewOnlyAssociatedCustomers && user?.associatedIds) {
+      roleFilteredCustomers = customers.filter(customer => 
+        user.associatedIds?.includes(customer.id)
+      );
+    }
+    // For customer role, only show themselves
+    else if (userRole === 'customer' && user?.associatedIds) {
+      roleFilteredCustomers = customers.filter(customer =>
+        user.associatedIds?.includes(customer.id)
+      );
+    }
+    
+    setFilteredCustomersByRole(roleFilteredCustomers);
+  }, [customers, permissions, user, userRole]);
   
   // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
@@ -69,7 +94,7 @@ const Customers = () => {
   };
   
   // Filter customers based on search query
-  const filteredCustomers = customers.filter(customer => {
+  const finalFilteredCustomers = filteredCustomersByRole.filter(customer => {
     const matchesSearch = !searchQuery || 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -85,11 +110,19 @@ const Customers = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-            <p className="text-muted-foreground">Manage your residential customers</p>
+            <p className="text-muted-foreground">
+              {userRole === 'sales' 
+                ? 'Manage your assigned customers' 
+                : userRole === 'customer'
+                ? 'Your Customer Information' 
+                : 'Manage your residential customers'}
+            </p>
           </div>
-          <Button onClick={() => setShowAddCustomerDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Customer
-          </Button>
+          {!permissions.canViewOnlyAssociatedCustomers && userRole !== 'customer' && (
+            <Button onClick={() => setShowAddCustomerDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Add Customer
+            </Button>
+          )}
           <AddCustomerDialog 
             open={showAddCustomerDialog} 
             onOpenChange={setShowAddCustomerDialog} 
@@ -98,26 +131,28 @@ const Customers = () => {
         </div>
         
         {/* Search */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search customers..."
-              className="pl-8 w-full md:max-w-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        {userRole !== 'customer' && (
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search customers..."
+                className="pl-8 w-full md:max-w-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto">
+              <span>{finalFilteredCustomers.length} customers</span>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto">
-            <span>{filteredCustomers.length} customers</span>
-          </div>
-        </div>
+        )}
         
         {/* Customer list */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCustomers.map(customer => (
+          {finalFilteredCustomers.map(customer => (
             <CustomerCard 
               key={customer.id} 
               customer={customer} 
@@ -127,20 +162,28 @@ const Customers = () => {
           ))}
         </div>
         
-        {filteredCustomers.length === 0 && (
+        {finalFilteredCustomers.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <UserRound className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium">No customers found</h3>
+            <h3 className="mt-4 text-lg font-medium">
+              {userRole === 'sales' 
+                ? 'No customers assigned to you' 
+                : 'No customers found'}
+            </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Try adjusting your search, or add a new customer.
+              {userRole === 'sales' 
+                ? 'You don\'t have any customers assigned to you yet.' 
+                : 'Try adjusting your search, or add a new customer.'}
             </p>
-            <Button className="mt-4" onClick={() => setShowAddCustomerDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Customer
-            </Button>
+            {!permissions.canViewOnlyAssociatedCustomers && userRole !== 'customer' && (
+              <Button className="mt-4" onClick={() => setShowAddCustomerDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add Customer
+              </Button>
+            )}
           </div>
         )}
         
-        {/* Customer details dialog */}
+        {/* Customer details dialog - modify to show/hide financial info based on role */}
         {selectedCustomer && (
           <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -175,17 +218,21 @@ const Customers = () => {
                               <p>{addr.address}</p>
                               {addr.notes && <p className="text-sm text-muted-foreground mt-1">{addr.notes}</p>}
                             </div>
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={() => {
-                                handleCreateWorkOrder(selectedCustomer, addr.address);
-                                setShowCustomerDetails(false);
-                              }}
-                            >
-                              <FileEdit className="h-4 w-4 mr-1" />
-                              Work Order
-                            </Button>
+                            {/* Only show work order button if appropriate for the role */}
+                            {(!permissions.canViewOnlyAssociatedCustomers || 
+                              (user?.associatedIds?.includes(selectedCustomer.id))) && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => {
+                                  handleCreateWorkOrder(selectedCustomer, addr.address);
+                                  setShowCustomerDetails(false);
+                                }}
+                              >
+                                <FileEdit className="h-4 w-4 mr-1" />
+                                Work Order
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -200,17 +247,35 @@ const Customers = () => {
                   <p>{selectedCustomer.billAddress}</p>
                 </div>
                 
+                {/* Show financial information based on permissions */}
+                {permissions.canViewCustomerPaymentHistory && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground">Payment History</h4>
+                    <p className="text-sm text-muted-foreground">No payment history available.</p>
+                  </div>
+                )}
+                
+                {permissions.canViewFuturePaymentPlans && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground">Payment Plans</h4>
+                    <p className="text-sm text-muted-foreground">No payment plans available.</p>
+                  </div>
+                )}
+                
                 <div className="pt-4 flex justify-between">
                   <Button variant="outline" onClick={() => setShowCustomerDetails(false)}>
                     Close
                   </Button>
-                  <Button onClick={() => {
-                    handleCreateWorkOrder(selectedCustomer);
-                    setShowCustomerDetails(false);
-                  }}>
-                    <FileEdit className="mr-1.5 h-4 w-4" />
-                    Create Work Order
-                  </Button>
+                  {(!permissions.canViewOnlyAssociatedCustomers || 
+                    (user?.associatedIds?.includes(selectedCustomer.id))) && (
+                    <Button onClick={() => {
+                      handleCreateWorkOrder(selectedCustomer);
+                      setShowCustomerDetails(false);
+                    }}>
+                      <FileEdit className="mr-1.5 h-4 w-4" />
+                      Create Work Order
+                    </Button>
+                  )}
                 </div>
               </div>
             </DialogContent>

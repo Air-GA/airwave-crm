@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { UserRound, Phone, Building, MapPin, MoreHorizontal, FileEdit } from "lucide-react";
+import { UserRound, Phone, Building, MapPin, MoreHorizontal, FileEdit, DollarSign, CalendarClock } from "lucide-react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Customer, ServiceAddress } from "@/types";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CustomerCardProps {
   customer: Customer;
@@ -23,6 +24,21 @@ interface CustomerCardProps {
 export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: CustomerCardProps) {
   const isMobile = useIsMobile();
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const { permissions, user } = useAuth();
+  
+  // Check if the logged-in user can view this customer
+  // For sales users, they should only see customers they sold to
+  const canViewCustomer = () => {
+    if (permissions.canViewOnlyAssociatedCustomers && user?.associatedIds) {
+      return user.associatedIds.includes(customer.id);
+    }
+    return true;
+  };
+  
+  // If user can't view this customer, don't render the card
+  if (permissions.canViewOnlyAssociatedCustomers && !canViewCustomer()) {
+    return null;
+  }
   
   // Get primary address or first address
   const primaryAddress = customer.serviceAddresses?.find(a => a.isPrimary)?.address || 
@@ -56,8 +72,24 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={onViewDetails}>View Details</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleCreateWorkOrder()}>Create Work Order</DropdownMenuItem>
-              <DropdownMenuItem>View Service History</DropdownMenuItem>
+              {!permissions.canViewOnlyAssociatedCustomers && (
+                <DropdownMenuItem onClick={() => handleCreateWorkOrder()}>Create Work Order</DropdownMenuItem>
+              )}
+              {permissions.canViewCustomerPaymentHistory && (
+                <DropdownMenuItem>
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Payment History
+                </DropdownMenuItem>
+              )}
+              {permissions.canViewFuturePaymentPlans && (
+                <DropdownMenuItem>
+                  <CalendarClock className="h-4 w-4 mr-2" />
+                  Payment Schedule
+                </DropdownMenuItem>
+              )}
+              {!permissions.canViewOnlyOwnWorkOrders && (
+                <DropdownMenuItem>View Service History</DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -91,15 +123,17 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
                         </div>
                         <p className="text-sm mt-1">{addr.address}</p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7"
-                        onClick={() => handleCreateWorkOrder(addr.address)}
-                      >
-                        <FileEdit className="h-3.5 w-3.5 mr-1" />
-                        {isMobile ? "Order" : "Work Order"}
-                      </Button>
+                      {(!permissions.canViewOnlyAssociatedCustomers || canViewCustomer()) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7"
+                          onClick={() => handleCreateWorkOrder(addr.address)}
+                        >
+                          <FileEdit className="h-3.5 w-3.5 mr-1" />
+                          {isMobile ? "Order" : "Work Order"}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -121,10 +155,12 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
           )}
           
           <div className="flex gap-2 pt-2">
-            <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreateWorkOrder()}>
-              <FileEdit className="mr-1.5 h-4 w-4" />
-              {isMobile ? "Work Order" : "New Work Order"}
-            </Button>
+            {(!permissions.canViewOnlyAssociatedCustomers || canViewCustomer()) && (
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreateWorkOrder()}>
+                <FileEdit className="mr-1.5 h-4 w-4" />
+                {isMobile ? "Work Order" : "New Work Order"}
+              </Button>
+            )}
             <Button size="sm" className="flex-1" onClick={onViewDetails}>
               View Details
             </Button>
