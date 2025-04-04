@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -13,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Customer, ServiceAddress, customers as initialCustomers } from "@/data/mockData";
+import { getImportedCustomers } from "@/services/importService";
 import { ChevronDown, FileEdit, Plus, Search, UserRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
@@ -25,9 +25,16 @@ const Customers = () => {
   const navigate = useNavigate();
   const { permissions, user, userRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    // Map any existing customers to ensure they have serviceAddresses property
-    return initialCustomers.map(customer => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  
+  useEffect(() => {
+    const importedCustomers = getImportedCustomers();
+    console.log(`Loaded ${importedCustomers.length} imported customers`);
+    
+    const processedMockCustomers = initialCustomers.map(customer => {
       if (!customer.serviceAddresses) {
         return {
           ...customer,
@@ -42,25 +49,38 @@ const Customers = () => {
       }
       return customer;
     });
-  });
-  const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+    
+    const processedImportedCustomers = importedCustomers.map(customer => {
+      if (!customer.serviceAddresses) {
+        return {
+          ...customer,
+          serviceAddresses: [
+            { 
+              id: `imported-${customer.id}`, 
+              address: customer.serviceAddress || '', 
+              isPrimary: true 
+            }
+          ]
+        };
+      }
+      return customer;
+    });
+    
+    const allCustomers = [...processedMockCustomers, ...processedImportedCustomers];
+    console.log(`Total customers loaded: ${allCustomers.length}`);
+    setCustomers(allCustomers);
+  }, []);
   
-  // Filter customers based on user role and permissions
   const [filteredCustomersByRole, setFilteredCustomersByRole] = useState<Customer[]>([]);
   
   useEffect(() => {
-    // Filter customers based on user role and permissions
     let roleFilteredCustomers = [...customers];
     
-    // For sales, only show customers they are associated with
     if (permissions.canViewOnlyAssociatedCustomers && user?.associatedIds) {
       roleFilteredCustomers = customers.filter(customer => 
         user.associatedIds?.includes(customer.id)
       );
     }
-    // For customer role, only show themselves
     else if (userRole === 'customer' && user?.associatedIds) {
       roleFilteredCustomers = customers.filter(customer =>
         user.associatedIds?.includes(customer.id)
@@ -70,15 +90,12 @@ const Customers = () => {
     setFilteredCustomersByRole(roleFilteredCustomers);
   }, [customers, permissions, user, userRole]);
   
-  // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
     setCustomers(prevCustomers => [newCustomer, ...prevCustomers]);
     toast.success("Customer added successfully!");
   };
   
-  // Handle creating a new work order for a customer
   const handleCreateWorkOrder = (customer: Customer, serviceAddress?: string) => {
-    // Use the provided service address or get the primary one
     const addressToUse = serviceAddress || 
       (customer.serviceAddresses?.find(a => a.isPrimary)?.address || 
       customer.serviceAddresses?.[0]?.address || 
@@ -87,13 +104,11 @@ const Customers = () => {
     navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone)}&customerEmail=${encodeURIComponent(customer.email)}&customerAddress=${encodeURIComponent(addressToUse)}`);
   };
   
-  // Handle viewing customer details
   const handleViewCustomerDetails = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowCustomerDetails(true);
   };
   
-  // Filter customers based on search query
   const finalFilteredCustomers = filteredCustomersByRole.filter(customer => {
     const matchesSearch = !searchQuery || 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -130,7 +145,6 @@ const Customers = () => {
           />
         </div>
         
-        {/* Search */}
         {userRole !== 'customer' && (
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
@@ -150,7 +164,6 @@ const Customers = () => {
           </div>
         )}
         
-        {/* Customer list */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {finalFilteredCustomers.map(customer => (
             <CustomerCard 
@@ -183,7 +196,6 @@ const Customers = () => {
           </div>
         )}
         
-        {/* Customer details dialog - modify to show/hide financial info based on role */}
         {selectedCustomer && (
           <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -218,7 +230,6 @@ const Customers = () => {
                               <p>{addr.address}</p>
                               {addr.notes && <p className="text-sm text-muted-foreground mt-1">{addr.notes}</p>}
                             </div>
-                            {/* Only show work order button if appropriate for the role */}
                             {(!permissions.canViewOnlyAssociatedCustomers || 
                               (user?.associatedIds?.includes(selectedCustomer.id))) && (
                               <Button 
@@ -247,7 +258,6 @@ const Customers = () => {
                   <p>{selectedCustomer.billAddress}</p>
                 </div>
                 
-                {/* Show financial information based on permissions */}
                 {permissions.canViewCustomerPaymentHistory && (
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">Payment History</h4>

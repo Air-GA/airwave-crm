@@ -1,5 +1,5 @@
 import { Customer, WorkOrder, InventoryItem } from "@/types";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 /**
  * Import customer data
@@ -18,6 +18,7 @@ export const importCustomers = async (
     localStorage.setItem('imported_customers', JSON.stringify(updatedCustomers));
     
     console.log(`Successfully imported ${customers.length} customers to localStorage`);
+    console.log(`Total customers in storage: ${updatedCustomers.length}`);
     return customers;
   } catch (error) {
     console.error("Error importing customers:", error);
@@ -47,6 +48,7 @@ export const importWorkOrders = async (
     localStorage.setItem('imported_work_orders', JSON.stringify(updatedWorkOrders));
     
     console.log(`Successfully imported ${workOrders.length} work orders to localStorage`);
+    console.log(`Total work orders in storage: ${updatedWorkOrders.length}`);
     return workOrders;
   } catch (error) {
     console.error("Error importing work orders:", error);
@@ -76,6 +78,7 @@ export const importInventory = async (
     localStorage.setItem('imported_inventory', JSON.stringify(updatedInventory));
     
     console.log(`Successfully imported ${inventory.length} inventory items to localStorage`);
+    console.log(`Total inventory items in storage: ${updatedInventory.length}`);
     return inventory;
   } catch (error) {
     console.error("Error importing inventory:", error);
@@ -136,7 +139,9 @@ export const processInventoryImport = async (inventory: Partial<InventoryItem>[]
  * @returns Array of imported customers
  */
 export const getImportedCustomers = (): Customer[] => {
-  return JSON.parse(localStorage.getItem('imported_customers') || '[]');
+  const importedCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
+  console.log(`Retrieved ${importedCustomers.length} imported customers from localStorage`);
+  return importedCustomers;
 };
 
 /**
@@ -144,13 +149,27 @@ export const getImportedCustomers = (): Customer[] => {
  * @returns Array of imported work orders
  */
 export const getImportedWorkOrders = (): WorkOrder[] => {
-  return JSON.parse(localStorage.getItem('imported_work_orders') || '[]');
+  const importedWorkOrders = JSON.parse(localStorage.getItem('imported_work_orders') || '[]');
+  console.log(`Retrieved ${importedWorkOrders.length} imported work orders from localStorage`);
+  return importedWorkOrders;
 };
 
 /**
  * Get all imported inventory items
  * @returns Array of imported inventory items
  */
-export const getImportedInventory = (): any[] => {
-  return JSON.parse(localStorage.getItem('imported_inventory') || '[]');
+export const getImportedInventory = (): InventoryItem[] => {
+  const importedInventory = JSON.parse(localStorage.getItem('imported_inventory') || '[]');
+  console.log(`Retrieved ${importedInventory.length} imported inventory items from localStorage`);
+  return importedInventory;
+};
+
+/**
+ * Clear all imported data from localStorage
+ */
+export const clearImportedData = (): void => {
+  localStorage.removeItem('imported_customers');
+  localStorage.removeItem('imported_work_orders');
+  localStorage.removeItem('imported_inventory');
+  console.log("All imported data cleared from localStorage");
 };
