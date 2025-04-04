@@ -15,7 +15,7 @@ const MapView = () => {
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Check for Google Maps API key on component mount and when integration settings change
+  // Check for Google Maps API key on component mount
   useEffect(() => {
     const checkApiKey = () => {
       try {
@@ -26,8 +26,7 @@ const MapView = () => {
         
         // Auto-show map if API key is available
         if (hasGoogleMapsApiKey && !showMap) {
-          console.log("Auto-showing map because API key is available:", 
-            integrations.googleMaps?.apiKey?.substring(0, 5) + "...");
+          console.log("Auto-showing map because API key is available");
           setShowMap(true);
           setApiKeyError(null);
         } else if (!hasGoogleMapsApiKey) {
@@ -46,14 +45,14 @@ const MapView = () => {
     // Initial check
     checkApiKey();
     
-    // Re-check when settings might have changed - use a slower interval to reduce load
-    const interval = setInterval(checkApiKey, 30000); // Increased from 10s to 30s to reduce frequency
+    // Re-check when settings might have changed
+    const interval = setInterval(checkApiKey, 30000);
     
     return () => clearInterval(interval);
   }, [showMap]);
 
   const handleMapError = (error: string) => {
-    console.error("Map error:", error);
+    console.error("Map error in MapView:", error);
     setApiKeyError(error);
     toast.error("Map Error", {
       description: error
@@ -120,7 +119,7 @@ const MapView = () => {
             </Button>
           </div>
         ) : (
-          <TechLocationMap key="tech-map" onError={handleMapError} />
+          <TechLocationMap key={`tech-map-${Date.now()}`} onError={handleMapError} />
         )}
       </CardContent>
     </Card>
