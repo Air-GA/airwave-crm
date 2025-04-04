@@ -76,6 +76,9 @@ export interface WorkOrder {
   isMaintenancePlan?: boolean;
   maintenanceTimePreference?: string;
   nearbyAddresses?: string[];
+  // Syncing information
+  syncedFromCRM?: boolean;
+  syncTimestamp?: string;
 }
 
 export interface InventoryItem {

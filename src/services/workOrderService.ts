@@ -10,6 +10,8 @@ interface WorkOrderStore {
   workOrders: WorkOrder[];
   setWorkOrders: (workOrders: WorkOrder[]) => void;
   updateWorkOrder: (updatedOrder: WorkOrder) => void;
+  addWorkOrder: (newOrder: WorkOrder) => void;
+  removeWorkOrder: (orderId: string) => void;
 }
 
 export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
@@ -19,6 +21,12 @@ export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
     workOrders: state.workOrders.map((order) => 
       order.id === updatedOrder.id ? updatedOrder : order
     ),
+  })),
+  addWorkOrder: (newOrder) => set((state) => ({
+    workOrders: [newOrder, ...state.workOrders]
+  })),
+  removeWorkOrder: (orderId) => set((state) => ({
+    workOrders: state.workOrders.filter((order) => order.id !== orderId)
   })),
 }));
 
@@ -124,7 +132,12 @@ export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<Wo
     createdAt: new Date().toISOString(),
     technicianId: workOrder.technicianId,
     technicianName: workOrder.technicianName,
-    notes: workOrder.notes || []
+    notes: workOrder.notes || [],
+    isMaintenancePlan: workOrder.isMaintenancePlan || false,
+    maintenanceTimePreference: workOrder.maintenanceTimePreference,
+    estimatedHours: workOrder.estimatedHours,
+    email: workOrder.email,
+    phoneNumber: workOrder.phoneNumber
   };
   
   try {
@@ -144,7 +157,10 @@ export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<Wo
         technician_id: newWorkOrder.technicianId,
         technician_name: newWorkOrder.technicianName,
         created_at: newWorkOrder.createdAt,
-        notes: newWorkOrder.notes
+        notes: newWorkOrder.notes,
+        is_maintenance_plan: newWorkOrder.isMaintenancePlan,
+        maintenance_time_preference: newWorkOrder.maintenanceTimePreference,
+        estimated_hours: newWorkOrder.estimatedHours
       })
       .select()
       .single();
@@ -152,7 +168,7 @@ export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<Wo
     if (error) throw error;
     
     if (data) {
-      return {
+      const mappedOrder = {
         id: data.id,
         customerId: data.customer_id,
         customerName: data.customer_name,
@@ -165,8 +181,16 @@ export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<Wo
         technicianId: data.technician_id,
         technicianName: data.technician_name,
         createdAt: data.created_at,
-        notes: data.notes
+        notes: data.notes,
+        isMaintenancePlan: data.is_maintenance_plan,
+        maintenanceTimePreference: data.maintenance_time_preference,
+        estimatedHours: data.estimated_hours
       };
+      
+      // Update the store
+      useWorkOrderStore.getState().addWorkOrder(mappedOrder);
+      
+      return mappedOrder;
     }
   } catch (err) {
     console.error("Error creating work order:", err);
@@ -175,6 +199,9 @@ export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<Wo
   // Fall back to localStorage
   const existingWorkOrders = JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
   localStorage.setItem('workOrders', JSON.stringify([newWorkOrder, ...existingWorkOrders]));
+  
+  // Update the store
+  useWorkOrderStore.getState().addWorkOrder(newWorkOrder);
   
   return newWorkOrder;
 }
@@ -269,8 +296,6 @@ export async function deleteWorkOrder(workOrderId: string): Promise<boolean> {
     }
   }
 }
-
-// New functions for work order completion
 
 /**
  * Complete a work order
@@ -437,6 +462,70 @@ export async function unassignWorkOrder(workOrderId: string): Promise<WorkOrder>
   // Update the store
   const store = useWorkOrderStore.getState();
   store.updateWorkOrder(updatedOrder);
+  
+  return updatedOrder;
+}
+
+/**
+ * Create a maintenance plan work order
+ * @param maintenanceItem The maintenance item to schedule
+ * @param technicianId The ID of the technician to assign
+ * @param technicianName The name of the technician
+ * @param scheduledDate The date and time for the maintenance
+ * @returns The created work order
+ */
+export async function createMaintenanceWorkOrder(
+  maintenanceItem: any,
+  technicianId: string | undefined,
+  technicianName: string | undefined,
+  scheduledDate: string
+): Promise<WorkOrder> {
+  const workOrder = await createWorkOrder({
+    customerId: maintenanceItem.customerId,
+    customerName: maintenanceItem.customerName,
+    address: maintenanceItem.address,
+    type: 'maintenance',
+    description: 'Biannual HVAC maintenance service',
+    priority: 'medium',
+    status: technicianId ? 'scheduled' : 'pending',
+    scheduledDate: scheduledDate,
+    technicianId: technicianId,
+    technicianName: technicianName,
+    isMaintenancePlan: true,
+    maintenanceTimePreference: maintenanceItem.preferredTime,
+    estimatedHours: 3 // 3 hours for HVAC maintenance
+  });
+  
+  return workOrder;
+}
+
+/**
+ * Reschedule a maintenance work order
+ * @param workOrderId The ID of the work order to reschedule
+ * @param technicianId The ID of the technician
+ * @param technicianName The name of the technician
+ * @param scheduledDate The new scheduled date and time
+ * @returns The updated work order
+ */
+export async function rescheduleMaintenanceWorkOrder(
+  workOrderId: string,
+  technicianId: string | undefined,
+  technicianName: string | undefined,
+  scheduledDate: string
+): Promise<WorkOrder | null> {
+  const updatedOrder = await updateWorkOrder(workOrderId, {
+    technicianId,
+    technicianName,
+    scheduledDate,
+    status: technicianId ? 'scheduled' : 'pending'
+  });
+  
+  if (!updatedOrder) {
+    throw new Error(`Failed to reschedule maintenance work order ${workOrderId}`);
+  }
+  
+  // Update the store
+  useWorkOrderStore.getState().updateWorkOrder(updatedOrder);
   
   return updatedOrder;
 }

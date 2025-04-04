@@ -13,12 +13,15 @@ import {
   MapPin, 
   UserRound, 
   Clock, 
-  AlertCircle 
+  AlertCircle,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { Customer, WorkOrder } from "@/types";
 import { formatDate } from "@/lib/date-utils";
 import { useDraggable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { useWorkOrderStore } from "@/services/workOrderService";
 
 // Sample time slots for maintenance
 const TIME_SLOTS = [
@@ -81,17 +84,59 @@ const DraggableMaintenanceItem = ({ item, onSchedule }: {
             </div>
           )}
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={(e) => {
-            e.stopPropagation();
-            onSchedule(item);
-          }}
-        >
-          Schedule
+        <div>
+          <Badge className="mb-2" variant="outline">Maintenance</Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onSchedule(item);
+            }}
+          >
+            Schedule
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AreaGroup = ({ 
+  title, 
+  items, 
+  onSchedule 
+}: { 
+  title: string; 
+  items: MaintenanceItem[];
+  onSchedule: (item: MaintenanceItem) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="mb-4">
+      <div 
+        className="flex items-center justify-between cursor-pointer py-1 border-b"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{title}</Badge>
+          <span className="text-sm text-muted-foreground">
+            ({items.length})
+          </span>
+        </div>
+        <Button variant="ghost" size="sm">
+          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </Button>
       </div>
+      
+      {isOpen && items.map(item => (
+        <DraggableMaintenanceItem
+          key={item.customerId}
+          item={item}
+          onSchedule={onSchedule}
+        />
+      ))}
     </div>
   );
 };
@@ -103,7 +148,15 @@ const MaintenancePlanList = ({
   const [maintenanceItems, setMaintenanceItems] = useState<MaintenanceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortByLocation, setSortByLocation] = useState(false);
+  const [sortByLocation, setSortByLocation] = useState(true);
+
+  // Get scheduled maintenance work orders to filter them out
+  const workOrders = useWorkOrderStore(state => state.workOrders);
+  const scheduledMaintenanceIds = useMemo(() => {
+    return workOrders
+      .filter(order => order.type === 'maintenance' && order.isMaintenancePlan)
+      .map(order => order.customerId);
+  }, [workOrders]);
 
   // Get current month for display
   const currentMonth = useMemo(() => {
@@ -122,46 +175,51 @@ const MaintenancePlanList = ({
           {
             customerId: "cust-1",
             customerName: "John Smith",
-            address: "123 Main St, Cityville",
-            preferredTime: TIME_SLOTS[0],
-            lastService: "2024-01-15",
+            address: "123 Oak St, Springfield",
+            preferredTime: "8:00 AM - 11:00 AM",
+            lastService: "2023-10-15",
             location: { lat: 35.12, lng: -80.71 }
           },
           {
             customerId: "cust-2",
-            customerName: "Emily Johnson",
-            address: "456 Park Ave, Cityville",
-            preferredTime: TIME_SLOTS[1],
-            lastService: "2024-01-20",
+            customerName: "Sarah Johnson",
+            address: "127 Oak St, Springfield",
+            preferredTime: "1:00 PM - 4:00 PM",
+            lastService: "2023-09-22",
             location: { lat: 35.13, lng: -80.72 }
           },
           {
             customerId: "cust-3",
-            customerName: "Michael Brown",
-            address: "789 Oak Dr, Townsville",
-            preferredTime: TIME_SLOTS[2],
-            lastService: "2024-02-05",
+            customerName: "Robert Davis",
+            address: "456 Pine Ave, Springfield",
+            preferredTime: "10:00 AM - 1:00 PM",
+            lastService: "2023-11-05",
             location: { lat: 35.20, lng: -80.80 }
           },
           {
             customerId: "cust-4",
-            customerName: "Sarah Wilson",
-            address: "101 Pine St, Cityville",
-            preferredTime: TIME_SLOTS[0],
-            lastService: "2024-02-10",
-            location: { lat: 35.14, lng: -80.73 }
+            customerName: "Emily Wilson",
+            address: "458 Pine Ave, Springfield",
+            preferredTime: "2:00 PM - 5:00 PM",
+            lastService: "2023-10-28",
+            location: { lat: 35.21, lng: -80.81 }
           },
           {
             customerId: "cust-5",
-            customerName: "David Miller",
-            address: "202 Elm Rd, Townsville",
-            preferredTime: TIME_SLOTS[1],
-            lastService: "2024-02-18",
-            location: { lat: 35.22, lng: -80.82 }
+            customerName: "Michael Brown",
+            address: "789 Maple Dr, Springfield",
+            preferredTime: "8:00 AM - 11:00 AM",
+            lastService: "2024-02-05",
+            location: { lat: 35.25, lng: -80.85 }
           }
         ];
         
-        setMaintenanceItems(mockMaintenanceItems);
+        // Filter out already scheduled customers
+        const filteredItems = mockMaintenanceItems.filter(
+          item => !scheduledMaintenanceIds.includes(item.customerId)
+        );
+        
+        setMaintenanceItems(filteredItems);
         setError(null);
       } catch (err) {
         console.error("Error fetching maintenance plans:", err);
@@ -172,23 +230,26 @@ const MaintenancePlanList = ({
     };
 
     fetchMaintenancePlans();
-  }, []);
+  }, [scheduledMaintenanceIds]);
 
-  // Group items by location proximity for displaying nearby addresses
-  const groupedByProximity = useMemo(() => {
-    if (!sortByLocation) return null;
+  // Group items by location proximity for displaying by area
+  const groupedByArea = useMemo(() => {
+    if (!sortByLocation) {
+      return { "All Customers": maintenanceItems };
+    }
     
-    // This is a simplified grouping strategy - in a real implementation, 
-    // you would use a proper distance calculation algorithm
+    // Group by street name for this example
     const groups: { [key: string]: MaintenanceItem[] } = {};
     
-    // Group by general area (first 3 digits of address for this example)
     maintenanceItems.forEach(item => {
-      const addressKey = item.address.split(' ')[0].substring(0, 3);
-      if (!groups[addressKey]) {
-        groups[addressKey] = [];
+      // Extract street name from address
+      const streetMatch = item.address.match(/\d+\s+([A-Za-z]+)/);
+      const streetName = streetMatch ? `${streetMatch[1]} Street Area` : "Other Area";
+      
+      if (!groups[streetName]) {
+        groups[streetName] = [];
       }
-      groups[addressKey].push(item);
+      groups[streetName].push(item);
     });
     
     return groups;
@@ -202,7 +263,7 @@ const MaintenancePlanList = ({
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Biannual HVAC Maintenance ({currentMonth})</CardTitle>
+          <CardTitle>Maintenance Plan Members</CardTitle>
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="group-nearby" 
@@ -213,7 +274,7 @@ const MaintenancePlanList = ({
               htmlFor="group-nearby" 
               className="text-sm text-muted-foreground cursor-pointer"
             >
-              Group nearby addresses
+              Group by area
             </label>
           </div>
         </div>
@@ -229,38 +290,16 @@ const MaintenancePlanList = ({
           </Alert>
         ) : maintenanceItems.length === 0 ? (
           <div className="text-center p-4">
-            <p className="text-muted-foreground">No maintenance plans due this month.</p>
+            <p className="text-muted-foreground">No pending maintenance plans for this month.</p>
           </div>
-        ) : sortByLocation && groupedByProximity ? (
-          // Display grouped by location
-          Object.entries(groupedByProximity).map(([location, items], index) => (
-            <div key={location} className="mb-4">
-              <div className="flex items-center mb-2">
-                <Badge variant="outline" className="mr-2">Group {index + 1}</Badge>
-                <span className="text-sm text-muted-foreground">
-                  {items.length} addresses in proximity
-                </span>
-              </div>
-              {items.map(item => (
-                <DraggableMaintenanceItem
-                  key={item.customerId}
-                  item={item}
-                  onSchedule={() => onSchedule(item)}
-                />
-              ))}
-            </div>
-          ))
         ) : (
-          // Display list without grouping
           <div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Drag items to the calendar or use Schedule button
-            </p>
-            {maintenanceItems.map(item => (
-              <DraggableMaintenanceItem
-                key={item.customerId}
-                item={item}
-                onSchedule={() => onSchedule(item)}
+            {Object.entries(groupedByArea).map(([areaName, items]) => (
+              <AreaGroup 
+                key={areaName} 
+                title={areaName} 
+                items={items}
+                onSchedule={onSchedule}
               />
             ))}
           </div>

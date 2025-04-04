@@ -1,15 +1,23 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Clock, Plus, UserRound } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Plus, UserRound, CalendarClock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { formatDate } from "@/lib/date-utils";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import WorkOrderDetailsPanel from "@/components/workorders/WorkOrderDetailsPanel";
 import { Technician, WorkOrder } from "@/types";
 import { fetchTechnicians } from "@/services/technicianService";
-import { fetchWorkOrders, useWorkOrderStore, updateWorkOrder, createWorkOrder } from "@/services/workOrderService";
+import { 
+  fetchWorkOrders, 
+  useWorkOrderStore, 
+  updateWorkOrder, 
+  createWorkOrder,
+  createMaintenanceWorkOrder,
+  rescheduleMaintenanceWorkOrder
+} from "@/services/workOrderService";
 import { useToast } from "@/hooks/use-toast";
 import { SyncButton } from "@/components/SyncButton";
 import { syncWorkOrdersFromCRM } from "@/services/crmSyncService";  
@@ -51,6 +59,22 @@ import {
   PointerSensor,
   TouchSensor,
 } from "@dnd-kit/core";
+
+// Maintenance order schema
+const maintenanceOrderSchema = z.object({
+  customerName: z.string().min(2, "Customer name is required"),
+  address: z.string().min(5, "Valid address is required"),
+  phoneNumber: z.string().optional(),
+  email: z.string().email("Valid email is required").optional(),
+  technicianId: z.string().optional(),
+  scheduledDate: z.date({
+    required_error: "Please select a date",
+  }),
+  timeSlot: z.string().min(1, "Please select a time slot"),
+  notes: z.string().optional(),
+});
+
+type MaintenanceOrderFormValues = z.infer<typeof maintenanceOrderSchema>;
 
 // Quick work order schema for the dialog
 const quickWorkOrderSchema = z.object({
@@ -114,8 +138,8 @@ const Schedule = () => {
   });
   
   // Form for maintenance appointment creation
-  const maintenanceForm = useForm<QuickWorkOrderFormValues>({
-    resolver: zodResolver(quickWorkOrderSchema),
+  const maintenanceForm = useForm<MaintenanceOrderFormValues>({
+    resolver: zodResolver(maintenanceOrderSchema),
   });
 
   const loadData = async () => {
@@ -347,15 +371,19 @@ const Schedule = () => {
       setSelectedMaintenanceItem(maintenanceItem);
       
       // Pre-populate the maintenance form
+      const scheduledDate = new Date(date);
+      
+      // Parse the preferred time to set default time slot
+      let timeSlot = maintenanceItem.preferredTime || "8:00 AM - 11:00 AM";
+      
       maintenanceForm.reset({
         customerName: maintenanceItem.customerName,
         address: maintenanceItem.address,
-        phoneNumber: "", // This would come from your customer data
-        email: "", // This would come from your customer data
-        type: "maintenance",
-        priority: "medium",
-        description: "Biannual HVAC maintenance service",
-        maintenanceTimePreference: maintenanceItem.preferredTime
+        phoneNumber: "",
+        email: "",
+        scheduledDate: scheduledDate,
+        timeSlot: timeSlot,
+        notes: ""
       });
       
       setIsMaintenanceOrderOpen(true);
@@ -367,51 +395,60 @@ const Schedule = () => {
     setSelectedMaintenanceItem(item);
     
     // Pre-populate the maintenance form
+    const scheduledDate = new Date(date);
+    
     maintenanceForm.reset({
       customerName: item.customerName,
       address: item.address,
-      phoneNumber: "", // This would come from your customer data
-      email: "", // This would come from your customer data
-      type: "maintenance",
-      priority: "medium",
-      description: "Biannual HVAC maintenance service",
-      maintenanceTimePreference: item.preferredTime
+      phoneNumber: "",
+      email: "",
+      scheduledDate: scheduledDate,
+      timeSlot: item.preferredTime || "8:00 AM - 11:00 AM",
+      notes: ""
     });
     
     setIsMaintenanceOrderOpen(true);
   };
   
   // Handle maintenance form submission
-  const onSubmitMaintenanceCreate = async (data: QuickWorkOrderFormValues) => {
+  const onSubmitMaintenanceCreate = async (data: MaintenanceOrderFormValues) => {
     try {
-      // Parse the preferred time to get start time
-      let scheduledDate = new Date(date);
-      const timePreference = data.maintenanceTimePreference || "8:00 AM - 11:00 AM";
-      const startHour = parseInt(timePreference.split(':')[0]);
-      const isPM = timePreference.includes('PM') && startHour !== 12;
+      // Parse the time slot to get start time
+      const timeSlot = data.timeSlot;
+      const startTimeMatch = timeSlot.match(/(\d+):(\d+)\s*([AP]M)/);
       
-      // Set the scheduled time
-      scheduledDate.setHours(isPM ? startHour + 12 : startHour, 0, 0, 0);
+      if (!startTimeMatch) {
+        toast({
+          title: "Error",
+          description: "Invalid time format",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      let hours = parseInt(startTimeMatch[1]);
+      const minutes = parseInt(startTimeMatch[2]);
+      const isPM = startTimeMatch[3] === "PM" && hours !== 12;
+      
+      if (isPM) hours += 12;
+      if (startTimeMatch[3] === "AM" && hours === 12) hours = 0;
+      
+      // Create a scheduled date with the correct time
+      const scheduledDate = new Date(data.scheduledDate);
+      scheduledDate.setHours(hours, minutes, 0, 0);
+      
+      // Get the technician name if a technician was selected
+      const technicianName = data.technicianId 
+        ? technicians.find(t => t.id === data.technicianId)?.name 
+        : undefined;
       
       // Create the maintenance work order
-      const newWorkOrder = await createWorkOrder({
-        customerName: data.customerName,
-        email: data.email,
-        phoneNumber: data.phoneNumber,
-        address: data.address,
-        type: "maintenance",
-        description: data.description,
-        priority: data.priority,
-        scheduledDate: scheduledDate.toISOString(),
-        status: data.technicianId ? 'scheduled' : 'pending',
-        technicianId: data.technicianId || undefined,
-        technicianName: data.technicianId 
-          ? technicians.find(t => t.id === data.technicianId)?.name 
-          : undefined,
-        estimatedHours: 3, // 3 hours for HVAC maintenance
-        isMaintenancePlan: true,
-        maintenanceTimePreference: data.maintenanceTimePreference
-      });
+      const workOrder = await createMaintenanceWorkOrder(
+        selectedMaintenanceItem,
+        data.technicianId,
+        technicianName,
+        scheduledDate.toISOString()
+      );
 
       // Refresh work orders
       await loadData();
@@ -424,10 +461,10 @@ const Schedule = () => {
 
       toast({
         title: "Maintenance Scheduled",
-        description: `HVAC maintenance for ${data.customerName} has been scheduled.`,
+        description: `HVAC maintenance for ${data.customerName} has been scheduled for ${formatDate(scheduledDate)}.`,
       });
     } catch (error) {
-      console.error("Failed to create maintenance order:", error);
+      console.error("Failed to schedule maintenance:", error);
       toast({
         title: "Error",
         description: "Failed to schedule maintenance. Please try again.",
@@ -445,7 +482,7 @@ const Schedule = () => {
             <p className="text-muted-foreground">Manage appointments and technician schedules</p>
           </div>
           <div className="flex gap-2">
-            <SyncButton onSync={handleSyncWorkOrders} label="Work Orders" />
+            <SyncButton onSync={handleSyncWorkOrders} label="Sync Work Orders" />
             <Button onClick={handleQuickCreate} variant="outline">
               <Plus className="mr-2 h-4 w-4" /> Quick Create
             </Button>
@@ -472,7 +509,7 @@ const Schedule = () => {
             sensors={sensors} 
             onDragEnd={handleDragEnd}
           >
-            <div className="grid gap-6 md:grid-cols-[300px_1fr]">
+            <div className="grid gap-6 md:grid-cols-[300px_1fr_350px]">
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -530,36 +567,34 @@ const Schedule = () => {
                     </div>
                   </CardContent>
                 </Card>
-                
-                <MaintenancePlanList 
-                  onDragStart={handleMaintenanceDragStart}
-                  onSchedule={handleMaintenanceSchedule}
-                />
               </div>
               
-              <div className="space-y-6">
-                <Card id="calendar-drop-area" className="relative">
-                  <CardHeader className="pb-2">
-                    <CardTitle>
-                      {selectedTechnician 
-                        ? `${selectedTechnician.name}'s Schedule - ${formatDate(date)}`
-                        : `All Appointments - ${formatDate(date)}`
-                      }
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <TechnicianScheduleView
-                      technician={selectedTechnician}
-                      workOrders={workOrders}
-                      selectedDate={date}
-                      showAllAppointments={!selectedTechnician}
-                      onWorkOrderClick={handleWorkOrderClick}
-                      isLoading={loading}
-                    />
-                  </CardContent>
-                  <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-transparent transition-colors duration-200 rounded-lg data-[droppable=true]:border-primary data-[droppable=true]:bg-primary/5" data-droppable="true" />
-                </Card>
-              </div>
+              <Card id="calendar-drop-area" className="relative">
+                <CardHeader className="pb-2">
+                  <CardTitle>
+                    {selectedTechnician 
+                      ? `${selectedTechnician.name}'s Schedule - ${formatDate(date)}`
+                      : `All Appointments - ${formatDate(date)}`
+                    }
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TechnicianScheduleView
+                    technician={selectedTechnician}
+                    workOrders={workOrders}
+                    selectedDate={date}
+                    showAllAppointments={!selectedTechnician}
+                    onWorkOrderClick={handleWorkOrderClick}
+                    isLoading={loading}
+                  />
+                </CardContent>
+                <div className="absolute inset-0 pointer-events-none border-2 border-dashed border-transparent transition-colors duration-200 rounded-lg data-[droppable=true]:border-primary data-[droppable=true]:bg-primary/5" data-droppable="true" />
+              </Card>
+              
+              <MaintenancePlanList 
+                onDragStart={handleMaintenanceDragStart}
+                onSchedule={handleMaintenanceSchedule}
+              />
             </div>
           </DndContext>
         )}
@@ -782,7 +817,7 @@ const Schedule = () => {
                     name="phoneNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel>Phone Number (Optional)</FormLabel>
                         <FormControl>
                           <Input placeholder="(555) 123-4567" {...field} />
                         </FormControl>
@@ -798,7 +833,7 @@ const Schedule = () => {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>Email (Optional)</FormLabel>
                         <FormControl>
                           <Input placeholder="customer@example.com" type="email" {...field} />
                         </FormControl>
@@ -825,22 +860,38 @@ const Schedule = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={maintenanceForm.control}
-                    name="maintenanceTimePreference"
+                    name="scheduledDate"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Preferred Time</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select preferred time" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="8:00 AM - 11:00 AM">8:00 AM - 11:00 AM</SelectItem>
-                            <SelectItem value="11:00 AM - 2:00 PM">11:00 AM - 2:00 PM</SelectItem>
-                            <SelectItem value="2:00 PM - 5:00 PM">2:00 PM - 5:00 PM</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  formatDate(field.value)
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -848,20 +899,20 @@ const Schedule = () => {
                   
                   <FormField
                     control={maintenanceForm.control}
-                    name="priority"
+                    name="timeSlot"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Priority</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value || "medium"}>
+                        <FormLabel>Time Slot</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select priority" />
+                              <SelectValue placeholder="Select time slot" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="8:00 AM - 11:00 AM">8:00 AM - 11:00 AM</SelectItem>
+                            <SelectItem value="11:00 AM - 2:00 PM">11:00 AM - 2:00 PM</SelectItem>
+                            <SelectItem value="2:00 PM - 5:00 PM">2:00 PM - 5:00 PM</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -897,13 +948,13 @@ const Schedule = () => {
                 
                 <FormField
                   control={maintenanceForm.control}
-                  name="description"
+                  name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Notes (Optional)</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Details about the maintenance service" 
+                          placeholder="Any special instructions or notes" 
                           className="min-h-[80px]" 
                           {...field} 
                         />
