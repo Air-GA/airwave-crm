@@ -1,341 +1,156 @@
 
-import { Bell, Menu, Search } from "lucide-react";
+import { useState } from "react";
+import { Menu, Bell, UserCircle, Sun, Moon } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { useEffect, useState } from "react";
-import { WorkOrder } from "@/types";
-import { fetchWorkOrders } from "@/services/workOrderService";
-import WorkOrderDetailsPanel from "@/components/workorders/WorkOrderDetailsPanel";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/components/theme-provider";
+import { ReactNode } from "react";
 
 interface TopBarProps {
   setSidebarOpen: (open: boolean) => void;
+  children?: ReactNode;
 }
 
-interface Notification {
-  id: number | string;
-  title: string;
-  description: string;
-  type: string;
-  link: string;
-  timestamp: string;
-  isNew: boolean;
-  requiredPermission: string;
-  relatedId?: string; // Add relatedId to track related work order or entity
-}
-
-const TopBar = ({ setSidebarOpen }: TopBarProps) => {
-  const isMobile = useIsMobile();
+const TopBar = ({ setSidebarOpen, children }: TopBarProps) => {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { userRole, permissions } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { setTheme, theme } = useTheme();
   
-  useEffect(() => {
-    const loadWorkOrders = async () => {
-      try {
-        const orders = await fetchWorkOrders();
-        setWorkOrders(orders);
-        
-        const currentTime = new Date();
-        if (lastFetchTime) {
-          const newOrders = orders.filter(order => {
-            const orderCreatedAt = new Date(order.createdAt);
-            return orderCreatedAt > lastFetchTime;
-          });
-          
-          if (newOrders.length > 0) {
-            const newNotifications = newOrders.map((order, index) => ({
-              id: `new-wo-${order.id}`,
-              title: `New Work Order #${order.id}`,
-              description: `${order.type} at ${order.address}`,
-              type: "workorder",
-              link: "/work-orders",
-              timestamp: new Date().toISOString(),
-              isNew: true,
-              requiredPermission: "canViewAllWorkOrders",
-              relatedId: order.id
-            }));
-            
-            setNotifications(prev => [...newNotifications, ...prev].slice(0, 10));
-          }
-          
-          const scheduledOrders = orders.filter(order => {
-            return order.status === "scheduled" && 
-                  order.technicianId && 
-                  order.scheduledDate > lastFetchTime.toISOString();
-          });
-          
-          if (scheduledOrders.length > 0) {
-            const scheduleNotifications = scheduledOrders.map((order, index) => ({
-              id: `schedule-${order.id}`,
-              title: `Schedule Update`,
-              description: `Work order #${order.id} assigned to ${order.technicianName}`,
-              type: "schedule",
-              link: "/schedule",
-              timestamp: new Date().toISOString(),
-              isNew: true,
-              requiredPermission: "canDispatchTechnicians",
-              relatedId: order.id
-            }));
-            
-            setNotifications(prev => [...scheduleNotifications, ...prev].slice(0, 10));
-          }
-        }
-        
-        setLastFetchTime(currentTime);
-      } catch (error) {
-        console.error("Error fetching notifications data:", error);
-      }
-    };
-    
-    loadWorkOrders();
-    
-    const intervalId = setInterval(loadWorkOrders, 60000);
-    
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [lastFetchTime]);
+  const getInitials = () => {
+    if (user?.name) {
+      return user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase();
+    }
+    return user?.email?.substring(0, 2).toUpperCase() || 'U';
+  };
   
-  const getFilteredNotifications = () => {
-    const allNotifications = notifications.length > 0 ? notifications : [
-      {
-        id: 1,
-        title: "Work Order Updates",
-        description: "No new updates at this time",
-        type: "workorder",
-        link: "/work-orders",
-        timestamp: new Date().toISOString(),
-        isNew: false,
-        requiredPermission: "canViewAllWorkOrders"
-      }
-    ];
-
-    return allNotifications.filter(notification => {
-      if (!permissions) return false;
-      return permissions[notification.requiredPermission as keyof typeof permissions];
-    });
-  };
-
-  const handleNotificationClick = (path: string, notificationId: string | number, type: string, relatedId?: string) => {
-    // Mark notification as read
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, isNew: false } 
-          : notification
-      )
-    );
-    
-    const baseUrl = window.location.origin;
-    let targetUrl = `${baseUrl}${path}`;
-    
-    if (type === "workorder" && relatedId) {
-      targetUrl = `${baseUrl}/work-orders?id=${relatedId}`;
-      window.open(targetUrl, '_blank');
-      toast.success(`Opening work order #${relatedId} details in new window`);
-      return;
-    }
-    
-    if (type === "schedule" && relatedId) {
-      const workOrder = workOrders.find(wo => wo.id === relatedId);
-      if (workOrder && workOrder.scheduledDate) {
-        const scheduledDate = new Date(workOrder.scheduledDate);
-        const dateString = scheduledDate.toISOString().split('T')[0];
-        
-        targetUrl = `${baseUrl}/schedule?date=${dateString}&tech=${workOrder.technicianId || ''}`;
-        window.open(targetUrl, '_blank');
-        toast.success(`Opening schedule for work order #${workOrder.id} in new window`);
-        return;
-      }
-    }
-    
-    window.open(`${baseUrl}${path}`, '_blank');
-    toast.success("Opening notification page in new window");
-  };
-
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-    setSelectedWorkOrder(null);
-  };
-
-  const viewWorkOrderDetails = () => {
-    if (selectedWorkOrder) {
-      const baseUrl = window.location.origin;
-      window.open(`${baseUrl}/work-orders?id=${selectedWorkOrder.id}`, '_blank');
-      setIsDialogOpen(false);
-    }
-  };
-
-  const filteredNotifications = getFilteredNotifications();
-  const newNotificationsCount = filteredNotifications.filter(n => n.isNew).length;
-
   return (
-    <header className="border-b bg-card shadow-sm">
-      <div className="flex h-16 items-center px-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="mr-2 md:hidden"
-          onClick={() => setSidebarOpen(true)}
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-        
-        {/* Logo section */}
-        {isMobile ? (
-          <div className="flex-1 flex justify-center">
-            <img 
-              src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-              alt="Air Georgia Logo" 
-              className="h-20 w-auto" 
-            />
-          </div>
-        ) : (
-          <div className="mr-4">
-            <img 
-              src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-              alt="Air Georgia Logo" 
-              className="h-12 w-auto" 
-            />
-          </div>
-        )}
-        
-        {/* Search section */}
-        <div className={`${isMobile ? "hidden" : "flex-1"}`}>
-          <div className="relative max-w-md">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-full rounded-md border bg-background pl-8 md:w-80"
-            />
-          </div>
+    <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center gap-4 border-b bg-background px-4 md:px-6">
+      <Button
+        variant="outline"
+        size="icon"
+        className="md:hidden"
+        onClick={() => setSidebarOpen(true)}
+      >
+        <Menu className="h-5 w-5" />
+        <span className="sr-only">Toggle menu</span>
+      </Button>
+      
+      <div className="w-full flex items-center justify-between gap-4">
+        <div>
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/logo.png" alt="Air Georgia Logo" className="h-8 w-8" />
+            <h1 className="hidden text-xl font-semibold md:block">Air Georgia HVAC</h1>
+          </Link>
         </div>
         
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
+        <div className="flex items-center gap-4">
+          {children}
+          
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+          
+          <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className={`h-5 w-5 ${newNotificationsCount > 0 ? 'text-primary' : ''}`} />
-                {newNotificationsCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white animate-pulse">
-                    {newNotificationsCount}
-                  </span>
-                )}
+              <Button variant="outline" size="icon" className="rounded-full relative">
+                <Bell className="h-4 w-4" />
+                <Badge
+                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs"
+                  variant="destructive"
+                >
+                  3
+                </Badge>
+                <span className="sr-only">Notifications</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <div className="p-2 font-medium">Notifications</div>
               <DropdownMenuSeparator />
-              {filteredNotifications.length > 0 ? (
-                filteredNotifications.map(notification => (
-                  <DropdownMenuItem 
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(
-                      notification.link, 
-                      notification.id,
-                      notification.type,
-                      notification.relatedId
-                    )}
-                    className={`cursor-pointer ${notification.isNew ? "bg-accent/20" : ""}`}
-                  >
-                    <div className="flex flex-col w-full">
-                      <div className="flex items-center justify-between">
-                        <span className={`${notification.isNew ? 'font-medium text-primary' : 'font-medium'}`}>
-                          {notification.title}
-                        </span>
-                        {notification.isNew && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 bg-primary text-primary-foreground rounded-full">
-                            New
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {notification.description}
-                      </span>
-                      <span className="text-xs text-muted-foreground mt-1">
-                        {new Date(notification.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                ))
-              ) : (
-                <DropdownMenuItem disabled>
-                  No notifications available
-                </DropdownMenuItem>
-              )}
-              {filteredNotifications.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="cursor-pointer text-center text-sm font-medium text-primary"
-                    onClick={() => {
-                      // Mark all notifications as read when viewing all
-                      setNotifications(prev => prev.map(notification => ({ ...notification, isNew: false })));
-                      window.open(`${window.location.origin}/notifications`, '_blank');
-                    }}
-                  >
-                    View all notifications
-                  </DropdownMenuItem>
-                </>
-              )}
+              <div className="p-2 text-sm">
+                <div className="mb-2 rounded-md p-2 hover:bg-muted">
+                  <p className="font-medium">New work order assigned</p>
+                  <p className="text-xs text-muted-foreground">5 minutes ago</p>
+                </div>
+                <div className="mb-2 rounded-md p-2 hover:bg-muted">
+                  <p className="font-medium">Inventory alert: Low stock on R-410A</p>
+                  <p className="text-xs text-muted-foreground">1 hour ago</p>
+                </div>
+                <div className="rounded-md p-2 hover:bg-muted">
+                  <p className="font-medium">Customer feedback received</p>
+                  <p className="text-xs text-muted-foreground">Yesterday</p>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/notifications" className="w-full cursor-pointer justify-center">
+                  View all notifications
+                </Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           
-          {!isMobile && (
-            <Button 
-              variant="default" 
-              className="ml-2"
-              onClick={() => navigate("/work-orders/create")}
-            >
-              + New Work Order
-            </Button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="" />
+                  <AvatarFallback>{getInitials()}</AvatarFallback>
+                </Avatar>
+                <span className="sr-only">User menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <div className="flex items-center justify-start gap-2 p-2">
+                <div className="flex flex-col space-y-1 leading-none">
+                  {user?.name && <p className="font-medium">{user.name}</p>}
+                  {user?.email && (
+                    <p className="w-[200px] truncate text-sm text-muted-foreground">
+                      {user.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/settings">Settings</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  logout();
+                  navigate("/login");
+                }}
+              >
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        if (!open) closeDialog();
-        setIsDialogOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Work Order Details</DialogTitle>
-          </DialogHeader>
-          {selectedWorkOrder && (
-            <div className="space-y-4">
-              <WorkOrderDetailsPanel workOrder={selectedWorkOrder} />
-              <div className="flex justify-end">
-                <Button onClick={viewWorkOrderDetails}>
-                  View Full Details
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </header>
   );
 };

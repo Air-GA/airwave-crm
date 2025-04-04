@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer';
+type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
 
 interface AuthUser {
   id: string;
@@ -102,6 +102,16 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewTechnicianData: false,
         canDispatchTechnicians: false,
       };
+    case 'user':
+      return {
+        canViewProfitNumbers: false,
+        canEditData: true,
+        canViewAllWorkOrders: true,
+        canViewFinancials: false,
+        canViewHRInfo: false,
+        canViewTechnicianData: false,
+        canDispatchTechnicians: false,
+      };
     default:
       return {
         canViewProfitNumbers: false,
@@ -126,6 +136,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     role: 'admin',
     name: 'Admin User'
   });
+
+  useEffect(() => {
+    // Check for role preview in URL query params
+    const params = new URLSearchParams(window.location.search);
+    const rolePreview = params.get('role_preview') as UserRole | null;
+    
+    if (rolePreview && ['admin', 'manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'].includes(rolePreview)) {
+      // If this is a preview iframe, use the role from query params
+      if (user && user.role === 'admin') {
+        const previewUser = { 
+          ...user, 
+          role: rolePreview,
+          name: `${rolePreview.charAt(0).toUpperCase() + rolePreview.slice(1)} View`
+        };
+        setUser(previewUser);
+        setUserRole(rolePreview);
+      }
+    }
+  }, [user]);
 
   const permissions = getRolePermissions(userRole);
 
