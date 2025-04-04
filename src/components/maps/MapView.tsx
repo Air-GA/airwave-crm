@@ -4,42 +4,39 @@ import TechLocationMap from './TechLocationMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getIntegrationSettings, saveIntegrationSettings } from "@/utils/settingsStorage";
-import { MapPin, AlertCircle } from 'lucide-react';
+import { MapPin, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Hard-coded API key from user
-const DEFAULT_API_KEY = 'EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA';
+// Hardcoded API key from user
+const API_KEY = 'EMAkZ0QQg780AGyS_WPp9X75f1o-f4WItx6wHBHoRpA';
 
 const MapView = () => {
   const [showMap, setShowMap] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(true); // Default to true since we have a hard-coded key
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapKey, setMapKey] = useState<string>(`tech-map-${Date.now()}`);
   
   // Check for Google Maps API key on component mount
   useEffect(() => {
     const checkApiKey = () => {
       try {
-        // Store the provided API key in settings if not already present
+        // Save the provided API key in settings if not already present
         const integrations = getIntegrationSettings();
         if (!integrations.googleMaps?.apiKey) {
           integrations.googleMaps = {
             ...integrations.googleMaps,
             connected: true,
-            apiKey: DEFAULT_API_KEY,
+            apiKey: API_KEY,
           };
           saveIntegrationSettings(integrations);
-          console.log("Saved default Google Maps API key to settings");
+          console.log("Saved Google Maps API key to settings");
         }
-        
-        // Always set hasApiKey to true since we have a default
-        setHasApiKey(true);
         
         // Auto-show map
         if (!showMap) {
-          console.log("Auto-showing map with default API key");
+          console.log("Auto-showing map with API key");
           setShowMap(true);
           setApiKeyError(null);
         }
@@ -52,11 +49,6 @@ const MapView = () => {
     
     // Initial check
     checkApiKey();
-    
-    // Re-check when settings might have changed
-    const interval = setInterval(checkApiKey, 30000);
-    
-    return () => clearInterval(interval);
   }, [showMap]);
 
   const handleMapError = (error: string) => {
@@ -64,6 +56,14 @@ const MapView = () => {
     setApiKeyError(error);
     toast.error("Map Error", {
       description: error
+    });
+  };
+  
+  const handleRetry = () => {
+    console.log("Retrying map load");
+    setMapKey(`tech-map-${Date.now()}`);
+    toast.info("Reloading map", {
+      description: "Please wait while the map is being reloaded..."
     });
   };
   
@@ -124,7 +124,20 @@ const MapView = () => {
             </Button>
           </div>
         ) : (
-          <TechLocationMap key={`tech-map-${Date.now()}`} onError={handleMapError} defaultApiKey={DEFAULT_API_KEY} />
+          <div>
+            <TechLocationMap key={mapKey} onError={handleMapError} apiKey={API_KEY} />
+            <div className="mt-2 flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRetry}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reload Map
+              </Button>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

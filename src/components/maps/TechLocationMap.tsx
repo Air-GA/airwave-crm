@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getIntegrationSettings } from "@/utils/settingsStorage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Map, Info, ExternalLink, RefreshCw } from "lucide-react";
+import { AlertCircle, Info, ExternalLink, RefreshCw } from "lucide-react";
 import { Technician } from '@/types';
 import { useTechnicianStore } from '@/services/technicianService';
 import { toast } from "sonner";
 
-// Sample technician data if we need fallbacks
+// Sample technician data for fallbacks
 const sampleTechs: Technician[] = [
   { 
     id: "tech1", 
@@ -48,202 +48,145 @@ const sampleTechs: Technician[] = [
 
 interface TechLocationMapProps {
   onError?: (error: string) => void;
-  defaultApiKey?: string;
+  apiKey: string;
 }
 
-// Track script loading state
-let googleMapsScriptLoaded = false;
-let googleMapsInitialized = false;
+// Global Google Maps script state tracker
+const googleMapsLoaded = {
+  status: false,
+  loading: false,
+  error: null as string | null
+};
 
-const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("");
+const TechLocationMap = ({ onError, apiKey }: TechLocationMapProps) => {
   const [manualApiKey, setManualApiKey] = useState<string>("");
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+  const [mapInitialized, setMapInitialized] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showApiKeyHelp, setShowApiKeyHelp] = useState<boolean>(false);
-  const [scriptLoading, setScriptLoading] = useState<boolean>(false);
-  const [mapInitialized, setMapInitialized] = useState<boolean>(false);
-  const [scriptLoadAttempts, setScriptLoadAttempts] = useState<number>(0);
-  
-  const technicians = useTechnicianStore(state => state.technicians);
   
   const mapRef = useRef<HTMLDivElement>(null);
-  const scriptRef = useRef<HTMLScriptElement | null>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  const markers = useRef<google.maps.Marker[]>([]);
+  const scriptId = 'google-maps-script';
+  
+  const technicians = useTechnicianStore(state => state.technicians);
 
-  // Handler for reporting errors
-  const reportError = useCallback((errorMessage: string) => {
+  // Report errors to parent component and console
+  const reportError = (errorMessage: string) => {
     console.error("Map error:", errorMessage);
     setError(errorMessage);
+    setLoading(false);
     if (onError) {
       onError(errorMessage);
     }
-    setScriptLoading(false);
-  }, [onError]);
+  };
 
-  // Load API key from settings or use default
-  useEffect(() => {
-    try {
-      // Use default key if provided, otherwise try to get from settings
-      if (defaultApiKey) {
-        console.log("Using provided default API key");
-        setGoogleMapsApiKey(defaultApiKey);
-        return;
-      }
-      
-      const settings = getIntegrationSettings();
-      if (settings.googleMaps?.connected && settings.googleMaps?.apiKey) {
-        const apiKey = settings.googleMaps.apiKey;
-        setGoogleMapsApiKey(apiKey);
-        console.log("Found Google Maps API key in settings, length:", apiKey.length);
-      } else {
-        console.log("No Google Maps API key found in settings");
-      }
-    } catch (err) {
-      console.error("Error loading API key from settings:", err);
-    }
-  }, [defaultApiKey]);
-
-  // Clean up previous script and prepare for new load
-  const cleanupScript = useCallback(() => {
-    console.log("Cleaning up Google Maps script");
-    // Clean up any previously loaded scripts
-    if (scriptRef.current && document.head.contains(scriptRef.current)) {
-      document.head.removeChild(scriptRef.current);
-      scriptRef.current = null;
-    }
-    
+  // Clean up markers and map instance
+  const cleanupMap = () => {
     // Clean up markers
-    markers.forEach(marker => {
-      if (marker) marker.setMap(null);
-    });
-    setMarkers([]);
+    if (markers.current.length > 0) {
+      markers.current.forEach(marker => {
+        if (marker) marker.setMap(null);
+      });
+      markers.current = [];
+    }
     
     // Clean up map instance
-    if (map) {
-      // @ts-ignore - setMap is not in the types but it works
-      map.setMap(null);
-      setMap(null);
+    if (mapInstance.current) {
+      mapInstance.current = null;
     }
     
-    // Reset global initMap function to avoid conflicts
-    if (window.initMap) {
-      // @ts-ignore - initMap is added to window but TS doesn't know about it
-      delete window.initMap;
-    }
-  }, [markers, map]);
-
-  // Reset global state for complete reload
-  const resetMapState = useCallback(() => {
-    console.log("Resetting map state completely");
-    googleMapsScriptLoaded = false;
-    googleMapsInitialized = false;
-    setIsLoaded(false);
     setMapInitialized(false);
-    setMap(null);
-    setError(null);
-    setScriptLoading(false);
-    
-    // Clean up script and markers
-    cleanupScript();
-    
-    // Force reloading by incrementing attempts counter
-    setScriptLoadAttempts(prev => prev + 1);
-  }, [cleanupScript]);
+  };
 
-  // Load Google Maps script with error handling
-  useEffect(() => {
-    // Use stored key, explicitly provided key, or fallback to default key
-    const apiKey = googleMapsApiKey || manualApiKey || defaultApiKey;
-    
-    if (!apiKey) {
-      console.log("No API key available for Google Maps");
-      return;
-    }
-
-    // Don't reload if already loaded and working
-    if (isLoaded && mapInitialized && map) {
-      console.log("Map already initialized and working");
+  // Load Google Maps script
+  const loadGoogleMapsScript = () => {
+    if (!apiKey && !manualApiKey) {
+      reportError("No Google Maps API key provided");
       return;
     }
     
-    // Don't try to load if already loading
-    if (scriptLoading) {
-      console.log("Script already loading, waiting...");
+    const keyToUse = manualApiKey || apiKey;
+    
+    // If Google Maps is already loaded
+    if (window.google?.maps && googleMapsLoaded.status) {
+      console.log("Google Maps already loaded, initializing map");
+      setMapLoaded(true);
+      setLoading(false);
+      initializeMap();
       return;
     }
-
-    console.log(`Loading Google Maps script (attempt #${scriptLoadAttempts + 1}) with API key length: ${apiKey.length}`);
-    setScriptLoading(true);
     
-    // Clean up any existing script first
-    cleanupScript();
+    // If script is already being loaded, don't load it again
+    if (googleMapsLoaded.loading) {
+      console.log("Google Maps script is already loading");
+      return;
+    }
     
-    // Create a unique callback name to avoid conflicts
-    const callbackName = `initGoogleMaps_${Date.now()}`;
+    // Remove any existing script tags
+    const existingScript = document.getElementById(scriptId);
+    if (existingScript) {
+      existingScript.remove();
+    }
     
-    // Set up the callback function
-    // @ts-ignore - adding to window
-    window[callbackName] = () => {
-      console.log("Google Maps API loaded successfully via callback");
-      googleMapsScriptLoaded = true;
-      googleMapsInitialized = true;
-      setIsLoaded(true);
-      setScriptLoading(false);
+    console.log(`Loading Google Maps script with API key: ${keyToUse.substring(0, 5)}...`);
+    googleMapsLoaded.loading = true;
+    
+    // Create script element
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${keyToUse}&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    
+    // Set up callbacks
+    script.onload = () => {
+      console.log("Google Maps script loaded successfully");
+      googleMapsLoaded.status = true;
+      googleMapsLoaded.loading = false;
+      googleMapsLoaded.error = null;
+      setMapLoaded(true);
+      setLoading(false);
       
-      // Small delay before initializing the map to ensure DOM is ready
+      // Initialize map with a slight delay to ensure DOM and Google Maps are fully ready
       setTimeout(() => {
-        if (mapRef.current && !mapInitialized) {
-          initializeMap();
-        }
+        initializeMap();
       }, 100);
     };
     
-    // Create and append the script element
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=${callbackName}&v=weekly`;
-    script.async = true;
-    script.defer = true;
-    scriptRef.current = script;
-    
-    // Error handling for script loading
     script.onerror = () => {
-      console.error("Failed to load Google Maps API script");
-      reportError("Failed to load Google Maps API. Please check your API key.");
-      googleMapsScriptLoaded = false;
-      
-      // Clean up failed script
-      cleanupScript();
+      const errorMsg = "Failed to load Google Maps API. Please check your API key.";
+      console.error(errorMsg);
+      googleMapsLoaded.loading = false;
+      googleMapsLoaded.error = errorMsg;
+      reportError(errorMsg);
     };
     
-    // Add a timeout in case the script never loads
-    const timeout = setTimeout(() => {
-      if (!googleMapsInitialized) {
-        console.error("Google Maps script loading timed out");
-        reportError("Google Maps loading timed out. Please try again.");
-        cleanupScript();
-      }
-    }, 15000); // 15 second timeout
-    
-    // Append the script to document
+    // Add the script to the document
     document.head.appendChild(script);
     
-    return () => {
-      clearTimeout(timeout);
-      // Keep callback function around in case it's called late
-      // but we'll be ready for the next render
-    };
-  }, [googleMapsApiKey, manualApiKey, defaultApiKey, scriptLoadAttempts, cleanupScript, reportError, isLoaded, mapInitialized, map, scriptLoading]);
+    // Set a timeout in case the script never loads
+    setTimeout(() => {
+      if (!googleMapsLoaded.status && googleMapsLoaded.loading) {
+        const errorMsg = "Google Maps script loading timed out. Please try again.";
+        console.error(errorMsg);
+        googleMapsLoaded.loading = false;
+        googleMapsLoaded.error = errorMsg;
+        reportError(errorMsg);
+      }
+    }, 10000); // 10 second timeout
+  };
 
-  // Initialize map function
-  const initializeMap = useCallback(() => {
+  // Initialize the map once Google Maps is loaded
+  const initializeMap = () => {
     if (!mapRef.current || !window.google?.maps) {
       console.log("Cannot initialize map: map reference or Google Maps not available");
       return;
     }
     
-    if (mapInitialized && map) {
+    if (mapInitialized) {
       console.log("Map already initialized, skipping");
       return;
     }
@@ -259,9 +202,9 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
       };
       
       console.log("Creating new map with options:", mapOptions);
-      const mapInstance = new google.maps.Map(mapRef.current, mapOptions);
+      const newMapInstance = new google.maps.Map(mapRef.current, mapOptions);
+      mapInstance.current = newMapInstance;
       
-      setMap(mapInstance);
       setMapInitialized(true);
       setError(null);
 
@@ -289,8 +232,6 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
           lng: tech.currentLocation.lng 
         };
         
-        console.log(`Creating marker for ${tech.name} at position:`, position);
-        
         // Choose marker color based on status
         const status = tech.status || 'offline';
         const icon = {
@@ -305,7 +246,7 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
         
         const marker = new google.maps.Marker({
           position,
-          map: mapInstance,
+          map: newMapInstance,
           title: tech.name,
           icon,
         });
@@ -328,14 +269,14 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
         marker.addListener("click", () => {
           infoWindow.open({
             anchor: marker,
-            map: mapInstance,
+            map: newMapInstance,
           });
         });
 
         return marker;
       }).filter(Boolean) as google.maps.Marker[];
-
-      setMarkers(newMarkers);
+      
+      markers.current = newMarkers;
       
       // Fit map to markers if there are multiple
       if (newMarkers.length > 1) {
@@ -345,7 +286,7 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
             bounds.extend(marker.getPosition()!);
           }
         });
-        mapInstance.fitBounds(bounds);
+        newMapInstance.fitBounds(bounds);
       }
       
       // Confirm map loaded successfully
@@ -359,22 +300,26 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
       reportError(`Error initializing map: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setMapInitialized(false);
     }
-  }, [map, mapInitialized, reportError, technicians]);
+  };
 
-  // Initialize map once loaded
+  // Initial setup
   useEffect(() => {
-    if (isLoaded && !mapInitialized && mapRef.current && window.google?.maps) {
-      console.log("Google Maps loaded, initializing map");
-      initializeMap();
-    }
-  }, [isLoaded, mapInitialized, initializeMap]);
+    // Load the map script when component mounts
+    loadGoogleMapsScript();
+    
+    // Cleanup function
+    return () => {
+      cleanupMap();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey]);
 
-  // Handle API key submission
+  // Handle API key manual submission
   const handleApiKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Try to use the default key if manual input is empty
-    const keyToUse = manualApiKey.trim() ? manualApiKey : defaultApiKey;
+    const keyToUse = manualApiKey.trim() ? manualApiKey : apiKey;
     
     if (!keyToUse) {
       toast.error("Please enter a valid API key");
@@ -384,17 +329,19 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
     console.log("Setting new API key");
     
     // Reset state for fresh start
-    resetMapState();
+    cleanupMap();
+    setMapLoaded(false);
+    googleMapsLoaded.status = false;
     
-    // Use the key directly
-    setGoogleMapsApiKey(keyToUse);
+    // Reload with new key
+    loadGoogleMapsScript();
     
     toast.success("API Key applied", {
       description: "Attempting to load map with the provided API key"
     });
   };
 
-  // Manual retry handler
+  // Handle retry button click
   const handleRetry = () => {
     console.log("Manual retry requested by user");
     
@@ -403,12 +350,16 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
     });
     
     // Reset everything and try again
-    resetMapState();
+    cleanupMap();
+    setMapLoaded(false);
+    googleMapsLoaded.status = false;
+    loadGoogleMapsScript();
   };
 
-  return (
-    <Card className="overflow-hidden">
-      {((!googleMapsApiKey && !manualApiKey && !defaultApiKey) || error) ? (
+  // Render API key input form if no key available
+  if ((!apiKey && !manualApiKey) || error) {
+    return (
+      <Card className="overflow-hidden">
         <div className="p-4">
           <Alert className="mb-4" variant={error ? "destructive" : "default"}>
             <AlertCircle className="h-4 w-4" />
@@ -416,7 +367,7 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
               {error ? "Map Error" : "Google Maps API Key Required"}
             </AlertTitle>
             <AlertDescription>
-              {error || "Please enter a Google Maps API key to display the map. You can also add it in the Integrations settings tab."}
+              {error || "Please enter a Google Maps API key to display the map."}
             </AlertDescription>
           </Alert>
           
@@ -437,17 +388,14 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
                   <li>Create a new project or select an existing one</li>
                   <li>Enable the "Maps JavaScript API"</li>
                   <li>Create an API key in the "Credentials" section</li>
-                  <li>Under API restrictions, restrict the key to "Maps JavaScript API" only</li>
-                  <li>Optionally, restrict the key to your website domain for security</li>
                 </ol>
-                <p className="mt-1">After creating your API key, enter it below or add it in the Settings → Integrations page.</p>
               </AlertDescription>
             </Alert>
           )}
           
           <form onSubmit={handleApiKeySubmit} className="flex flex-col space-y-2">
             <Input
-              type="password"
+              type="text"
               placeholder="Enter Google Maps API Key"
               value={manualApiKey}
               onChange={(e) => setManualApiKey(e.target.value)}
@@ -455,14 +403,28 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
             <Button type="submit">Load Map</Button>
           </form>
         </div>
-      ) : scriptLoading ? (
+      </Card>
+    );
+  }
+
+  // Show loading state
+  if (loading || !mapLoaded) {
+    return (
+      <Card className="overflow-hidden">
         <div className="p-4 flex justify-center items-center h-[400px]">
           <div className="flex items-center space-x-2">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
             <span>Loading map...</span>
           </div>
         </div>
-      ) : !isLoaded || !mapInitialized ? (
+      </Card>
+    );
+  }
+
+  // Show initializing state
+  if (mapLoaded && !mapInitialized) {
+    return (
+      <Card className="overflow-hidden">
         <div className="p-4 flex justify-center items-center h-[400px]">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
@@ -478,9 +440,14 @@ const TechLocationMap = ({ onError, defaultApiKey }: TechLocationMapProps) => {
             </Button>
           </div>
         </div>
-      ) : (
-        <div ref={mapRef} className="h-[400px] w-full"></div>
-      )}
+      </Card>
+    );
+  }
+
+  // Show the map
+  return (
+    <Card className="overflow-hidden">
+      <div ref={mapRef} className="h-[400px] w-full"></div>
     </Card>
   );
 };
