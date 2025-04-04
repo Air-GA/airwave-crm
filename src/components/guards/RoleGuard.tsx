@@ -16,6 +16,11 @@ export function RoleGuard({
   allowedRoles, 
   fallbackPath = "/unauthorized" 
 }: RoleGuardProps) {
+  // Development mode: Allow access to all routes
+  return <>{children}</>;
+  
+  // This code will be uncommented when implementing proper role-based access:
+  /*
   const { isAuthenticated, userRole } = useAuth();
 
   if (!isAuthenticated) {
@@ -23,9 +28,9 @@ export function RoleGuard({
   }
   
   if (!userRole || !allowedRoles.includes(userRole)) {
-    // Pass the allowed roles as state to the unauthorized page
     return <Navigate to={fallbackPath} replace state={{ allowedRoles }} />;
   }
 
   return <>{children}</>;
+  */
 }

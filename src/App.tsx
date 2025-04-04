@@ -1,5 +1,5 @@
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -34,75 +34,24 @@ function App() {
           <ThemeProvider defaultTheme="light" storageKey="hvac-ui-theme">
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
+              {/* Redirect login to homepage during development */}
+              <Route path="/login" element={<Navigate to="/" replace />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
-              {/* Protected routes using the RoleGuard component */}
-              <Route path="/customers" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales"]}>
-                  <Customers />
-                </RoleGuard>
-              } />
-              <Route path="/work-orders" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "tech"]}>
-                  <WorkOrders />
-                </RoleGuard>
-              } />
-              <Route path="/work-orders/create" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr"]}>
-                  <CreateWorkOrder />
-                </RoleGuard>
-              } />
-              <Route path="/schedule" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "tech"]}>
-                  <Schedule />
-                </RoleGuard>
-              } />
-              <Route path="/dispatch" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr"]}>
-                  <Dispatch />
-                </RoleGuard>
-              } />
-              <Route path="/inventory" element={
-                <RoleGuard allowedRoles={["admin", "manager", "tech"]}>
-                  <Inventory />
-                </RoleGuard>
-              } />
-              <Route path="/invoices" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales"]}>
-                  <Invoices />
-                </RoleGuard>
-              } />
-              <Route path="/reports" element={
-                <RoleGuard allowedRoles={["admin", "manager"]}>
-                  <Reports />
-                </RoleGuard>
-              } />
-              <Route path="/messages" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
-                  <Messages />
-                </RoleGuard>
-              } />
-              <Route path="/notifications" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
-                  <Notifications />
-                </RoleGuard>
-              } />
-              <Route path="/timesheets" element={
-                <RoleGuard allowedRoles={["admin", "manager", "hr", "tech"]}>
-                  <Timesheets />
-                </RoleGuard>
-              } />
-              <Route path="/settings" element={
-                <RoleGuard allowedRoles={["admin", "manager"]}>
-                  <Settings />
-                </RoleGuard>
-              } />
-              <Route path="/import-data" element={
-                <RoleGuard allowedRoles={["admin", "manager"]}>
-                  <ImportData />
-                </RoleGuard>
-              } />
+              {/* All routes are accessible during development */}
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/work-orders" element={<WorkOrders />} />
+              <Route path="/work-orders/create" element={<CreateWorkOrder />} />
+              <Route path="/schedule" element={<Schedule />} />
+              <Route path="/dispatch" element={<Dispatch />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/invoices" element={<Invoices />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/timesheets" element={<Timesheets />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/import-data" element={<ImportData />} />
 
               {/* Not found */}
               <Route path="*" element={<NotFound />} />
