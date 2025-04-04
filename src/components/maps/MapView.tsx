@@ -4,11 +4,14 @@ import TechLocationMap from './TechLocationMap';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getIntegrationSettings } from "@/utils/settingsStorage";
-import { MapPin } from 'lucide-react';
+import { MapPin, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 const MapView = () => {
   const [showMap, setShowMap] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   
   // Check for Google Maps API key on component mount and when integration settings change
   useEffect(() => {
@@ -20,8 +23,12 @@ const MapView = () => {
       
       // Auto-show map if API key is available
       if (hasGoogleMapsApiKey && !showMap) {
-        console.log("Auto-showing map because API key is available");
+        console.log("Auto-showing map because API key is available:", integrations.googleMaps.apiKey.substring(0, 5) + "...");
         setShowMap(true);
+        setApiKeyError(null);
+      } else if (!hasGoogleMapsApiKey) {
+        console.log("No Google Maps API key found in settings");
+        setApiKeyError("No Google Maps API key configured. Please add your API key in Settings → Integrations.");
       }
       
       setHasApiKey(hasGoogleMapsApiKey);
@@ -34,6 +41,14 @@ const MapView = () => {
     
     return () => clearInterval(interval);
   }, [showMap]);
+
+  const handleMapError = (error: string) => {
+    console.error("Map error:", error);
+    setApiKeyError(error);
+    toast.error("Map Error", {
+      description: error
+    });
+  };
   
   return (
     <Card>
@@ -47,6 +62,13 @@ const MapView = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {apiKeyError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{apiKeyError}</AlertDescription>
+          </Alert>
+        )}
+        
         {!showMap ? (
           <div className="text-center py-8">
             <p className="mb-4">
@@ -62,7 +84,7 @@ const MapView = () => {
             </Button>
           </div>
         ) : (
-          <TechLocationMap />
+          <TechLocationMap onError={handleMapError} />
         )}
       </CardContent>
     </Card>
