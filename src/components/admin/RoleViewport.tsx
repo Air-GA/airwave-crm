@@ -10,7 +10,8 @@ import {
   MessagesSquare,
   LayoutDashboard,
   MessageCircle,
-  MessageSquare
+  MessageSquare,
+  User
 } from "lucide-react";
 
 type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
@@ -65,6 +66,13 @@ export const RoleViewport = ({
     return ['admin', 'manager', 'tech', 'csr'].includes(role);
   };
   
+  const getRoleIcon = (role: UserRole) => {
+    if (role === 'customer') {
+      return <User className="h-4 w-4 mr-2" />;
+    }
+    return <Users className="h-4 w-4 mr-2" />;
+  };
+  
   const availableRoles = getRolesForPage(currentPage);
   
   return (
@@ -95,7 +103,7 @@ export const RoleViewport = ({
           <div className="h-[calc(90vh-80px)] rounded-lg border bg-card shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
               <div className="flex items-center">
-                <Users className="h-4 w-4 mr-2" />
+                {getRoleIcon(expanded)}
                 <span className="font-medium capitalize">{expanded} View</span>
                 {currentPage.toLowerCase() === 'messages' && hasDiscordIntegration(expanded) && (
                   <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">
@@ -127,7 +135,7 @@ export const RoleViewport = ({
               >
                 <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
                   <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-2" />
+                    {getRoleIcon(role)}
                     <span className="font-medium capitalize">{role} View</span>
                     {currentPage.toLowerCase() === 'messages' && hasDiscordIntegration(role) && (
                       <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 text-xs">
