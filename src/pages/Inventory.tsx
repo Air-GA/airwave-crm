@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -883,3 +884,482 @@ const Inventory = () => {
                           <TableCell className="text-right">{item.inStock}</TableCell>
                           <TableCell className="text-right">{mobileUnitQty}</TableCell>
                           <TableCell className="text-right">{totalQty}</TableCell>
+                          <TableCell className="text-right">{item.minStock}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openTransferDialog(item)}
+                            >
+                              <MoveRight className="h-4 w-4" />
+                              <span className="sr-only">Transfer</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Mobile Units Tab Content */}
+          <TabsContent value="mobile-units" className="space-y-6">
+            {mobileUnits.map(unit => (
+              <Card key={unit.id} className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Truck className="mr-2 h-5 w-5" />
+                    {unit.name} - {unit.technicianName}
+                    <Badge 
+                      variant={unit.status === "active" ? "default" : 
+                              unit.status === "maintenance" ? "outline" : "secondary"}
+                      className="ml-2"
+                    >
+                      {unit.status === "active" ? "Active" : 
+                      unit.status === "maintenance" ? "In Maintenance" : "Inactive"}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {getInvoiceGroupsByMobileUnit(unit.id).length > 0 ? (
+                    <div className="space-y-4">
+                      {getInvoiceGroupsByMobileUnit(unit.id).map(group => (
+                        <Collapsible 
+                          key={group.invoiceNumber}
+                          open={expandedInvoices[group.invoiceNumber]}
+                          onOpenChange={() => toggleInvoiceExpand(group.invoiceNumber)}
+                          className="border rounded-md p-2"
+                        >
+                          <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted rounded-md">
+                              <div className="flex items-center">
+                                <FileText className="mr-2 h-5 w-5 text-muted-foreground" />
+                                <div>
+                                  <h4 className="text-sm font-medium">Invoice: {group.invoiceNumber}</h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    {group.items.length} items
+                                  </p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="icon">
+                                {expandedInvoices[group.invoiceNumber] ? 
+                                  <ChevronUp className="h-4 w-4" /> : 
+                                  <ChevronDown className="h-4 w-4" />
+                                }
+                              </Button>
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Item</TableHead>
+                                  <TableHead>Category</TableHead>
+                                  <TableHead className="text-right">Quantity</TableHead>
+                                  <TableHead className="w-[80px]">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {group.items.map(({ item, quantity }) => (
+                                  <TableRow key={`${group.invoiceNumber}-${item.id}`}>
+                                    <TableCell>{item.name}</TableCell>
+                                    <TableCell>{item.category}</TableCell>
+                                    <TableCell className="text-right">{quantity}</TableCell>
+                                    <TableCell>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => openRemovalDialog(unit.id, item.id, group.invoiceNumber)}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                        <span className="sr-only">Remove</span>
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8">
+                      <Package className="h-10 w-10 text-muted-foreground" />
+                      <h3 className="mt-4 text-base font-medium">No inventory items</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        This mobile unit doesn't have any inventory items.
+                      </p>
+                      <Button className="mt-4" onClick={() => openTransferDialog()}>
+                        <MoveRight className="mr-2 h-4 w-4" /> Transfer Items to this Unit
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+          
+          {/* Alerts Tab Content */}
+          <TabsContent value="alerts" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <AlertTriangle className="mr-2 h-5 w-5 text-amber-500" />
+                  Inventory Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {inventoryItems.filter(item => item.inStock < item.minStock).length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">In Stock</TableHead>
+                        <TableHead className="text-right">Min Stock</TableHead>
+                        <TableHead className="text-right">Need to Order</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inventoryItems
+                        .filter(item => item.inStock < item.minStock)
+                        .map(item => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell>{item.category}</TableCell>
+                            <TableCell className="text-right text-destructive font-medium">
+                              {item.inStock}
+                            </TableCell>
+                            <TableCell className="text-right">{item.minStock}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {item.minStock - item.inStock}
+                            </TableCell>
+                            <TableCell>{item.supplier}</TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="sm">
+                                <Phone className="mr-2 h-4 w-4" /> Order
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <AlertCircle className="h-12 w-12 text-green-500" />
+                    <h3 className="mt-4 text-lg font-medium">No alerts</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      All inventory items are at or above minimum stock levels.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Transfers Tab Content */}
+          <TabsContent value="transfers" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
+                <CardTitle className="flex items-center">
+                  <MoveRight className="mr-2 h-5 w-5" />
+                  Inventory Transfer History
+                </CardTitle>
+                <Button onClick={() => openTransferDialog()}>
+                  <Plus className="mr-2 h-4 w-4" /> New Transfer
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {transferHistory.map(transfer => (
+                    <Collapsible 
+                      key={transfer.id}
+                      className="border rounded-md"
+                    >
+                      <CollapsibleTrigger asChild>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 cursor-pointer hover:bg-muted">
+                          <div>
+                            <div className="flex items-center">
+                              <div className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                                <MoveRight className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {getLocationName(transfer.sourceLocation)} → {getLocationName(transfer.destinationLocation)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {transfer.items.length} items
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center mt-2 sm:mt-0">
+                            <div className="text-xs text-muted-foreground mr-4">
+                              <Calendar className="inline-block mr-1 h-3 w-3" />
+                              {format(new Date(transfer.date), "MMM d, yyyy")}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              <User className="inline-block mr-1 h-3 w-3" />
+                              {transfer.createdBy}
+                            </div>
+                            <ChevronDown className="h-4 w-4 ml-2" />
+                          </div>
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="px-4 pb-4">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Item</TableHead>
+                                <TableHead className="text-right">Quantity</TableHead>
+                                <TableHead>Invoice</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {transfer.items.map((item, idx) => (
+                                <TableRow key={`${transfer.id}-${idx}`}>
+                                  <TableCell>{item.itemName}</TableCell>
+                                  <TableCell className="text-right">{item.quantity}</TableCell>
+                                  <TableCell>{item.invoiceNumber || "N/A"}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+      
+      {/* Transfer Dialog */}
+      <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transfer Inventory</DialogTitle>
+            <DialogDescription>
+              Move items between warehouse and mobile units
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...transferForm}>
+            <form onSubmit={transferForm.handleSubmit(handleTransferInventory)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={transferForm.control}
+                  name="sourceLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select source" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="warehouse">Main Warehouse</SelectItem>
+                          {mobileUnits.map(unit => (
+                            <SelectItem key={unit.id} value={unit.id}>
+                              {unit.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={transferForm.control}
+                  name="destinationLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Destination</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select destination" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="warehouse">Main Warehouse</SelectItem>
+                          {mobileUnits.map(unit => (
+                            <SelectItem key={unit.id} value={unit.id}>
+                              {unit.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium mb-3">Items to Transfer</h4>
+                <div className="space-y-3">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-start space-x-2">
+                      <div className="grid grid-cols-5 gap-2 flex-1">
+                        <div className="col-span-2">
+                          <FormField
+                            control={transferForm.control}
+                            name={`items.${index}.itemId`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <Select 
+                                  onValueChange={field.onChange} 
+                                  defaultValue={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select item" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {inventoryItems.map(item => (
+                                      <SelectItem key={item.id} value={item.id}>
+                                        {item.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="col-span-1">
+                          <FormField
+                            control={transferForm.control}
+                            name={`items.${index}.quantity`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    type="number" 
+                                    min="1"
+                                    {...field}
+                                    onChange={e => field.onChange(Number(e.target.value))} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="col-span-2">
+                          <FormField
+                            control={transferForm.control}
+                            name={`items.${index}.invoiceNumber`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="Invoice #" 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                      
+                      {index > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => remove(index)}
+                        >
+                          <X className="h-4 w-4" />
+                          <span className="sr-only">Remove item</span>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={addItemToTransfer}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Item
+                </Button>
+              </div>
+              
+              <DialogFooter>
+                <Button type="submit">Transfer Items</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Item Removal Dialog */}
+      <AlertDialog open={removalDialog.isOpen} onOpenChange={closeRemovalDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Inventory Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to remove {removalDialog.itemName} from {
+                mobileUnits.find(u => u.id === removalDialog.unitId)?.name || "the mobile unit"
+              }.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="py-4">
+            <h4 className="text-sm font-medium mb-2">Quantity to remove:</h4>
+            <div className="flex items-center space-x-2">
+              <Input
+                type="number"
+                min="1"
+                max={removalDialog.currentQuantity}
+                value={removalQuantity}
+                onChange={(e) => setRemovalQuantity(Number(e.target.value))}
+                className="w-24"
+              />
+              <span className="text-sm text-muted-foreground">
+                of {removalDialog.currentQuantity} available
+              </span>
+            </div>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveItems}>
+              Remove Items
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </MainLayout>
+  );
+};
+
+export default Inventory;

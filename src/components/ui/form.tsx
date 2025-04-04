@@ -50,14 +50,14 @@ const useFormField = () => {
     throw new Error("useFormField should be used within <FormField>")
   }
 
-  // Handle the case when form context is not available
+  // Modified to handle the case when form context is not available
   if (!formContext) {
     return {
       id: itemContext?.id,
       name: fieldContext.name,
-      formItemId: `${itemContext?.id}-form-item`,
-      formDescriptionId: `${itemContext?.id}-form-item-description`,
-      formMessageId: `${itemContext?.id}-form-item-message`,
+      formItemId: `${itemContext?.id || "form"}-form-item`,
+      formDescriptionId: `${itemContext?.id || "form"}-form-item-description`,
+      formMessageId: `${itemContext?.id || "form"}-form-item-message`,
       invalid: false,
     }
   }
@@ -70,9 +70,9 @@ const useFormField = () => {
   return {
     id,
     name: fieldContext.name,
-    formItemId: `${id}-form-item`,
-    formDescriptionId: `${id}-form-item-description`,
-    formMessageId: `${id}-form-item-message`,
+    formItemId: `${id || "form"}-form-item`,
+    formDescriptionId: `${id || "form"}-form-item-description`,
+    formMessageId: `${id || "form"}-form-item-message`,
     ...fieldState,
   }
 }
