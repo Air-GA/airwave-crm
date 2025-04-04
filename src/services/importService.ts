@@ -1,9 +1,11 @@
-
 import { Customer, WorkOrder, InventoryItem } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
+// Maximum number of items to store in a single localStorage chunk
+const MAX_CHUNK_SIZE = 100;
+
 /**
- * Import customer data
+ * Import customer data with chunking to avoid quota limits
  * @param customers Array of customer objects to import
  * @returns Array of imported customer objects
  */
@@ -17,14 +19,77 @@ export const importCustomers = async (
       throw new Error("No valid customer data to import");
     }
     
-    // Store in localStorage for demo purposes
-    const existingCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
-    const updatedCustomers = [...existingCustomers, ...customers];
-    localStorage.setItem('imported_customers', JSON.stringify(updatedCustomers));
+    // Store in localStorage with chunking to avoid quota limits
+    let existingCustomers: Customer[] = [];
+    try {
+      existingCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
+    } catch (e) {
+      console.warn("Error parsing existing customers, starting fresh", e);
+      existingCustomers = [];
+    }
     
-    console.log(`Successfully imported ${customers.length} customers to localStorage`);
-    console.log(`Total customers in storage: ${updatedCustomers.length}`);
-    return customers;
+    console.log(`Found ${existingCustomers.length} existing customers in storage`);
+    
+    if (customers.length > MAX_CHUNK_SIZE) {
+      console.log(`Large import detected (${customers.length} items). Using chunked import.`);
+      
+      // Process in chunks to avoid localStorage limits
+      const totalChunks = Math.ceil(customers.length / MAX_CHUNK_SIZE);
+      let successfulImports = 0;
+      
+      for (let i = 0; i < totalChunks; i++) {
+        const startIdx = i * MAX_CHUNK_SIZE;
+        const endIdx = Math.min(startIdx + MAX_CHUNK_SIZE, customers.length);
+        const chunk = customers.slice(startIdx, endIdx);
+        
+        try {
+          const chunkKey = `imported_customers_chunk_${i}`;
+          localStorage.setItem(chunkKey, JSON.stringify(chunk));
+          successfulImports += chunk.length;
+          console.log(`Successfully stored chunk ${i+1}/${totalChunks} (${chunk.length} customers)`);
+        } catch (error) {
+          console.error(`Error storing chunk ${i+1}/${totalChunks}:`, error);
+          toast({
+            title: "Import Warning",
+            description: `Only ${successfulImports} customers could be imported due to storage limits.`,
+            variant: "destructive",
+          });
+          return customers.slice(0, successfulImports);
+        }
+      }
+      
+      // Store the chunk index information
+      try {
+        localStorage.setItem('customer_chunks_count', totalChunks.toString());
+        console.log(`Successfully imported ${successfulImports} customers in ${totalChunks} chunks`);
+      } catch (error) {
+        console.error("Error storing chunk metadata:", error);
+      }
+      
+      return customers;
+    } else {
+      // For smaller imports, use the regular approach
+      try {
+        const updatedCustomers = [...existingCustomers, ...customers];
+        localStorage.setItem('imported_customers', JSON.stringify(updatedCustomers));
+        
+        console.log(`Successfully imported ${customers.length} customers to localStorage`);
+        console.log(`Total customers in storage: ${updatedCustomers.length}`);
+        return customers;
+      } catch (error) {
+        if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+          // Handle quota exceeded error
+          toast({
+            title: "Storage Limit Reached",
+            description: "Your browser's storage limit has been reached. Try importing fewer customers or clearing existing data.",
+            variant: "destructive",
+          });
+          throw new Error("Storage quota exceeded. Try importing fewer customers or clearing existing data.");
+        } else {
+          throw error;
+        }
+      }
+    }
   } catch (error) {
     console.error("Error importing customers:", error);
     toast({
@@ -330,16 +395,38 @@ export const processInventoryImport = async (rawData: RawInventoryData[]): Promi
 };
 
 /**
- * Get all imported customers
+ * Get all imported customers with chunk support
  * @returns Array of imported customers
  */
 export const getImportedCustomers = (): Customer[] => {
   try {
-    const importedCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
-    console.log(`Retrieved ${importedCustomers.length} imported customers from localStorage`);
+    let allCustomers: Customer[] = [];
+    
+    // Check if we have chunked data
+    const chunksCount = parseInt(localStorage.getItem('customer_chunks_count') || '0', 10);
+    
+    if (chunksCount > 0) {
+      console.log(`Loading ${chunksCount} customer chunks from localStorage`);
+      
+      // Collect all chunks
+      for (let i = 0; i < chunksCount; i++) {
+        try {
+          const chunkKey = `imported_customers_chunk_${i}`;
+          const chunkData = JSON.parse(localStorage.getItem(chunkKey) || '[]');
+          allCustomers = [...allCustomers, ...chunkData];
+        } catch (e) {
+          console.warn(`Error loading chunk ${i}:`, e);
+        }
+      }
+    } else {
+      // Regular storage approach
+      allCustomers = JSON.parse(localStorage.getItem('imported_customers') || '[]');
+    }
+    
+    console.log(`Retrieved ${allCustomers.length} imported customers from localStorage`);
     
     // Ensure all customers have the required properties to match Customer type
-    const processedCustomers = importedCustomers.map((customer: any) => {
+    const processedCustomers = allCustomers.map((customer: any) => {
       // Make sure each customer conforms to our expected Customer type
       return {
         id: customer.id || `imported-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -419,9 +506,20 @@ export const getImportedInventory = (): InventoryItem[] => {
  */
 export const clearImportedData = (): void => {
   try {
+    // Clear regular items
     localStorage.removeItem('imported_customers');
     localStorage.removeItem('imported_work_orders');
     localStorage.removeItem('imported_inventory');
+    
+    // Clear chunked customer data if it exists
+    const chunksCount = parseInt(localStorage.getItem('customer_chunks_count') || '0', 10);
+    if (chunksCount > 0) {
+      for (let i = 0; i < chunksCount; i++) {
+        localStorage.removeItem(`imported_customers_chunk_${i}`);
+      }
+      localStorage.removeItem('customer_chunks_count');
+    }
+    
     console.log("All imported data cleared from localStorage");
     
     toast({
@@ -435,5 +533,37 @@ export const clearImportedData = (): void => {
       description: `Failed to clear imported data: ${(error as Error).message}`,
       variant: "destructive",
     });
+  }
+};
+
+/**
+ * Calculate the approximate size of object in bytes
+ * @param object The object to measure
+ * @returns Size in bytes
+ */
+export const getObjectSizeInBytes = (object: any): number => {
+  const jsonString = JSON.stringify(object);
+  return new Blob([jsonString]).size;
+};
+
+/**
+ * Check if adding the new data would exceed localStorage limits
+ * @param key The localStorage key
+ * @param newData The new data to be added
+ * @returns Boolean indicating if it would exceed quota
+ */
+export const wouldExceedQuota = (key: string, newData: any): boolean => {
+  try {
+    // Test storing the data
+    const testKey = `${key}_size_test`;
+    localStorage.setItem(testKey, JSON.stringify(newData));
+    localStorage.removeItem(testKey);
+    return false;
+  } catch (e) {
+    if (e instanceof DOMException && 
+       (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      return true;
+    }
+    return false;
   }
 };
