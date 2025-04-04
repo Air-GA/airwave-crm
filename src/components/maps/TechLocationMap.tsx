@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,9 @@ interface TechLocationMapProps {
   onError?: (error: string) => void;
 }
 
+// Global flag to prevent multiple script loads
+let googleMapsScriptLoaded = false;
+
 const TechLocationMap = ({ onError }: TechLocationMapProps) => {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string>("");
   const [manualApiKey, setManualApiKey] = useState<string>("");
@@ -78,7 +82,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
   // Load API key from settings
   useEffect(() => {
     const settings = getIntegrationSettings();
-    if (settings.googleMaps.connected && settings.googleMaps.apiKey) {
+    if (settings.googleMaps?.connected && settings.googleMaps?.apiKey) {
       setGoogleMapsApiKey(settings.googleMaps.apiKey);
       console.log("Found Google Maps API key in settings, length:", settings.googleMaps.apiKey.length);
     } else {
@@ -92,10 +96,15 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
       document.head.removeChild(scriptRef.current);
       scriptRef.current = null;
     }
+    
+    // Reset global initMap function to avoid conflicts
     if (window.initMap) {
       // @ts-ignore - initMap is added to window but TS doesn't know about it
       delete window.initMap;
     }
+    
+    // Reset global flag
+    googleMapsScriptLoaded = false;
   }, []);
 
   // Load Google Maps script
@@ -103,6 +112,14 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     const apiKey = googleMapsApiKey || manualApiKey;
     if (!apiKey) {
       console.log("No API key available for Google Maps");
+      return;
+    }
+
+    // If script is already loaded globally, don't load it again
+    if (googleMapsScriptLoaded || window.google?.maps) {
+      console.log("Google Maps already loaded, skipping script load");
+      setIsLoaded(true);
+      setScriptLoading(false);
       return;
     }
 
@@ -117,17 +134,21 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     setMarkers([]);
     setMapInitialized(false);
     
+    // Set global flag to prevent multiple loads
+    googleMapsScriptLoaded = true;
+    
     // Clean up any existing script
     cleanupScript();
     
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&loading=async`;
     script.async = true;
     script.defer = true;
     scriptRef.current = script;
     
     // Define error handling
     script.onerror = () => {
+      googleMapsScriptLoaded = false;
       const errorMsg = "Failed to load Google Maps API. Please check your API key.";
       reportError(errorMsg);
       setIsLoaded(false);
@@ -144,14 +165,27 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     document.head.appendChild(script);
     
     return () => {
-      cleanupScript();
+      // Don't remove the script on component unmount to avoid reloading issues
+      // Only reset component state
+      markers.forEach(marker => marker.setMap(null));
+      setMarkers([]);
     };
   }, [googleMapsApiKey, manualApiKey, cleanupScript, markers, reportError]);
 
   // Initialize map with technician markers
   useEffect(() => {
-    if (!isLoaded || !mapRef.current) {
-      console.log("Map not ready to initialize:", { isLoaded, mapRefExists: !!mapRef.current });
+    if (!isLoaded || !mapRef.current || !window.google?.maps) {
+      console.log("Map not ready to initialize:", { 
+        isLoaded, 
+        mapRefExists: !!mapRef.current,
+        googleMapsExists: !!window.google?.maps
+      });
+      return;
+    }
+    
+    // If map is already initialized, don't initialize it again
+    if (mapInitialized) {
+      console.log("Map already initialized, skipping initialization");
       return;
     }
     
@@ -268,14 +302,7 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
       console.error("Error initializing Google Maps:", error);
       reportError("Error initializing map. Please check console for details.");
     }
-  }, [isLoaded, technicians, reportError]);
-
-  // Clean up markers
-  useEffect(() => {
-    return () => {
-      markers.forEach(marker => marker.setMap(null));
-    };
-  }, [markers]);
+  }, [isLoaded, technicians, reportError, mapInitialized]);
 
   // Handle Google Maps API errors
   useEffect(() => {
@@ -302,8 +329,11 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
     e.preventDefault();
     if (manualApiKey) {
       console.log("Setting new API key, length:", manualApiKey.length);
+      // Reset global state to force reloading
+      googleMapsScriptLoaded = false;
       cleanupScript();
       setIsLoaded(false);
+      setMapInitialized(false);
       
       // Save the API key to settings
       const settings = getIntegrationSettings();
@@ -320,8 +350,13 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
   };
 
   const handleRetry = () => {
+    // Reset global state to force reloading
+    googleMapsScriptLoaded = false;
     cleanupScript();
     setError(null);
+    setMapInitialized(false);
+    setIsLoaded(false);
+    
     const apiKey = googleMapsApiKey || manualApiKey;
     if (apiKey) {
       console.log("Retrying with API key, length:", apiKey.length);
@@ -331,7 +366,6 @@ const TechLocationMap = ({ onError }: TechLocationMapProps) => {
         settings.googleMaps.connected = true;
         settings.googleMaps.apiKey = apiKey;
         saveIntegrationSettings(settings);
-        window.location.reload();
       }, 500);
     }
   };
