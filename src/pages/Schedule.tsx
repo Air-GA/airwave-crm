@@ -55,6 +55,10 @@ const quickWorkOrderSchema = z.object({
   priority: z.enum(["low", "medium", "high", "emergency"]),
   description: z.string().min(10, "Description is required"),
   technicianId: z.string().optional(),
+  scheduledDate: z.date({
+    required_error: "Please select a date",
+  }),
+  scheduledTime: z.string().min(1, "Please select a time"),
 });
 
 type QuickWorkOrderFormValues = z.infer<typeof quickWorkOrderSchema>;
@@ -79,12 +83,18 @@ const Schedule = () => {
   const defaultValues: Partial<QuickWorkOrderFormValues> = {
     type: "maintenance",
     priority: "medium",
+    scheduledDate: date,
+    scheduledTime: "10:00"
   };
 
   const form = useForm<QuickWorkOrderFormValues>({
     resolver: zodResolver(quickWorkOrderSchema),
     defaultValues,
   });
+
+  useEffect(() => {
+    form.setValue("scheduledDate", date);
+  }, [date, form]);
 
   const loadData = async () => {
     try {
@@ -141,10 +151,6 @@ const Schedule = () => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadData();
-  }, [toast]);
 
   const handleSyncWorkOrders = async () => {
     try {
@@ -250,6 +256,21 @@ const Schedule = () => {
         setDraggedMaintenance(member);
         setIsCreateWorkOrderOpen(true);
         
+        let preferredTime = "10:00";
+        if (member.preferredTimeSlot) {
+          const timeMatch = member.preferredTimeSlot.match(/(\d+):(\d+)\s*(AM|PM)/i);
+          if (timeMatch) {
+            let hours = parseInt(timeMatch[1], 10);
+            const minutes = parseInt(timeMatch[2], 10);
+            const meridian = timeMatch[3].toUpperCase();
+            
+            if (meridian === 'PM' && hours < 12) hours += 12;
+            if (meridian === 'AM' && hours === 12) hours = 0;
+            
+            preferredTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          }
+        }
+        
         form.reset({
           customerName: member.customerName,
           address: member.address,
@@ -258,7 +279,9 @@ const Schedule = () => {
           type: 'maintenance',
           priority: 'medium',
           description: `Biannual maintenance service for ${member.customerName}`,
-          technicianId: selectedTechnicianId || undefined
+          technicianId: selectedTechnicianId || undefined,
+          scheduledDate: date,
+          scheduledTime: preferredTime
         });
       }
     }
@@ -266,24 +289,9 @@ const Schedule = () => {
 
   const onSubmitQuickCreate = async (data: QuickWorkOrderFormValues) => {
     try {
-      let scheduledDate = new Date(date);
-      if (draggedMaintenance?.preferredTimeSlot) {
-        const timeMatch = draggedMaintenance.preferredTimeSlot.match(/(\d+):(\d+)\s*(AM|PM)/i);
-        if (timeMatch) {
-          let hours = parseInt(timeMatch[1], 10);
-          const minutes = parseInt(timeMatch[2], 10);
-          const meridian = timeMatch[3].toUpperCase();
-          
-          if (meridian === 'PM' && hours < 12) hours += 12;
-          if (meridian === 'AM' && hours === 12) hours = 0;
-          
-          scheduledDate.setHours(hours, minutes, 0, 0);
-        } else {
-          scheduledDate.setHours(10, 0, 0, 0);
-        }
-      } else {
-        scheduledDate.setHours(10, 0, 0, 0);
-      }
+      let scheduledDateTime = new Date(data.scheduledDate);
+      const [hours, minutes] = data.scheduledTime.split(':').map(num => parseInt(num, 10));
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
       
       const newWorkOrder = await createWorkOrder({
         customerName: data.customerName,
@@ -293,7 +301,7 @@ const Schedule = () => {
         type: data.type,
         description: data.description,
         priority: data.priority,
-        scheduledDate: scheduledDate.toISOString(),
+        scheduledDate: scheduledDateTime.toISOString(),
         status: data.technicianId ? 'scheduled' : 'pending',
         technicianId: data.technicianId || undefined,
         technicianName: data.technicianId 
@@ -311,7 +319,7 @@ const Schedule = () => {
 
       toast({
         title: "Maintenance Appointment Created",
-        description: `New maintenance appointment for ${data.customerName} has been scheduled.`,
+        description: `New maintenance appointment for ${data.customerName} has been scheduled for ${formatDate(scheduledDateTime, { includeTime: true })}.`,
       });
     } catch (error) {
       console.error("Failed to create maintenance appointment:", error);
@@ -330,6 +338,18 @@ const Schedule = () => {
     const street = streetMatch[1];
     return `Look for other maintenance members on ${street} Street to optimize technician routes`;
   };
+
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 8; hour <= 20; hour++) {
+      const hourStr = hour.toString().padStart(2, '0');
+      options.push(`${hourStr}:00`);
+      options.push(`${hourStr}:30`);
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
@@ -587,6 +607,73 @@ const Schedule = () => {
                               <SelectItem value="medium">Medium</SelectItem>
                               <SelectItem value="high">High</SelectItem>
                               <SelectItem value="emergency">Emergency</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="scheduledDate"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Appointment Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    formatDate(field.value)
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={(date) => date && field.onChange(date)}
+                                initialFocus
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="scheduledTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Appointment Time</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select time" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {timeOptions.map(time => (
+                                <SelectItem key={time} value={time}>
+                                  {time}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

@@ -1,358 +1,134 @@
 
-import { supabase } from '../lib/supabase';
-import { WorkOrder, Technician } from '../types';
-import { toast } from '@/components/ui/use-toast';
-import { workOrders as mockWorkOrders } from '../data/mockData';
+import { mockWorkOrders } from '@/data/mockData';
+import { WorkOrder } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from '@/hooks/use-toast';
 
-// Base URL for the Supabase Edge Function
-const CRM_SYNC_URL = `${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321'}/functions/v1/crm-sync`;
-
-/**
- * Fetch and sync technicians from the external CRM
- */
-export const syncTechniciansFromCRM = async (): Promise<Technician[]> => {
-  try {
-    console.log("Attempting to sync technicians from CRM...");
-    console.log("Using CRM sync URL:", CRM_SYNC_URL);
-    
-    // Since supabase client may not have functions property in the current setup
-    // Use direct fetch to the edge function URL instead
-    const response = await fetch(`${CRM_SYNC_URL}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ action: 'sync-technicians' })
-    });
-    
-    // Check if the request was successful
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Error response from sync technicians:", errorData);
-      throw new Error(errorData.error || `Failed to sync technicians: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log("Successfully synced technicians:", data);
-    
-    toast({
-      title: "Sync Complete",
-      description: `Successfully synced ${data.technicians?.length || 0} technicians from CRM`,
-    });
-
-    return data.technicians || [];
-  } catch (error) {
-    console.error("Error in syncTechniciansFromCRM:", error);
-    
-    // Provide more detailed error message
-    let errorMessage = "Could not sync technicians due to a network error";
-    if (error instanceof Error) {
-      errorMessage = `Sync failed: ${error.message}`;
-    }
-    
-    toast({
-      title: "Sync Failed",
-      description: errorMessage,
-      variant: "destructive",
-    });
-    
-    // Return empty array to prevent further issues
-    return [];
-  }
-};
+const API_ENDPOINT = import.meta.env.VITE_SUPABASE_URL 
+  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crm-sync`
+  : '/api/crm-sync';
 
 /**
- * Fetch and sync work orders from the external CRM
+ * Sync work orders from CRM system
+ * This is a mock implementation that simulates API calls
  */
 export const syncWorkOrdersFromCRM = async (): Promise<WorkOrder[]> => {
+  console.log("Syncing work orders from CRM...");
+  
+  // In a real implementation, this would be an API call to fetch data from CRM
   try {
-    console.log("Attempting to sync work orders from CRM...");
-    console.log("Using CRM sync URL:", CRM_SYNC_URL);
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Use mock data if we're in development and there's no Supabase connection
-    if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
-      console.log("Using mock data for work orders in development environment");
-      
-      // Convert mockWorkOrders to use cost instead of price for compatibility
-      const convertedMockWorkOrders = mockWorkOrders.map(order => {
-        // Create a new object with all the properties of the original order
-        const converted = {...order};
-        
-        // Convert partsUsed if it exists
-        if (converted.partsUsed && converted.partsUsed.length > 0) {
-          converted.partsUsed = converted.partsUsed.map(part => ({
-            id: part.id,
-            name: part.name,
-            quantity: part.quantity,
-            cost: part.price // Map price to cost
-          }));
-        }
-        
-        return converted;
-      });
-      
-      console.log(`Returning ${convertedMockWorkOrders.length} converted mock work orders`);
-      
-      toast({
-        title: "Mock Sync Complete",
-        description: `Using ${convertedMockWorkOrders.length} mock work orders (development mode)`,
-      });
-      
-      return convertedMockWorkOrders as unknown as WorkOrder[];
-    }
+    // For this mock, we're returning predefined mock data
+    console.log("Synced work orders from CRM:", mockWorkOrders.length);
     
-    // Since supabase client may not have functions property in the current setup
-    // Use direct fetch to the edge function URL instead
-    const response = await fetch(`${CRM_SYNC_URL}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ action: 'sync-work-orders' })
+    // Map mockWorkOrders from mockData to match the WorkOrder type
+    const transformedOrders = mockWorkOrders.map(order => {
+      // Map partsUsed.price to partsUsed.cost
+      const transformedOrder = {
+        ...order,
+        partsUsed: order.partsUsed?.map(part => ({
+          id: part.id,
+          name: part.name,
+          quantity: part.quantity,
+          price: part.price, // Keep price for compatibility
+          cost: part.price    // Map price to cost
+        })) || []
+      };
+      return transformedOrder;
     });
-    
-    // Check if the request was successful
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Error response from sync work orders:", errorData);
-      throw new Error(errorData.error || `Failed to sync work orders: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log("Successfully synced work orders:", data);
     
     toast({
-      title: "Sync Complete",
-      description: `Successfully synced ${data.workOrders?.length || 0} work orders from CRM`,
+      title: "Sync Successful",
+      description: `Successfully synced ${transformedOrders.length} work orders from CRM`,
     });
-
-    return data.workOrders?.map(mapWorkOrderFromDB) || [];
+    
+    return transformedOrders;
   } catch (error) {
-    console.error("Error in syncWorkOrdersFromCRM:", error);
-    
-    // Provide more detailed error message
-    let errorMessage = "Could not sync work orders due to a network error";
-    if (error instanceof Error) {
-      errorMessage = `Sync failed: ${error.message}`;
-    }
-    
+    console.error("Error syncing work orders from CRM:", error);
     toast({
       title: "Sync Failed",
-      description: errorMessage,
+      description: "Could not sync work orders from CRM. Please try again.",
       variant: "destructive",
     });
-    
-    // Return empty array to prevent further issues
-    return [];
+    throw error;
   }
 };
 
 /**
- * Push a work order update back to the external CRM
+ * Sync work orders to CRM system
+ * This is a mock implementation that simulates API calls
  */
-export const pushWorkOrderUpdateToCRM = async (workOrder: WorkOrder): Promise<boolean> => {
+export const syncWorkOrdersToCRM = async (workOrders: WorkOrder[]): Promise<boolean> => {
+  console.log("Syncing work orders to CRM...");
+  
+  // In a real implementation, this would be an API call to send data to CRM
   try {
-    console.log("Pushing work order update to CRM:", workOrder);
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // If we're in development with no Supabase, just simulate a successful update
-    if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
-      console.log("Development mode: Simulating successful work order update to CRM");
-      
-      toast({
-        title: "Update Successful",
-        description: "Work order was successfully updated (development mode)",
-      });
-      
-      return true;
-    }
-    
-    // Since supabase client may not have functions property in the current setup
-    // Use direct fetch to the edge function URL instead
-    const response = await fetch(`${CRM_SYNC_URL}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ 
-        action: 'push-update',
-        type: 'work-order',
-        payload: mapWorkOrderToDB(workOrder) 
-      })
-    });
-    
-    // Check if the request was successful
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Error response from updating work order:", errorData);
-      throw new Error(errorData.error || `Failed to update work order: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log("Successfully updated work order in CRM:", data);
-
+    console.log(`Successfully synced ${workOrders.length} work orders to CRM`);
     toast({
-      title: "Update Successful",
-      description: "Work order was successfully updated in CRM",
+      title: "Sync Successful",
+      description: `Successfully synced ${workOrders.length} work orders to CRM`,
     });
-
+    
     return true;
   } catch (error) {
-    console.error("Error in pushWorkOrderUpdateToCRM:", error);
-    
-    // Provide more detailed error message
-    let errorMessage = "Could not update work order due to a network error";
-    if (error instanceof Error) {
-      errorMessage = `Update failed: ${error.message}`;
-    }
-    
+    console.error("Error syncing work orders to CRM:", error);
     toast({
-      title: "Update Failed",
-      description: errorMessage,
+      title: "Sync Failed",
+      description: "Could not sync work orders to CRM. Please try again.",
       variant: "destructive",
     });
-    
     return false;
   }
 };
 
 /**
- * Push a technician update back to the external CRM
+ * Generate a new work order with CRM integration
+ * This is a mock implementation that simulates API calls
  */
-export const pushTechnicianUpdateToCRM = async (technician: Technician): Promise<boolean> => {
+export const generateWorkOrderInCRM = async (customerData: any): Promise<WorkOrder | null> => {
+  console.log("Generating work order in CRM...");
+  
+  // In a real implementation, this would be an API call to CRM system
   try {
-    console.log("Pushing technician update to CRM:", technician);
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // If we're in development with no Supabase, just simulate a successful update
-    if (import.meta.env.DEV && (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder'))) {
-      console.log("Development mode: Simulating successful technician update to CRM");
-      
-      toast({
-        title: "Update Successful",
-        description: "Technician was successfully updated (development mode)",
-      });
-      
-      return true;
-    }
-    
-    // Map the technician to the format expected by the CRM
-    const techForCRM = {
-      id: technician.id,
-      name: technician.name,
-      status: technician.status,
-      skills: technician.specialties,
-      location: {
-        address: technician.current_location_address,
-        latitude: technician.current_location_lat,
-        longitude: technician.current_location_lng
-      }
+    // Generate mock work order
+    const workOrder: WorkOrder = {
+      id: uuidv4(),
+      customerName: customerData.name,
+      email: customerData.email,
+      phoneNumber: customerData.phone,
+      address: customerData.address,
+      type: "maintenance",
+      description: "Generated from CRM system",
+      priority: "medium",
+      scheduledDate: new Date().toISOString(),
+      createdDate: new Date().toISOString(),
+      status: "pending",
+      estimatedHours: 2,
+      partsUsed: []
     };
-
-    // Since supabase client may not have functions property in the current setup
-    // Use direct fetch to the edge function URL instead
-    const response = await fetch(`${CRM_SYNC_URL}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ 
-        action: 'push-update',
-        type: 'technician',
-        payload: techForCRM
-      })
-    });
     
-    // Check if the request was successful
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Error response from updating technician:", errorData);
-      throw new Error(errorData.error || `Failed to update technician: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log("Successfully updated technician in CRM:", data);
-
+    console.log("Generated work order:", workOrder);
     toast({
-      title: "Update Successful",
-      description: "Technician was successfully updated in CRM",
+      title: "Work Order Created",
+      description: `Work order #${workOrder.id.substring(0, 8)} created in CRM system`,
     });
-
-    return true;
+    
+    return workOrder;
   } catch (error) {
-    console.error("Error in pushTechnicianUpdateToCRM:", error);
-    
-    // Provide more detailed error message
-    let errorMessage = "Could not update technician due to a network error";
-    if (error instanceof Error) {
-      errorMessage = `Update failed: ${error.message}`;
-    }
-    
+    console.error("Error generating work order in CRM:", error);
     toast({
-      title: "Update Failed",
-      description: errorMessage,
+      title: "Error",
+      description: "Could not generate work order in CRM system. Please try again.",
       variant: "destructive",
     });
-    
-    return false;
+    return null;
   }
-};
-
-// Utility functions to map between Supabase and our app's data structures
-// These are copied from workOrderService.ts to maintain consistency
-
-// Map the Supabase schema to our application types
-const mapWorkOrderFromDB = (order: any): WorkOrder => {
-  return {
-    id: order.id,
-    customerId: order.customer_id,
-    customerName: order.customer_name,
-    address: order.address,
-    type: order.type,
-    description: order.description,
-    priority: order.priority,
-    status: order.status,
-    scheduledDate: order.scheduled_date,
-    createdAt: order.created_at,
-    completedDate: order.completed_date || undefined,
-    estimatedHours: order.estimated_hours || undefined,
-    technicianId: order.technician_id || undefined,
-    technicianName: order.technician_name || undefined,
-    notes: order.notes || undefined,
-    partsUsed: order.partsUsed ? order.partsUsed.map((part: any) => ({
-      id: part.id,
-      name: part.name,
-      quantity: part.quantity,
-      cost: part.price || part.cost // Map price to cost if cost is not available
-    })) : undefined,
-  };
-};
-
-// Map our application type to the Supabase schema
-const mapWorkOrderToDB = (order: WorkOrder) => {
-  return {
-    id: order.id,
-    customer_id: order.customerId,
-    customer_name: order.customerName,
-    address: order.address,
-    type: order.type,
-    description: order.description,
-    priority: order.priority,
-    status: order.status,
-    scheduled_date: order.scheduledDate,
-    created_at: order.createdAt,
-    completed_date: order.completedDate || null,
-    estimated_hours: order.estimatedHours || null,
-    technician_id: order.technicianId || null,
-    technician_name: order.technicianName || null,
-    notes: order.notes || null,
-    partsUsed: order.partsUsed ? order.partsUsed.map(part => ({
-      id: part.id,
-      name: part.name,
-      quantity: part.quantity,
-      price: part.cost // Map cost to price for the backend
-    })) : null,
-  };
 };
