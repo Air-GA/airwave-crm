@@ -17,8 +17,13 @@ const MapView = () => {
       integrations.googleMaps.apiKey && 
       integrations.googleMaps.apiKey.length > 0;
     
+    // Auto-show map if API key is available
+    if (hasGoogleMapsApiKey && !showMap) {
+      setShowMap(true);
+    }
+    
     setHasApiKey(hasGoogleMapsApiKey);
-  }, []);
+  }, [showMap]);
   
   return (
     <Card>

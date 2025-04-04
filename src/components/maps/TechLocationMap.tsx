@@ -6,17 +6,11 @@ import { Input } from "@/components/ui/input";
 import { getIntegrationSettings, saveIntegrationSettings } from "@/utils/settingsStorage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Map, Info, ExternalLink } from "lucide-react";
+import { Technician } from '@/types';
+import { useTechnicianStore } from '@/services/technicianService';
 
-interface TechLocation {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  status: "available" | "busy" | "offline";
-}
-
-// Sample technician data
-const sampleTechs: TechLocation[] = [
+// Sample technician data if we need fallbacks
+const sampleTechs = [
   { id: "tech1", name: "Mike Johnson", lat: 33.7952, lng: -83.7136, status: "available" },
   { id: "tech2", name: "Sarah Williams", lat: 33.8304, lng: -83.6909, status: "busy" },
   { id: "tech3", name: "Robert Taylor", lat: 33.7490, lng: -83.7376, status: "available" },
@@ -30,6 +24,9 @@ const TechLocationMap = () => {
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showApiKeyHelp, setShowApiKeyHelp] = useState<boolean>(false);
+  
+  const technicians = useTechnicianStore(state => state.technicians);
+  
   const mapRef = useRef<HTMLDivElement>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
 
@@ -48,12 +45,14 @@ const TechLocationMap = () => {
       scriptRef.current = null;
     }
     if (window.initMap) {
+      // @ts-ignore - initMap is added to window but TS doesn't know about it
       delete window.initMap;
     }
   };
 
   // Load Google Maps script
   useEffect(() => {
+    console.log("Google Maps API key:", googleMapsApiKey || manualApiKey);
     const apiKey = googleMapsApiKey || manualApiKey;
     if (!apiKey) return;
 
@@ -75,12 +74,14 @@ const TechLocationMap = () => {
     
     // Define error handling
     script.onerror = () => {
+      console.error("Failed to load Google Maps API");
       setError("Failed to load Google Maps API. Please check your API key.");
       setIsLoaded(false);
     };
     
     // Define the callback function
     window.initMap = () => {
+      console.log("Google Maps API loaded successfully");
       setIsLoaded(true);
     };
     
@@ -91,12 +92,14 @@ const TechLocationMap = () => {
     };
   }, [googleMapsApiKey, manualApiKey]);
 
-  // Initialize map
+  // Initialize map with technician markers
   useEffect(() => {
     if (!isLoaded || !mapRef.current) return;
     
     try {
-      // Create map
+      console.log("Initializing map with", technicians.length, "technicians");
+      
+      // Create map centered on Monroe, GA (or average of technician locations)
       const mapInstance = new google.maps.Map(mapRef.current, {
         center: { lat: 33.7956, lng: -83.7136 }, // Monroe, GA
         zoom: 12,
@@ -105,21 +108,32 @@ const TechLocationMap = () => {
       
       setMap(mapInstance);
 
+      // Use real technicians if available, otherwise use sample data
+      const techsToShow = technicians.length > 0 && technicians.some(t => t.currentLocation)
+        ? technicians
+        : sampleTechs;
+
       // Add markers for technicians
-      const mapMarkers = sampleTechs.map(tech => {
+      const mapMarkers = techsToShow.map(tech => {
+        // Get location from technician data
+        const location = tech.currentLocation 
+          ? { lat: tech.currentLocation.lat, lng: tech.currentLocation.lng }
+          : { lat: (tech as any).lat || 33.7956, lng: (tech as any).lng || -83.7136 };
+        
         // Choose marker color based on status
+        const status = tech.status || 'offline';
         let icon = {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
-          fillColor: tech.status === "available" ? "#22c55e" : 
-                    tech.status === "busy" ? "#f97316" : "#6b7280",
+          fillColor: status === "available" ? "#22c55e" : 
+                    status === "busy" ? "#f97316" : "#6b7280",
           fillOpacity: 1,
           strokeWeight: 1,
           strokeColor: "#ffffff",
         };
         
         const marker = new google.maps.Marker({
-          position: { lat: tech.lat, lng: tech.lng },
+          position: location,
           map: mapInstance,
           title: tech.name,
           icon,
@@ -131,9 +145,10 @@ const TechLocationMap = () => {
             <div style="padding: 8px;">
               <div style="font-weight: bold;">${tech.name}</div>
               <div style="color: ${
-                tech.status === "available" ? "green" : 
-                tech.status === "busy" ? "orange" : "gray"
-              }; text-transform: capitalize;">${tech.status}</div>
+                status === "available" ? "green" : 
+                status === "busy" ? "orange" : "gray"
+              }; text-transform: capitalize;">${status}</div>
+              ${tech.currentLocation?.address ? `<div style="margin-top: 4px; font-size: 12px;">${tech.currentLocation.address}</div>` : ''}
             </div>
           `,
         });
@@ -154,7 +169,7 @@ const TechLocationMap = () => {
       console.error("Error initializing Google Maps:", error);
       setError("Error initializing map. Please check console for details.");
     }
-  }, [isLoaded]);
+  }, [isLoaded, technicians]);
 
   // Clean up markers
   useEffect(() => {
@@ -167,6 +182,7 @@ const TechLocationMap = () => {
   useEffect(() => {
     const handleMapError = (event: ErrorEvent) => {
       if (event.message && event.message.includes('Google Maps JavaScript API error')) {
+        console.error("Google Maps API error:", event.message);
         setError("Google Maps API error: Invalid or restricted API key. Please check your API key settings.");
         setIsLoaded(false);
       }
@@ -182,6 +198,7 @@ const TechLocationMap = () => {
   const handleApiKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualApiKey) {
+      console.log("Setting new API key:", manualApiKey);
       cleanupScript();
       setIsLoaded(false);
       
@@ -191,6 +208,8 @@ const TechLocationMap = () => {
       settings.googleMaps.apiKey = manualApiKey;
       saveIntegrationSettings(settings);
       setGoogleMapsApiKey(manualApiKey);
+      
+      // Toast notification would be good here
     }
   };
 
@@ -198,7 +217,7 @@ const TechLocationMap = () => {
     <Card className="overflow-hidden">
       {((!googleMapsApiKey && !manualApiKey) || error) ? (
         <div className="p-4">
-          <Alert className="mb-4" variant="destructive">
+          <Alert className="mb-4" variant={error ? "destructive" : "default"}>
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>
               {error ? "Map Error" : "Google Maps API Key Required"}
