@@ -21,7 +21,7 @@ import Notifications from "@/pages/Notifications";
 import Timesheets from "@/pages/Timesheets";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
-import RoleGuard from "@/components/auth/RoleGuard";
+import { RoleGuard } from "@/components/guards/RoleGuard";
 
 const queryClient = new QueryClient();
 
@@ -37,20 +37,66 @@ function App() {
               <Route path="/unauthorized" element={<Unauthorized />} />
 
               {/* Protected routes */}
-              <Route element={<RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]} />}>
-                <Route path="/customers" element={<Customers />} />
-                <Route path="/work-orders" element={<WorkOrders />} />
-                <Route path="/work-orders/create" element={<CreateWorkOrder />} />
-                <Route path="/schedule" element={<Schedule />} />
-                <Route path="/dispatch" element={<Dispatch />} />
-                <Route path="/inventory" element={<Inventory />} />
-                <Route path="/invoices" element={<Invoices />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/messages" element={<Messages />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/timesheets" element={<Timesheets />} />
-                <Route path="/settings" element={<Settings />} />
-              </Route>
+              <Route path="/customers" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Customers />
+                </RoleGuard>
+              } />
+              <Route path="/work-orders" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <WorkOrders />
+                </RoleGuard>
+              } />
+              <Route path="/work-orders/create" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <CreateWorkOrder />
+                </RoleGuard>
+              } />
+              <Route path="/schedule" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Schedule />
+                </RoleGuard>
+              } />
+              <Route path="/dispatch" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Dispatch />
+                </RoleGuard>
+              } />
+              <Route path="/inventory" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Inventory />
+                </RoleGuard>
+              } />
+              <Route path="/invoices" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Invoices />
+                </RoleGuard>
+              } />
+              <Route path="/reports" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Reports />
+                </RoleGuard>
+              } />
+              <Route path="/messages" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Messages />
+                </RoleGuard>
+              } />
+              <Route path="/notifications" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Notifications />
+                </RoleGuard>
+              } />
+              <Route path="/timesheets" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Timesheets />
+                </RoleGuard>
+              } />
+              <Route path="/settings" element={
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                  <Settings />
+                </RoleGuard>
+              } />
 
               {/* Not found */}
               <Route path="*" element={<NotFound />} />
