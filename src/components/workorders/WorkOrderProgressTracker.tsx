@@ -16,7 +16,10 @@ import {
   Bell, 
   CheckCircle2, 
   User, 
-  CalendarClock 
+  CalendarClock,
+  Clock10,
+  Medal,
+  TrendingUp
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -132,6 +135,10 @@ const WorkOrderProgressTracker = ({
   );
   
   const [activeTab, setActiveTab] = useState<string>("overview");
+  
+  // Track metrics for tech performance
+  const [averageStepTime, setAverageStepTime] = useState<number>(0);
+  const [totalServiceTime, setTotalServiceTime] = useState<number>(0);
 
   // Calculate progress percentage based on completed steps
   function calculateProgress(steps: ProgressStep[]): number {
@@ -178,6 +185,9 @@ const WorkOrderProgressTracker = ({
     const newProgress = calculateProgress(updatedSteps);
     setProgress(newProgress);
     
+    // Calculate timing metrics
+    calculateTimingMetrics(updatedSteps);
+    
     // Send notifications based on step settings
     sendNotifications(updatedSteps[stepIndex]);
     
@@ -185,6 +195,112 @@ const WorkOrderProgressTracker = ({
     if (onProgressUpdate) {
       onProgressUpdate(updatedSteps, nextStepId(updatedSteps, stepId) || stepId, newProgress);
     }
+  };
+  
+  // Calculate timing metrics based on step timestamps
+  const calculateTimingMetrics = (steps: ProgressStep[]) => {
+    // Get completed steps with timestamps
+    const completedSteps = steps.filter(step => 
+      step.status === "completed" && step.timestamp
+    );
+    
+    if (completedSteps.length <= 1) return;
+    
+    // Calculate time between steps
+    let totalTime = 0;
+    let timeIntervals = [];
+    
+    for (let i = 1; i < completedSteps.length; i++) {
+      const prevTime = new Date(completedSteps[i-1].timestamp!).getTime();
+      const currTime = new Date(completedSteps[i].timestamp!).getTime();
+      const timeDiff = (currTime - prevTime) / (1000 * 60); // in minutes
+      
+      timeIntervals.push(timeDiff);
+      totalTime += timeDiff;
+    }
+    
+    // Calculate total service time
+    const serviceStartIndex = steps.findIndex(step => step.id === "arrival");
+    const serviceEndIndex = steps.findIndex(step => step.id === "completion");
+    
+    if (serviceStartIndex >= 0 && serviceEndIndex >= 0 && 
+        steps[serviceStartIndex].status === "completed" && 
+        steps[serviceEndIndex].status === "completed") {
+      
+      const startTime = new Date(steps[serviceStartIndex].timestamp!).getTime();
+      const endTime = new Date(steps[serviceEndIndex].timestamp!).getTime();
+      const serviceTime = (endTime - startTime) / (1000 * 60); // in minutes
+      
+      setTotalServiceTime(Math.round(serviceTime));
+    }
+    
+    // Set average time
+    if (timeIntervals.length > 0) {
+      setAverageStepTime(Math.round(totalTime / timeIntervals.length));
+    }
+  };
+  
+  // Calculate the time between steps
+  const calculateStepDuration = (currentStepId: string, nextStepId: string) => {
+    const currentStep = progressSteps.find(step => step.id === currentStepId);
+    const nextStep = progressSteps.find(step => step.id === nextStepId);
+    
+    if (!currentStep?.timestamp || !nextStep?.timestamp || 
+        currentStep.status !== "completed" || nextStep.status !== "completed") {
+      return null;
+    }
+    
+    const startTime = new Date(currentStep.timestamp).getTime();
+    const endTime = new Date(nextStep.timestamp).getTime();
+    const diffMinutes = Math.round((endTime - startTime) / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes} mins`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const mins = diffMinutes % 60;
+      return `${hours}h ${mins}m`;
+    }
+  };
+  
+  // Calculate total service time
+  const calculateTotalServiceTime = () => {
+    const arrivalStep = progressSteps.find(step => step.id === "arrival");
+    const completionStep = progressSteps.find(step => step.id === "completion");
+    
+    if (!arrivalStep?.timestamp || !completionStep?.timestamp || 
+        arrivalStep.status !== "completed" || completionStep.status !== "completed") {
+      return null;
+    }
+    
+    const startTime = new Date(arrivalStep.timestamp).getTime();
+    const endTime = new Date(completionStep.timestamp).getTime();
+    const diffMinutes = Math.round((endTime - startTime) / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes} minutes`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const mins = diffMinutes % 60;
+      return `${hours}h ${mins}m`;
+    }
+  };
+  
+  // Calculate performance metrics for technician rating
+  const calculateTechPerformance = () => {
+    // This would ideally compare against team averages
+    // For now we'll use a simplified scoring system
+    
+    const serviceTime = calculateTotalServiceTime();
+    if (!serviceTime) return null;
+    
+    const completedStepsCount = progressSteps.filter(step => 
+      step.status === "completed").length;
+    
+    // Simple rating based on progress and timing
+    const rating = Math.min(5, Math.round((completedStepsCount / progressSteps.length) * 5));
+    
+    return rating;
   };
   
   // Get the ID of the next step after the current one
@@ -217,6 +333,11 @@ const WorkOrderProgressTracker = ({
       });
     }
   };
+  
+  // Calculate timing metrics on component mount
+  useEffect(() => {
+    calculateTimingMetrics(progressSteps);
+  }, []);
   
   // Find the current active step
   const currentActiveStep = progressSteps.find(step => step.id === currentStep);
@@ -264,9 +385,10 @@ const WorkOrderProgressTracker = ({
           
           {/* Tabs for different views */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-3">
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="metrics">Metrics</TabsTrigger>
               <TabsTrigger value="actions">Actions</TabsTrigger>
             </TabsList>
             
@@ -364,20 +486,136 @@ const WorkOrderProgressTracker = ({
                       )}
                     </div>
                     
+                    {/* Show time elapsed between steps */}
+                    {index > 0 && progressSteps[index-1].status === "completed" && step.status === "completed" && (
+                      <div className="mt-1.5 flex items-center text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3 mr-1" />
+                        <span>
+                          {calculateStepDuration(progressSteps[index-1].id, step.id) || "N/A"} between steps
+                        </span>
+                      </div>
+                    )}
+                    
                     <div className="flex mt-1 space-x-2">
                       {step.notifyCustomer && (
-                        <Badge variant="outline" size="sm" className="text-xs">
+                        <Badge variant="outline" className="text-xs">
                           <Bell className="h-3 w-3 mr-1" /> Customer
                         </Badge>
                       )}
                       {step.notifyTech && (
-                        <Badge variant="outline" size="sm" className="text-xs">
+                        <Badge variant="outline" className="text-xs">
                           <Bell className="h-3 w-3 mr-1" /> Technician
                         </Badge>
                       )}
                     </div>
                   </div>
                 ))}
+              </div>
+            </TabsContent>
+            
+            {/* Metrics tab - new tab for tech performance */}
+            <TabsContent value="metrics" className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border rounded-md p-3">
+                  <h3 className="font-medium mb-2 flex items-center">
+                    <Clock10 className="h-4 w-4 mr-1.5" />
+                    Service Timing
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Average Step Time:</p>
+                      <p className="font-medium">{averageStepTime > 0 ? `${averageStepTime} minutes` : "Not available"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Service Time:</p>
+                      <p className="font-medium">{calculateTotalServiceTime() || "Not complete"}</p>
+                    </div>
+                    {/* Show time to reach service location */}
+                    {progressSteps.find(s => s.id === "enroute")?.status === "completed" && 
+                     progressSteps.find(s => s.id === "arrival")?.status === "completed" && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Travel Time:</p>
+                        <p className="font-medium">{calculateStepDuration("enroute", "arrival") || "N/A"}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="border rounded-md p-3">
+                  <h3 className="font-medium mb-2 flex items-center">
+                    <Medal className="h-4 w-4 mr-1.5" />
+                    Technician Performance
+                  </h3>
+                  <div className="space-y-3">
+                    {calculateTechPerformance() ? (
+                      <>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Efficiency Rating:</p>
+                          <div className="flex items-center mt-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Medal 
+                                key={i} 
+                                className={`h-5 w-5 ${
+                                  i < (calculateTechPerformance() || 0) 
+                                    ? "text-amber-500" 
+                                    : "text-gray-200"
+                                }`} 
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Service Completion Speed:</p>
+                          <p className="font-medium flex items-center">
+                            {totalServiceTime < 120 ? (
+                              <>
+                                <TrendingUp className="h-4 w-4 mr-1.5 text-green-500" />
+                                Above Average
+                              </>
+                            ) : totalServiceTime < 180 ? (
+                              "Average"
+                            ) : (
+                              <>
+                                <TrendingUp className="h-4 w-4 mr-1.5 rotate-180 text-amber-500" />
+                                Below Average
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Performance metrics will be available when service is completed.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border rounded-md p-3">
+                <h3 className="font-medium mb-2">Step Completion Times</h3>
+                <div className="space-y-1">
+                  {progressSteps.filter(step => step.status === "completed" && step.timestamp).map((step, index) => {
+                    const prevStep = index > 0 ? progressSteps[index-1] : null;
+                    const duration = prevStep ? calculateStepDuration(prevStep.id, step.id) : null;
+                    
+                    return (
+                      <div key={step.id} className="flex justify-between text-sm py-1 border-b border-gray-100 last:border-none">
+                        <span>{step.name}</span>
+                        <div className="flex items-center">
+                          {duration && (
+                            <span className="text-xs text-muted-foreground mr-3">
+                              {duration}
+                            </span>
+                          )}
+                          <span>{formatDate(new Date(step.timestamp!), { timeOnly: true })}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {progressSteps.filter(step => step.status === "completed" && step.timestamp).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No steps completed yet.</p>
+                  )}
+                </div>
               </div>
             </TabsContent>
             

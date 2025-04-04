@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, User, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Calendar, Clock, MapPin, User, AlertCircle, CheckCircle2, Clock10, Medal } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { WorkOrder, ProgressStep } from "@/types";
 import { useState } from "react";
@@ -66,6 +66,33 @@ const WorkOrderDetailsPanel = ({
     }
   };
   
+  // Calculate service time if available from progress steps
+  const calculateServiceTime = () => {
+    if (!workOrder.progressSteps) return null;
+    
+    const arrivalStep = workOrder.progressSteps.find(step => step.id === "arrival");
+    const completionStep = workOrder.progressSteps.find(step => step.id === "completion");
+    
+    if (!arrivalStep?.timestamp || !completionStep?.timestamp || 
+        arrivalStep.status !== "completed" || completionStep.status !== "completed") {
+      return null;
+    }
+    
+    const startTime = new Date(arrivalStep.timestamp).getTime();
+    const endTime = new Date(completionStep.timestamp).getTime();
+    const diffMinutes = Math.round((endTime - startTime) / (1000 * 60));
+    
+    if (diffMinutes < 60) {
+      return `${diffMinutes} minutes`;
+    } else {
+      const hours = Math.floor(diffMinutes / 60);
+      const mins = diffMinutes % 60;
+      return `${hours}h ${mins}m`;
+    }
+  };
+  
+  const serviceTime = calculateServiceTime();
+  
   return (
     <>
       <div className="rounded-md border p-4">
@@ -91,6 +118,13 @@ const WorkOrderDetailsPanel = ({
             <span>{formatDate(new Date(workOrder.scheduledDate), { timeOnly: true })}</span>
           </div>
           
+          {serviceTime && (
+            <div className="flex items-center gap-2">
+              <Clock10 className="h-4 w-4 text-muted-foreground" />
+              <span>Service time: {serviceTime}</span>
+            </div>
+          )}
+          
           {workOrder.status === "pending-completion" && workOrder.pendingReason && (
             <div className="mt-1 flex items-start gap-1.5 text-sm text-amber-600 bg-amber-50 p-2 rounded-md">
               <AlertCircle className="h-4 w-4 mt-0.5" />
@@ -102,6 +136,18 @@ const WorkOrderDetailsPanel = ({
             <div className="mt-1 flex items-start gap-1.5 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
               <span>Completed: {workOrder.completedDate ? formatDate(new Date(workOrder.completedDate)) : "N/A"}</span>
+            </div>
+          )}
+          
+          {/* Show progress percentage if available */}
+          {workOrder.progressPercentage !== undefined && (
+            <div className="mt-1 flex items-center gap-1.5 text-sm">
+              <progress 
+                value={workOrder.progressPercentage} 
+                max="100" 
+                className="w-full h-2 rounded-full"
+              />
+              <span className="text-xs">{workOrder.progressPercentage}%</span>
             </div>
           )}
         </div>
