@@ -25,7 +25,7 @@ const MapView = () => {
           Technician Location Map
         </CardTitle>
         <CardDescription>
-          View the current location of your field technicians
+          View the current location of your field technicians with geofencing support
         </CardDescription>
       </CardHeader>
       <CardContent>
