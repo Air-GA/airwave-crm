@@ -331,28 +331,31 @@ const Schedule = () => {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-[300px_1fr]">
+          <div className="grid gap-6 md:grid-cols-[280px_1fr]">
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-2">
                   <CardTitle>Calendar</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0 pb-2">
                   <Calendar
                     mode="single"
                     selected={date}
                     onSelect={(date) => date && setDate(date)}
-                    className="rounded-md border pointer-events-auto"
+                    className="rounded-md border mx-auto w-full"
+                    classNames={{
+                      month: "space-y-4 w-full"
+                    }}
                   />
                 </CardContent>
               </Card>
               
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <CardTitle>Technicians</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="divide-y">
+                  <div className="divide-y max-h-[300px] overflow-y-auto">
                     {technicians.map((technician) => (
                       <div
                         key={technician.id}

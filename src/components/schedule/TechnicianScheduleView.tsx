@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/date-utils";
@@ -28,19 +29,8 @@ const TechnicianScheduleView = ({
   
   const allWorkOrders = storeWorkOrders.length > 0 ? storeWorkOrders : workOrders;
   
-  console.log("Available work orders:", allWorkOrders.length);
-  console.log("Technician:", technician?.id, technician?.name);
-  console.log("Selected date:", selectedDate);
-  
   const filteredWorkOrders = allWorkOrders.filter(order => {
     const orderDate = new Date(order.scheduledDate);
-    
-    console.log(`Filtering order: ${order.id}, date: ${orderDate}, selected date: ${selectedDate}`);
-    console.log(`Tech match: ${!technician || order.technicianId === technician?.id}, Date match: ${
-      orderDate.getFullYear() === selectedDate.getFullYear() &&
-      orderDate.getMonth() === selectedDate.getMonth() &&
-      orderDate.getDate() === selectedDate.getDate()
-    }`);
     
     if (showAllAppointments) {
       return (
@@ -56,12 +46,6 @@ const TechnicianScheduleView = ({
       orderDate.getMonth() === selectedDate.getMonth() &&
       orderDate.getDate() === selectedDate.getDate()
     );
-  });
-
-  console.log(`Total work orders: ${allWorkOrders.length}, Filtered: ${filteredWorkOrders.length}`);
-  
-  filteredWorkOrders.forEach(order => {
-    console.log(`Filtered order: ${order.id}, technician: ${order.technicianId}, date: ${order.scheduledDate}`);
   });
 
   filteredWorkOrders.sort((a, b) => 
@@ -127,7 +111,7 @@ const TechnicianScheduleView = ({
           <span>Loading schedule...</span>
         </div>
       ) : filteredWorkOrders.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
           {filteredWorkOrders.map((order) => (
             <Card 
               key={order.id} 
