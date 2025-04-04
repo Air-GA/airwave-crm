@@ -1,21 +1,13 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, FileSpreadsheet, AlertTriangle } from "lucide-react";
+import { Upload, FileSpreadsheet } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from 'xlsx';
 import { Customer, WorkOrder, InventoryItem } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  processCustomerImport, 
-  processWorkOrderImport, 
-  processInventoryImport,
-  getObjectSizeInBytes,
-  wouldExceedQuota
-} from "@/services/importService";
+import { importCustomers, importWorkOrders, importInventory } from "@/services/importService";
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface CSVImporterProps {
   type: "customers" | "work-orders" | "inventory";
@@ -27,7 +19,6 @@ interface CSVImporterProps {
 const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVImporterProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
   const { toast } = useToast();
   
   const handleDragOver = (e: React.DragEvent) => {
@@ -83,24 +74,11 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       return;
     }
     
-    // Clear any previous errors
-    setImportError(null);
     setIsProcessing(true);
     if (onImportStart) onImportStart();
 
     try {
       console.log(`Starting ${isExcelFile(file) ? 'Excel' : 'CSV'} import for file:`, file.name);
-      console.log(`File size: ${(file.size / 1024).toFixed(2)} KB`);
-      
-      // Check if file size is very large (might cause browser storage issues)
-      if (file.size > 5 * 1024 * 1024) { // 5MB
-        console.warn("Large file detected, may cause browser storage issues");
-        toast({
-          title: "Large file detected",
-          description: "This file is quite large and may exceed browser storage limits. Consider splitting into smaller files.",
-          variant: "warning",
-        });
-      }
       
       if (isExcelFile(file)) {
         handleExcelFile(file);
@@ -109,7 +87,6 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       }
     } catch (error) {
       console.error("File parsing error:", error);
-      setImportError(`Failed to process the file: ${(error as Error).message}`);
       toast({
         title: "Import failed",
         description: "Failed to process the file.",
@@ -248,7 +225,6 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
   
   const processData = async (data: any[]) => {
     if (data.length === 0) {
-      setImportError("The uploaded file doesn't contain any valid data.");
       toast({
         title: "Empty file",
         description: "The uploaded file doesn't contain any valid data.",
@@ -261,84 +237,38 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
     try {
       console.log(`Processing ${data.length} rows of ${type} data...`);
       
-      // Estimate data size to check if it might exceed storage
-      const roughSizeInBytes = getObjectSizeInBytes(data);
-      console.log(`Estimated data size: ${(roughSizeInBytes / 1024).toFixed(2)} KB`);
-      
-      // Check if the storage might be exceeded
-      if (wouldExceedQuota(`imported_${type}`, data)) {
-        console.warn("Data may exceed storage limits");
-        toast({
-          title: "Storage Warning",
-          description: "This import may exceed browser storage limits. Consider importing fewer records.",
-          variant: "warning",
-        });
-      }
-      
       if (type === "customers") {
-        try {
-          const importedCount = await processCustomerImport(data);
-          console.log(`Successfully imported ${importedCount} customer records`);
-          onComplete(data.slice(0, importedCount), "customers");
-          
-          toast({
-            title: "Import successful",
-            description: `${importedCount} customers have been imported successfully.`,
-          });
-        } catch (error) {
-          console.error("Error processing customer import:", error);
-          let errorMessage = `Error importing customers: ${(error as Error).message}`;
-          
-          // Check for storage quota errors
-          if (errorMessage.includes("quota") || errorMessage.includes("Storage")) {
-            errorMessage = "Browser storage limit reached. Try clearing existing data or import fewer customers.";
-          }
-          
-          setImportError(errorMessage);
-          toast({
-            title: "Import failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        }
+        const processedCustomers = processCustomers(data);
+        console.log(`Processed ${processedCustomers.length} customer records`);
+        const result = await importCustomers(processedCustomers);
+        onComplete(result, "customers");
+        
+        toast({
+          title: "Import successful",
+          description: `${result.length} customers have been imported successfully.`,
+        });
       } 
       else if (type === "work-orders") {
-        try {
-          const importedCount = await processWorkOrderImport(data);
-          console.log(`Successfully imported ${importedCount} work order records`);
-          onComplete(data.slice(0, importedCount), "work-orders");
-          
-          toast({
-            title: "Import successful",
-            description: `${importedCount} work orders have been imported successfully.`,
-          });
-        } catch (error) {
-          console.error("Error processing work order import:", error);
-          toast({
-            title: "Import failed",
-            description: `Error importing work orders: ${(error as Error).message}`,
-            variant: "destructive",
-          });
-        }
+        const processedWorkOrders = processWorkOrders(data);
+        console.log(`Processed ${processedWorkOrders.length} work order records`);
+        const result = await importWorkOrders(processedWorkOrders);
+        onComplete(result, "work-orders");
+        
+        toast({
+          title: "Import successful",
+          description: `${result.length} work orders have been imported successfully.`,
+        });
       }
       else if (type === "inventory") {
-        try {
-          const importedCount = await processInventoryImport(data);
-          console.log(`Successfully imported ${importedCount} inventory records`);
-          onComplete(data.slice(0, importedCount), "inventory");
-          
-          toast({
-            title: "Import successful",
-            description: `${importedCount} inventory items have been imported successfully.`,
-          });
-        } catch (error) {
-          console.error("Error processing inventory import:", error);
-          toast({
-            title: "Import failed",
-            description: `Error importing inventory: ${(error as Error).message}`,
-            variant: "destructive",
-          });
-        }
+        const processedInventory = processInventory(data);
+        console.log(`Processed ${processedInventory.length} inventory records`);
+        const result = await importInventory(processedInventory);
+        onComplete(result, "inventory");
+        
+        toast({
+          title: "Import successful",
+          description: `${result.length} inventory items have been imported successfully.`,
+        });
       }
       else {
         // Handle other import types
@@ -353,7 +283,6 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       
     } catch (error) {
       console.error("Import error:", error);
-      setImportError(`Import failed: ${(error as Error).message}`);
       toast({
         title: "Import failed",
         description: "There was an error importing the data. Please check the console for details.",
@@ -440,14 +369,6 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
       } transition-colors duration-200`}
     >
       <div className="flex flex-col items-center justify-center space-y-4">
-        {importError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Import Error</AlertTitle>
-            <AlertDescription>{importError}</AlertDescription>
-          </Alert>
-        )}
-        
         <div className="rounded-full bg-primary/10 p-3">
           <FileSpreadsheet className="h-8 w-8 text-primary" />
         </div>
@@ -457,16 +378,9 @@ const CSVImporter = ({ type, onComplete, onImportStart, onImportProgress }: CSVI
             Drag and drop your CSV or Excel file here, or click to select a file
           </p>
           {!isProcessing && (
-            <>
-              <p className="text-xs text-muted-foreground mt-1">
-                Note: Data will be stored locally in your browser
-              </p>
-              {type === "customers" && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tip: For large datasets, consider splitting into multiple files to avoid storage limits
-                </p>
-              )}
-            </>
+            <p className="text-xs text-muted-foreground mt-1">
+              Note: Data will be stored locally since no database is connected
+            </p>
           )}
         </div>
         <input

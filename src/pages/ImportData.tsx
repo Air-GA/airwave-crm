@@ -7,10 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { FileSpreadsheet, Upload, Check, AlertTriangle, Database } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { FileSpreadsheet, Upload, Check, AlertTriangle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import CSVImporter from "@/components/importers/CSVImporter";
-import { getImportedCustomers, getImportedWorkOrders, getImportedInventory, clearImportedData } from "@/services/importService";
 
 const ImportData = () => {
   const [importTab, setImportTab] = useState<string>("customers");
@@ -19,11 +18,7 @@ const ImportData = () => {
   const [importedCount, setImportedCount] = useState(0);
   const [importComplete, setImportComplete] = useState(false);
   const navigate = useNavigate();
-  
-  // Load counts on component mount
-  const customerCount = getImportedCustomers().length;
-  const workOrderCount = getImportedWorkOrders().length;
-  const inventoryCount = getImportedInventory().length;
+  const { toast } = useToast();
   
   const handleImportComplete = (items: any[]) => {
     setImportedCount(items.length);
@@ -44,44 +39,15 @@ const ImportData = () => {
       console.log(`Import progress: ${calculatedProgress}% (${current}/${total})`);
     }
   };
-
-  const handleClearData = () => {
-    clearImportedData();
-    toast({
-      title: "Data Cleared",
-      description: "All imported data has been removed.",
-    });
-  };
   
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
-            <p className="text-muted-foreground">
-              Import data from external sources to populate your HVAC management system
-            </p>
-          </div>
-          
-          <div className="flex flex-col xs:flex-row gap-2">
-            <Button variant="outline" onClick={handleClearData}>
-              Clear All Imported Data
-            </Button>
-            <Button onClick={() => navigate("/customers")}>
-              <Database className="mr-2 h-4 w-4" />
-              View Imported Data
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center mb-4">
-          <div className="flex items-center bg-muted p-2 rounded-md mr-4">
-            <span className="text-sm font-medium mr-2">Current Data:</span>
-            <span className="text-sm px-2 py-1 bg-primary/10 rounded mr-1">{customerCount} Customers</span>
-            <span className="text-sm px-2 py-1 bg-primary/10 rounded mr-1">{workOrderCount} Work Orders</span>
-            <span className="text-sm px-2 py-1 bg-primary/10 rounded">{inventoryCount} Inventory Items</span>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
+          <p className="text-muted-foreground">
+            Import data from external sources to populate your HVAC management system
+          </p>
         </div>
         
         <Tabs
