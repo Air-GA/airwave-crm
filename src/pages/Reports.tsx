@@ -559,7 +559,7 @@ const Reports = () => {
           </div>
         );
         
-      case 'tech':
+      case 'technician':
         return (
           <div className="space-y-6">
             <Card>

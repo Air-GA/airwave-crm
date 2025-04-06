@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { RoleViewport } from "@/components/admin/RoleViewport";
 import { PanelTop } from "lucide-react";
 
-type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
+type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'technician' | 'customer';
 
 interface AdminViewToggleProps {
   currentPage: string;
