@@ -95,7 +95,7 @@ export function LoginForm() {
                 <SelectItem value="csr">Customer Service Rep</SelectItem>
                 <SelectItem value="sales">Sales</SelectItem>
                 <SelectItem value="hr">HR</SelectItem>
-                <SelectItem value="tech">Technician</SelectItem>
+                <SelectItem value="technician">Technician</SelectItem>
                 <SelectItem value="customer">Customer</SelectItem>
               </SelectContent>
             </Select>

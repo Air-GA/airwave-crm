@@ -38,62 +38,62 @@ function App() {
 
               {/* Protected routes */}
               <Route path="/customers" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "customer"]}>
                   <Customers />
                 </RoleGuard>
               } />
               <Route path="/work-orders" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "technician", "customer"]}>
                   <WorkOrders />
                 </RoleGuard>
               } />
               <Route path="/work-orders/create" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales"]}>
                   <CreateWorkOrder />
                 </RoleGuard>
               } />
               <Route path="/schedule" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "technician", "customer"]}>
                   <Schedule />
                 </RoleGuard>
               } />
               <Route path="/dispatch" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr"]}>
                   <Dispatch />
                 </RoleGuard>
               } />
               <Route path="/inventory" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "technician"]}>
                   <Inventory />
                 </RoleGuard>
               } />
               <Route path="/invoices" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "customer"]}>
                   <Invoices />
                 </RoleGuard>
               } />
               <Route path="/reports" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "hr"]}>
                   <Reports />
                 </RoleGuard>
               } />
               <Route path="/messages" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "technician", "customer"]}>
                   <Messages />
                 </RoleGuard>
               } />
               <Route path="/notifications" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "technician", "customer"]}>
                   <Notifications />
                 </RoleGuard>
               } />
               <Route path="/timesheets" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "hr", "technician"]}>
                   <Timesheets />
                 </RoleGuard>
               } />
               <Route path="/settings" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "hr", "tech", "customer", "user"]}>
+                <RoleGuard allowedRoles={["admin", "manager", "customer"]}>
                   <Settings />
                 </RoleGuard>
               } />

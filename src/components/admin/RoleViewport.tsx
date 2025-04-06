@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +13,7 @@ import {
   User
 } from "lucide-react";
 
-type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
+type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'technician' | 'customer';
 
 interface RoleViewportProps {
   currentPage: string;
@@ -34,36 +33,36 @@ export const RoleViewport = ({
     
     switch(pageName.toLowerCase()) {
       case 'dashboard':
-        return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
+        return ['manager', 'csr', 'sales', 'hr', 'technician', 'customer'];
       case 'customers':
-        return ['manager', 'csr', 'sales', 'user'];
+        return ['manager', 'csr', 'sales', 'customer'];
       case 'work orders':
-        return ['manager', 'csr', 'tech', 'customer', 'user'];
+        return ['manager', 'csr', 'technician', 'customer'];
       case 'schedule':
-        return ['manager', 'csr', 'tech', 'hr', 'customer', 'user'];
+        return ['manager', 'csr', 'technician', 'hr', 'customer'];
       case 'dispatch':
-        return ['manager', 'csr', 'tech', 'user'];
+        return ['manager', 'csr', 'technician'];
       case 'inventory':
-        return ['manager', 'csr', 'tech', 'user'];
+        return ['manager', 'csr', 'technician'];
       case 'invoices':
-        return ['manager', 'csr', 'sales', 'customer', 'user'];
+        return ['manager', 'csr', 'sales', 'customer'];
       case 'reports':
-        return ['manager', 'hr', 'user'];
+        return ['manager', 'hr'];
       case 'messages':
-        return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
+        return ['manager', 'csr', 'sales', 'hr', 'technician', 'customer'];
       case 'notifications':
-        return ['manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'];
+        return ['manager', 'csr', 'sales', 'hr', 'technician', 'customer'];
       case 'timesheets':
-        return ['manager', 'hr', 'tech', 'user'];
+        return ['manager', 'hr', 'technician'];
       case 'settings':
-        return ['manager', 'customer', 'user'];
+        return ['manager', 'customer'];
       default:
         return baseRoles;
     }
   };
   
   const hasDiscordIntegration = (role: UserRole): boolean => {
-    return ['admin', 'manager', 'tech', 'csr'].includes(role);
+    return ['admin', 'manager', 'technician', 'csr'].includes(role);
   };
   
   const getRoleIcon = (role: UserRole) => {
