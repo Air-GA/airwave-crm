@@ -21,8 +21,18 @@ export const userFormSchema = z.object({
 
 export const integrationSchema = z.object({
   quickbooks: z.object({
-    connected: z.boolean(),
+    connected: z.boolean().default(false),
     apiKey: z.string().optional(),
+    clientId: z.string().optional(),
+    clientSecret: z.string().optional(),
+    environment: z.enum(["sandbox", "production"]).default("sandbox"),
+    redirectUri: z.string().optional(),
+    companyId: z.string().optional(),
+    autoSync: z.boolean().default(true),
+    syncInventory: z.boolean().default(true),
+    syncCustomers: z.boolean().default(true),
+    syncInvoices: z.boolean().default(true),
+    enableAutoPay: z.boolean().default(false),
   }),
   googleMaps: z.object({
     connected: z.boolean(),
