@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +34,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { useAuth } from "@/hooks/useAuth";
+import { SyncButton } from "@/components/SyncButton";
 import { 
   Tooltip,
   TooltipContent,
@@ -46,6 +46,7 @@ const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { userRole, permissions } = useAuth();
   const [syncingWithQuickbooks, setSyncingWithQuickbooks] = useState(false);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   
   // Only admins can see profit information
   const canViewProfitNumbers = userRole === 'admin';
@@ -121,17 +122,40 @@ const Invoices = () => {
     invoice.workOrderId.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleSyncWithQuickbooks = () => {
+  const handleSyncWithQuickbooks = async () => {
     setSyncingWithQuickbooks(true);
     
-    // Simulate syncing
-    setTimeout(() => {
-      setSyncingWithQuickbooks(false);
-      
-      // Show toast or notification that sync is complete
-      alert("Sync with QuickBooks completed successfully!");
-    }, 2000);
+    // Simulate syncing with a delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setSyncingWithQuickbooks(false);
+    
+    // Show toast or notification that sync is complete
+    return true; // Return success to the SyncButton component
   };
+  
+  // Check for new invoices and sync with QuickBooks in real-time (mock implementation)
+  useEffect(() => {
+    // This would be replaced with a real WebSocket or polling mechanism
+    const checkForNewInvoices = () => {
+      console.log("Checking for new invoices to sync with QuickBooks...");
+      // In a real implementation, this would check for new/updated invoices
+      // and sync them with QuickBooks automatically
+    };
+    
+    // Only set up listener if auto-sync is enabled and user is admin
+    if (autoSyncEnabled && userRole === 'admin') {
+      // Initial check
+      checkForNewInvoices();
+      
+      // Set up a listener for real-time updates (mock implementation)
+      const listener = setInterval(checkForNewInvoices, 60000); // Every minute
+      
+      return () => {
+        clearInterval(listener);
+      };
+    }
+  }, [autoSyncEnabled, userRole]);
   
   return (
     <MainLayout>
@@ -154,24 +178,58 @@ const Invoices = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="ml-2" 
-                      onClick={handleSyncWithQuickbooks}
-                      disabled={syncingWithQuickbooks}
-                    >
-                      <ReceiptText className={`mr-2 h-4 w-4 ${syncingWithQuickbooks ? 'animate-spin' : ''}`} />
-                      {syncingWithQuickbooks ? 'Syncing...' : 'Sync with QuickBooks'}
-                    </Button>
+                    <div>
+                      <SyncButton
+                        onSync={handleSyncWithQuickbooks}
+                        label="QuickBooks"
+                        autoSync={autoSyncEnabled}
+                        syncInterval={300000} // 5 minutes
+                      />
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Sync invoices with QuickBooks</p>
+                    <div className="space-y-2">
+                      <p>Sync invoices with QuickBooks</p>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          id="auto-sync" 
+                          checked={autoSyncEnabled}
+                          onChange={(e) => setAutoSyncEnabled(e.target.checked)}
+                          className="h-4 w-4" 
+                        />
+                        <label htmlFor="auto-sync" className="text-sm">Enable auto-sync</label>
+                      </div>
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
           </div>
         </div>
+        
+        {/* Live sync status indicator - only for admin */}
+        {userRole === 'admin' && autoSyncEnabled && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-2 flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="relative mr-2">
+                <div className="h-3 w-3 bg-green-500 rounded-full"></div>
+                <div className="h-3 w-3 bg-green-500 rounded-full absolute top-0 animate-ping"></div>
+              </div>
+              <span className="text-sm text-green-800">
+                Live sync with QuickBooks is active
+              </span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setAutoSyncEnabled(false)}
+              className="text-xs h-7 text-green-800"
+            >
+              Disable
+            </Button>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-lg border p-3">

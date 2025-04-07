@@ -29,6 +29,8 @@ export const integrationSchema = z.object({
     redirectUri: z.string().optional(),
     companyId: z.string().optional(),
     autoSync: z.boolean().default(true),
+    autoSyncInterval: z.number().default(300000), // 5 minutes in milliseconds
+    liveSyncEnabled: z.boolean().default(true),
     syncInventory: z.boolean().default(true),
     syncCustomers: z.boolean().default(true),
     syncInvoices: z.boolean().default(true),
