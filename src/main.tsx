@@ -6,7 +6,7 @@ import './index.css'
 // Preload the company logo
 const logoPreload = document.createElement('link');
 logoPreload.rel = 'preload';
-logoPreload.href = '/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png';
+logoPreload.href = '/lovable-uploads/6f2775b6-5f8c-4f01-a282-29f1dc0a70da.png';
 logoPreload.as = 'image';
 document.head.appendChild(logoPreload);
 
