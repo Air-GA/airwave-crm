@@ -45,3 +45,26 @@ export const integrationSchema = z.object({
     apiKey: z.string().optional().or(z.literal("")),
   }),
 });
+
+// Define the UserRole type to include customer
+export const userRoles = [
+  "admin",
+  "manager",
+  "csr",
+  "tech",
+  "technician",
+  "sales",
+  "hr",
+  "customer",
+  "user"
+] as const;
+
+export type UserRole = typeof userRoles[number];
+
+export const rolePermissionSchema = z.object({
+  role: z.enum(userRoles),
+  permissions: z.array(z.string()),
+  description: z.string(),
+});
+
+export type RolePermission = z.infer<typeof rolePermissionSchema>;
