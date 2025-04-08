@@ -3,9 +3,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { RoleViewport } from "@/components/admin/RoleViewport";
-import { PanelTop } from "lucide-react";
-
-type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'technician' | 'customer';
+import { PanelTop, Eye } from "lucide-react";
+import { UserRole } from "@/utils/settingsSchema";
 
 interface AdminViewToggleProps {
   currentPage: string;
@@ -36,10 +35,11 @@ export const AdminViewToggle = ({ currentPage }: AdminViewToggleProps) => {
     <>
       <Button
         variant="outline"
+        size="sm"
         className="gap-2"
         onClick={() => setShowRoleViews(true)}
       >
-        <PanelTop className="h-4 w-4" />
+        <Eye className="h-4 w-4" />
         <span>View as Roles</span>
       </Button>
       

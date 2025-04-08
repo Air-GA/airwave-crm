@@ -1,4 +1,3 @@
-
 import * as z from "zod";
 
 export const companyFormSchema = z.object({
@@ -46,7 +45,7 @@ export const integrationSchema = z.object({
   }),
 });
 
-// Define the UserRole type to include customer
+// Define the UserRole type to include all roles in one place
 export const userRoles = [
   "admin",
   "manager",
