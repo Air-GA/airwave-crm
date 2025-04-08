@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -42,10 +41,10 @@ export const RoleViewport = ({
       'dispatch': ['admin', 'manager', 'csr', 'technician'],
       'inventory': ['admin', 'manager', 'technician'],
       'invoices': ['admin', 'manager', 'csr', 'sales', 'customer'],
-      'reports': ['admin', 'manager', 'hr'],
+      'reports': ['admin', 'manager', 'hr', 'sales'],
       'messages': ['admin', 'manager', 'csr', 'sales', 'hr', 'technician', 'customer'],
       'notifications': ['admin', 'manager', 'csr', 'sales', 'hr', 'technician', 'customer'],
-      'timesheets': ['admin', 'manager', 'hr', 'technician'],
+      'timesheets': ['admin', 'manager', 'hr', 'technician', 'csr', 'sales'],
       'settings': ['admin', 'manager', 'customer']
     };
     

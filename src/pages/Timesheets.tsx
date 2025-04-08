@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,11 +41,16 @@ import {
   PlusCircle,
   Upload,
   User,
+  TimerOff,
+  Timer,
+  ClockAlert,
+  ClockOff,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 
-// Define types for our timesheet data
 interface TimesheetStats {
   hours: number;
   entries: number;
@@ -54,11 +58,87 @@ interface TimesheetStats {
   pending: number;
 }
 
+interface ClockEvent {
+  id: string;
+  type: 'in' | 'out';
+  timestamp: Date;
+  notes?: string;
+}
+
+interface TimeEntry {
+  id: string;
+  date: string;
+  technician: string;
+  jobNumber?: string;
+  customer?: string;
+  clockIn: Date;
+  clockOut?: Date;
+  hours?: number;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+}
+
 const Timesheets = () => {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const [selectedWeek, setSelectedWeek] = useState("current");
+  const [isClockedIn, setIsClockedIn] = useState(false);
+  const [clockInTime, setClockInTime] = useState<Date | null>(null);
+  const [clockOutTime, setClockOutTime] = useState<Date | null>(null);
+  const [clockEvents, setClockEvents] = useState<ClockEvent[]>([]);
+  const [activeTab, setActiveTab] = useState("daily");
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [weekStart, setWeekStart] = useState<Date | null>(null);
+  const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   
-  // Mock timesheet data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  useEffect(() => {
+    const today = new Date();
+    let startDay = new Date(today);
+    
+    while (startDay.getDay() !== 4) {
+      startDay.setDate(startDay.getDate() - 1);
+    }
+    
+    if (today.getDay() >= 4) {
+    } else {
+      startDay.setDate(startDay.getDate() - 7);
+    }
+    
+    startDay.setHours(0, 0, 0, 0);
+    const endDay = new Date(startDay);
+    endDay.setDate(endDay.getDate() + 6);
+    endDay.setHours(23, 59, 59, 999);
+    
+    setWeekStart(startDay);
+    setWeekEnd(endDay);
+  }, [selectedWeek]);
+  
+  useEffect(() => {
+    const storedClockIn = localStorage.getItem('clockInTime');
+    const storedEvents = localStorage.getItem('clockEvents');
+    
+    if (storedClockIn) {
+      const clockInDate = new Date(JSON.parse(storedClockIn));
+      setClockInTime(clockInDate);
+      setIsClockedIn(true);
+    }
+    
+    if (storedEvents) {
+      setClockEvents(JSON.parse(storedEvents).map((event: any) => ({
+        ...event,
+        timestamp: new Date(event.timestamp)
+      })));
+    }
+  }, []);
+  
   const timesheetStats: TimesheetStats = {
     hours: 37.5,
     entries: 15,
@@ -114,6 +194,79 @@ const Timesheets = () => {
     },
   ];
   
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  };
+  
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+  
+  const calculateHours = (clockIn: Date, clockOut: Date) => {
+    const diffMs = clockOut.getTime() - clockIn.getTime();
+    const diffHrs = diffMs / (1000 * 60 * 60);
+    return Math.round(diffHrs * 100) / 100;
+  };
+  
+  const handleClockIn = () => {
+    const now = new Date();
+    setClockInTime(now);
+    setIsClockedIn(true);
+    
+    const newEvent: ClockEvent = {
+      id: Date.now().toString(),
+      type: 'in',
+      timestamp: now
+    };
+    
+    const updatedEvents = [...clockEvents, newEvent];
+    setClockEvents(updatedEvents);
+    
+    localStorage.setItem('clockInTime', JSON.stringify(now));
+    localStorage.setItem('clockEvents', JSON.stringify(updatedEvents));
+    
+    toast.success("You have clocked in", {
+      description: `Time: ${formatTime(now)}`
+    });
+  };
+  
+  const handleClockOut = () => {
+    if (!clockInTime) return;
+    
+    const now = new Date();
+    setClockOutTime(now);
+    setIsClockedIn(false);
+    
+    const hours = calculateHours(clockInTime, now);
+    
+    const newEvent: ClockEvent = {
+      id: Date.now().toString(),
+      type: 'out',
+      timestamp: now
+    };
+    
+    const updatedEvents = [...clockEvents, newEvent];
+    setClockEvents(updatedEvents);
+    
+    localStorage.removeItem('clockInTime');
+    localStorage.setItem('clockEvents', JSON.stringify(updatedEvents));
+    
+    toast.success("You have clocked out", {
+      description: `Duration: ${hours} hours`
+    });
+  };
+  
+  const currentPayPeriod = weekStart && weekEnd ? 
+    `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : 
+    "Current Pay Period";
+  
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -132,6 +285,101 @@ const Timesheets = () => {
           </div>
         </div>
         
+        <Card className="border-2 border-blue-200">
+          <CardHeader className="bg-blue-50/50">
+            <CardTitle className="flex items-center">
+              <Clock className="mr-2 h-5 w-5" />
+              Time Clock
+            </CardTitle>
+            <CardDescription>
+              Record your work hours by clocking in and out
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <div className="text-xl font-bold">{formatTime(currentTime)}</div>
+                <div className="text-muted-foreground">{formatDate(currentTime)}</div>
+              </div>
+              <div className="flex space-x-4">
+                <Button
+                  variant={isClockedIn ? "outline" : "default"}
+                  className={!isClockedIn ? "bg-green-600 hover:bg-green-700" : ""}
+                  onClick={handleClockIn}
+                  disabled={isClockedIn}
+                >
+                  <Timer className="mr-2 h-4 w-4" />
+                  Clock In
+                </Button>
+                <Button 
+                  variant={!isClockedIn ? "outline" : "destructive"}
+                  onClick={handleClockOut}
+                  disabled={!isClockedIn}
+                >
+                  <TimerOff className="mr-2 h-4 w-4" />
+                  Clock Out
+                </Button>
+              </div>
+            </div>
+            
+            {isClockedIn && (
+              <div className="mt-6 p-4 bg-blue-50 rounded-md flex flex-col md:flex-row justify-between items-center">
+                <div>
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                    <Timer className="mr-1 h-3 w-3" />
+                    Currently Clocked In
+                  </Badge>
+                  <div className="mt-2">
+                    <span className="text-sm text-muted-foreground">Clocked in at:</span>{" "}
+                    <span className="font-medium">{clockInTime && formatTime(clockInTime)}</span>
+                  </div>
+                </div>
+                <div className="mt-2 md:mt-0">
+                  <span className="text-sm text-muted-foreground">Duration:</span>{" "}
+                  <span className="font-bold">
+                    {clockInTime && calculateHours(clockInTime, currentTime).toFixed(2)} hrs
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {clockEvents.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-medium mb-2">Recent Time Entries</h3>
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clockEvents
+                        .slice(-6)
+                        .reverse()
+                        .map((event) => (
+                          <TableRow key={event.id}>
+                            <TableCell>{formatDate(event.timestamp)}</TableCell>
+                            <TableCell>
+                              {event.type === 'in' ? (
+                                <Badge className="bg-green-100 text-green-800">Clock In</Badge>
+                              ) : (
+                                <Badge className="bg-red-100 text-red-800">Clock Out</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>{formatTime(event.timestamp)}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
@@ -139,7 +387,7 @@ const Timesheets = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{timesheetStats.hours} hrs</div>
-              <p className="text-xs text-muted-foreground">This week</p>
+              <p className="text-xs text-muted-foreground">{currentPayPeriod}</p>
             </CardContent>
           </Card>
           
@@ -149,7 +397,7 @@ const Timesheets = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{timesheetStats.entries}</div>
-              <p className="text-xs text-muted-foreground">This week</p>
+              <p className="text-xs text-muted-foreground">{currentPayPeriod}</p>
             </CardContent>
           </Card>
           
@@ -179,7 +427,7 @@ const Timesheets = () => {
             <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
               <div>
                 <CardTitle>Weekly Timesheet</CardTitle>
-                <CardDescription>September 4 - September 8, 2023</CardDescription>
+                <CardDescription>{currentPayPeriod}</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Select defaultValue={selectedWeek} onValueChange={setSelectedWeek}>
@@ -282,7 +530,7 @@ const Timesheets = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="daily">
+            <Tabs defaultValue="daily" value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="daily">Daily Entry</TabsTrigger>
                 <TabsTrigger value="weekly">Weekly Entry</TabsTrigger>
