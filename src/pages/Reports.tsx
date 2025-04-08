@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import MainLayout from "@/components/layout/MainLayout";
@@ -52,8 +51,9 @@ import {
   Truck, 
   HelpCircle
 } from "lucide-react";
+import ReportViewer, { ReportData } from "@/components/reports/ReportViewer";
+import { generateReportData, exportReportToCsv } from "@/services/reportService";
 
-// Types for reports
 interface Report {
   id: string;
   name: string;
@@ -76,7 +76,6 @@ type ReportType =
   | "scheduling" 
   | "productivity";
 
-// Report template options based on type
 interface ReportTemplate {
   id: string;
   name: string;
@@ -152,7 +151,6 @@ const REPORT_TEMPLATES: ReportTemplate[] = [
   }
 ];
 
-// Sample mock data for existing reports
 const SAMPLE_REPORTS: Report[] = [
   {
     id: "1",
@@ -206,8 +204,10 @@ const Reports = () => {
   const [isConfigureDialogOpen, setIsConfigureDialogOpen] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [isReportViewerOpen, setIsReportViewerOpen] = useState(false);
+  const [currentReportData, setCurrentReportData] = useState<ReportData | null>(null);
+  const [currentViewingReport, setCurrentViewingReport] = useState<Report | null>(null);
 
-  // Filter report templates based on user permissions
   const filteredTemplates = REPORT_TEMPLATES.filter(template => {
     if (template.requiresFinancialAccess && !permissions.canViewFinancials) {
       return false;
@@ -221,7 +221,6 @@ const Reports = () => {
     return true;
   });
 
-  // Create a new report from template
   const createReport = (templateId: string) => {
     const template = REPORT_TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
@@ -241,14 +240,12 @@ const Reports = () => {
     toast.success("Report created successfully");
   };
 
-  // Delete a report
   const deleteReport = (reportId: string) => {
     setReports(reports.filter(r => r.id !== reportId));
     setIsConfigureDialogOpen(false);
     toast.success("Report deleted successfully");
   };
 
-  // Toggle report scheduling
   const toggleSchedule = (reportId: string, scheduled: boolean) => {
     setReports(reports.map(report => 
       report.id === reportId 
@@ -258,7 +255,6 @@ const Reports = () => {
     toast.success(`Scheduling ${scheduled ? "enabled" : "disabled"}`);
   };
 
-  // Update report frequency
   const updateFrequency = (reportId: string, frequency: "daily" | "weekly" | "monthly" | "quarterly" | "annual") => {
     setReports(reports.map(report => 
       report.id === reportId 
@@ -267,23 +263,32 @@ const Reports = () => {
     ));
   };
 
-  // Generate a report (mock function)
   const generateReport = (reportId: string) => {
-    // In a real app, this would call an API to generate the report
-    const reportName = reports.find(r => r.id === reportId)?.name;
-    toast.success(`Generating ${reportName}...`);
+    const report = reports.find(r => r.id === reportId);
+    if (!report) return;
+    
+    toast.success(`Generating ${report.name}...`);
 
-    // Update the lastRun date
-    setReports(reports.map(report => 
-      report.id === reportId 
-        ? { ...report, lastRun: new Date().toISOString() } 
-        : report
+    const reportData = generateReportData(report.type, report.name);
+    
+    setReports(reports.map(r => 
+      r.id === reportId 
+        ? { ...r, lastRun: new Date().toISOString() } 
+        : r
     ));
 
-    // Mock delay to simulate report generation
     setTimeout(() => {
-      toast.success(`${reportName} generation complete!`);
-    }, 2000);
+      setCurrentReportData(reportData);
+      setCurrentViewingReport(report);
+      setIsReportViewerOpen(true);
+    }, 800);
+  };
+
+  const handleDownloadReport = () => {
+    if (!currentReportData || !currentViewingReport) return;
+    
+    exportReportToCsv(currentReportData, currentViewingReport.name);
+    toast.success("Report downloaded successfully");
   };
 
   return (
@@ -539,11 +544,13 @@ const Reports = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Report Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => generateReport(selectedReport.id)}>
+                      <DropdownMenuItem onClick={() => {
+                        generateReport(selectedReport.id);
+                        setIsConfigureDialogOpen(false);
+                      }}>
                         Generate Now
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => {
-                        // This would open an edit dialog in a real app
                         toast.info("Edit functionality would open here");
                       }}>
                         Edit Report
@@ -583,7 +590,10 @@ const Reports = () => {
                         Generate Now
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => {
-                        // This would download a report in a real app
+                        const reportData = generateReportData(report.type, report.name);
+                        setCurrentReportData(reportData);
+                        setCurrentViewingReport(report);
+                        exportReportToCsv(reportData, report.name);
                         toast.success("Report download started");
                       }}>
                         <DownloadCloud className="h-4 w-4 mr-2" />
@@ -649,6 +659,17 @@ const Reports = () => {
           )}
         </div>
       </div>
+
+      {currentViewingReport && (
+        <ReportViewer
+          isOpen={isReportViewerOpen}
+          onClose={() => setIsReportViewerOpen(false)}
+          reportName={currentViewingReport.name}
+          reportType={currentViewingReport.type}
+          reportData={currentReportData}
+          onDownload={handleDownloadReport}
+        />
+      )}
     </MainLayout>
   );
 };
