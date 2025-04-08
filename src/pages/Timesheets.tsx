@@ -60,6 +60,8 @@ interface TimesheetStats {
 
 interface ClockEvent {
   id: string;
+  userId: string;
+  userName: string;
   type: 'in' | 'out';
   timestamp: Date;
   notes?: string;
@@ -80,7 +82,7 @@ interface TimeEntry {
 
 const Timesheets = () => {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, permissions } = useAuth();
   const [selectedWeek, setSelectedWeek] = useState("current");
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);
@@ -90,6 +92,14 @@ const Timesheets = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
+  const [timesheetEntries, setTimesheetEntries] = useState<any[]>([]);
+  
+  // Check if user has permission to view all timesheets
+  const canViewAllTimesheets = 
+    permissions?.canViewHRInfo || 
+    user?.role === 'admin' || 
+    user?.role === 'manager' || 
+    user?.role === 'hr';
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -103,6 +113,7 @@ const Timesheets = () => {
     const today = new Date();
     let startDay = new Date(today);
     
+    // Find the previous Thursday (day 4)
     while (startDay.getDay() !== 4) {
       startDay.setDate(startDay.getDate() - 1);
     }
@@ -122,7 +133,8 @@ const Timesheets = () => {
   }, [selectedWeek]);
   
   useEffect(() => {
-    const storedClockIn = localStorage.getItem('clockInTime');
+    // Load clock events for the current user
+    const storedClockIn = localStorage.getItem('clockInTime_' + user?.id);
     const storedEvents = localStorage.getItem('clockEvents');
     
     if (storedClockIn) {
@@ -132,12 +144,84 @@ const Timesheets = () => {
     }
     
     if (storedEvents) {
-      setClockEvents(JSON.parse(storedEvents).map((event: any) => ({
+      const allEvents = JSON.parse(storedEvents).map((event: any) => ({
         ...event,
         timestamp: new Date(event.timestamp)
-      })));
+      }));
+      
+      // Filter events to only show current user's events unless admin/hr/manager
+      const filteredEvents = canViewAllTimesheets
+        ? allEvents
+        : allEvents.filter((event: ClockEvent) => event.userId === user?.id);
+      
+      setClockEvents(filteredEvents);
     }
-  }, []);
+    
+    // Filter timesheet entries based on user role
+    const mockTimesheetEntries = [
+      {
+        id: "TS1001",
+        date: "2023-09-04",
+        technician: "Mike Johnson",
+        technicianId: "1",
+        jobNumber: "JOB4532",
+        customer: "Peachtree Office Center",
+        hours: 8,
+        status: "approved"
+      },
+      {
+        id: "TS1002",
+        date: "2023-09-05",
+        technician: "Mike Johnson",
+        technicianId: "1",
+        jobNumber: "JOB4533",
+        customer: "Downtown Residences",
+        hours: 7.5,
+        status: "approved"
+      },
+      {
+        id: "TS1003",
+        date: "2023-09-06",
+        technician: "Mike Johnson",
+        technicianId: "1",
+        jobNumber: "JOB4536",
+        customer: "Riverfront Hotel",
+        hours: 6,
+        status: "approved"
+      },
+      {
+        id: "TS1004",
+        date: "2023-09-07",
+        technician: "David Chen",
+        technicianId: "2",
+        jobNumber: "JOB4538",
+        customer: "Westside Apartments",
+        hours: 8,
+        status: "approved"
+      },
+      {
+        id: "TS1005",
+        date: "2023-09-08",
+        technician: "Sarah Williams",
+        technicianId: "3",
+        jobNumber: "JOB4541",
+        customer: "North Hills Mall",
+        hours: 8,
+        status: "approved"
+      },
+    ];
+    
+    // Filter timesheet entries based on user permissions
+    if (canViewAllTimesheets) {
+      setTimesheetEntries(mockTimesheetEntries);
+    } else {
+      // For non-admin users, only show their own entries
+      const filteredEntries = mockTimesheetEntries.filter(
+        entry => entry.technicianId === user?.id
+      );
+      setTimesheetEntries(filteredEntries);
+    }
+  }, [user, canViewAllTimesheets]);
   
   const timesheetStats: TimesheetStats = {
     hours: 37.5,
@@ -145,54 +229,6 @@ const Timesheets = () => {
     approved: 12,
     pending: 3
   };
-  
-  const timesheetEntries = [
-    {
-      id: "TS1001",
-      date: "2023-09-04",
-      technician: "Mike Johnson",
-      jobNumber: "JOB4532",
-      customer: "Peachtree Office Center",
-      hours: 8,
-      status: "approved"
-    },
-    {
-      id: "TS1002",
-      date: "2023-09-05",
-      technician: "Mike Johnson",
-      jobNumber: "JOB4533",
-      customer: "Downtown Residences",
-      hours: 7.5,
-      status: "approved"
-    },
-    {
-      id: "TS1003",
-      date: "2023-09-06",
-      technician: "Mike Johnson",
-      jobNumber: "JOB4536",
-      customer: "Riverfront Hotel",
-      hours: 6,
-      status: "approved"
-    },
-    {
-      id: "TS1004",
-      date: "2023-09-07",
-      technician: "Mike Johnson",
-      jobNumber: "JOB4538",
-      customer: "Westside Apartments",
-      hours: 8,
-      status: "approved"
-    },
-    {
-      id: "TS1005",
-      date: "2023-09-08",
-      technician: "Mike Johnson",
-      jobNumber: "JOB4541",
-      customer: "North Hills Mall",
-      hours: 8,
-      status: "approved"
-    },
-  ];
   
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
@@ -216,21 +252,32 @@ const Timesheets = () => {
   };
   
   const handleClockIn = () => {
+    if (!user) return;
+    
     const now = new Date();
     setClockInTime(now);
     setIsClockedIn(true);
     
     const newEvent: ClockEvent = {
       id: Date.now().toString(),
+      userId: user.id,
+      userName: user.name || user.email,
       type: 'in',
       timestamp: now
     };
     
     const updatedEvents = [...clockEvents, newEvent];
-    setClockEvents(updatedEvents);
+    const allEvents = localStorage.getItem('clockEvents')
+      ? [...JSON.parse(localStorage.getItem('clockEvents')!).map((event: any) => ({
+          ...event,
+          timestamp: new Date(event.timestamp)
+        })), newEvent]
+      : [newEvent];
     
-    localStorage.setItem('clockInTime', JSON.stringify(now));
-    localStorage.setItem('clockEvents', JSON.stringify(updatedEvents));
+    setClockEvents(canViewAllTimesheets ? allEvents : updatedEvents);
+    
+    localStorage.setItem('clockInTime_' + user.id, JSON.stringify(now));
+    localStorage.setItem('clockEvents', JSON.stringify(allEvents));
     
     toast.success("You have clocked in", {
       description: `Time: ${formatTime(now)}`
@@ -238,7 +285,7 @@ const Timesheets = () => {
   };
   
   const handleClockOut = () => {
-    if (!clockInTime) return;
+    if (!user || !clockInTime) return;
     
     const now = new Date();
     setClockOutTime(now);
@@ -248,15 +295,24 @@ const Timesheets = () => {
     
     const newEvent: ClockEvent = {
       id: Date.now().toString(),
+      userId: user.id,
+      userName: user.name || user.email,
       type: 'out',
       timestamp: now
     };
     
-    const updatedEvents = [...clockEvents, newEvent];
-    setClockEvents(updatedEvents);
+    const allEvents = localStorage.getItem('clockEvents')
+      ? [...JSON.parse(localStorage.getItem('clockEvents')!).map((event: any) => ({
+          ...event,
+          timestamp: new Date(event.timestamp)
+        })), newEvent]
+      : [newEvent];
     
-    localStorage.removeItem('clockInTime');
-    localStorage.setItem('clockEvents', JSON.stringify(updatedEvents));
+    const updatedEvents = [...clockEvents, newEvent];
+    setClockEvents(canViewAllTimesheets ? allEvents : updatedEvents);
+    
+    localStorage.removeItem('clockInTime_' + user.id);
+    localStorage.setItem('clockEvents', JSON.stringify(allEvents));
     
     toast.success("You have clocked out", {
       description: `Duration: ${hours} hours`
@@ -345,12 +401,15 @@ const Timesheets = () => {
             
             {clockEvents.length > 0 && (
               <div className="mt-6">
-                <h3 className="font-medium mb-2">Recent Time Entries</h3>
+                <h3 className="font-medium mb-2">
+                  {canViewAllTimesheets ? "All Time Entries" : "Your Time Entries"}
+                </h3>
                 <div className="border rounded-md overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Date</TableHead>
+                        {canViewAllTimesheets && <TableHead>User</TableHead>}
                         <TableHead>Type</TableHead>
                         <TableHead>Time</TableHead>
                       </TableRow>
@@ -362,6 +421,7 @@ const Timesheets = () => {
                         .map((event) => (
                           <TableRow key={event.id}>
                             <TableCell>{formatDate(event.timestamp)}</TableCell>
+                            {canViewAllTimesheets && <TableCell>{event.userName}</TableCell>}
                             <TableCell>
                               {event.type === 'in' ? (
                                 <Badge className="bg-green-100 text-green-800">Clock In</Badge>
@@ -473,7 +533,7 @@ const Timesheets = () => {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     {!isMobile && <TableHead>Timesheet ID</TableHead>}
-                    {!isMobile && <TableHead>Technician</TableHead>}
+                    {!isMobile && canViewAllTimesheets && <TableHead>Technician</TableHead>}
                     <TableHead>Job/Customer</TableHead>
                     <TableHead className="text-right">Hours</TableHead>
                     <TableHead>Status</TableHead>
@@ -489,7 +549,7 @@ const Timesheets = () => {
                         })}
                       </TableCell>
                       {!isMobile && <TableCell>{entry.id}</TableCell>}
-                      {!isMobile && <TableCell>{entry.technician}</TableCell>}
+                      {!isMobile && canViewAllTimesheets && <TableCell>{entry.technician}</TableCell>}
                       <TableCell>
                         <div className="font-medium">{entry.jobNumber}</div>
                         <div className="text-xs text-muted-foreground">{entry.customer}</div>
@@ -518,75 +578,6 @@ const Timesheets = () => {
             </Button>
             <Button variant="outline">
               <FileText className="mr-2 h-4 w-4" /> Generate Report
-            </Button>
-          </CardFooter>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Submit New Hours</CardTitle>
-            <CardDescription>
-              Log your work hours for a specific job
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="daily" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList>
-                <TabsTrigger value="daily">Daily Entry</TabsTrigger>
-                <TabsTrigger value="weekly">Weekly Entry</TabsTrigger>
-              </TabsList>
-              <TabsContent value="daily" className="space-y-4 pt-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input id="date" type="date" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="technician">Technician</Label>
-                    <Select defaultValue="mike">
-                      <SelectTrigger id="technician">
-                        <SelectValue placeholder="Select Technician" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mike">Mike Johnson</SelectItem>
-                        <SelectItem value="david">David Chen</SelectItem>
-                        <SelectItem value="sarah">Sarah Williams</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="job">Job Number</Label>
-                    <Select>
-                      <SelectTrigger id="job">
-                        <SelectValue placeholder="Select Job" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="job4541">JOB4541 - North Hills Mall</SelectItem>
-                        <SelectItem value="job4542">JOB4542 - Eastside Offices</SelectItem>
-                        <SelectItem value="job4543">JOB4543 - Downtown Hotel</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hours">Hours Worked</Label>
-                    <Input id="hours" type="number" min="0" step="0.5" placeholder="8.0" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes (Optional)</Label>
-                  <Input id="notes" placeholder="Any notes about the work performed" />
-                </div>
-              </TabsContent>
-              <TabsContent value="weekly" className="pt-4">
-                <div className="text-center text-muted-foreground">
-                  Weekly timesheet entry coming soon.
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter>
-            <Button className="ml-auto">
-              <CheckCircle2 className="mr-2 h-4 w-4" /> Submit Hours
             </Button>
           </CardFooter>
         </Card>
