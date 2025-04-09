@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Table, 
@@ -14,14 +12,14 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, Download, Upload, Search } from "lucide-react";
+import { Download, Upload, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { InventoryItemActions } from "@/components/inventory/InventoryItemActions";
 import { AddInventoryItemDialog } from "@/components/inventory/AddInventoryItemDialog";
 
 export default function Inventory() {
-  const { user, hasPermission } = useAuth();
+  const { user, userRole } = useAuth();
   const [inventoryItems, setInventoryItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
@@ -83,6 +81,9 @@ export default function Inventory() {
     console.log("Import inventory functionality will be implemented later");
   };
 
+  // Check if user can add inventory items (admin or manager)
+  const canAddInventory = userRole === 'admin' || userRole === 'manager';
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center">
@@ -96,7 +97,7 @@ export default function Inventory() {
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
-          <AddInventoryItemDialog />
+          {canAddInventory && <AddInventoryItemDialog />}
         </div>
       </div>
 
