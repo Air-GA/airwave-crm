@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Card, 
@@ -30,7 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { 
   DollarSign, 
   Package, 
-  PriceTag, 
+  Tag, 
   RefreshCw, 
   Check, 
   X, 
@@ -62,7 +61,6 @@ export function ProfitRhinoIntegration() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   
-  // Only admin can manage integrations
   if (userRole !== 'admin') {
     return (
       <Card>
@@ -97,13 +95,11 @@ export function ProfitRhinoIntegration() {
   const onSubmit = (values: z.infer<typeof profitRhinoSchema>) => {
     console.log("Profit Rhino integration settings:", values);
     
-    // In a real app, this would save to your backend/database
     toast({
       title: "Settings saved",
       description: "Profit Rhino integration settings have been updated.",
     });
     
-    // Simulate connection
     if (values.apiKey && values.apiSecret) {
       setIsConnected(true);
     }
@@ -112,7 +108,6 @@ export function ProfitRhinoIntegration() {
   const handleConnect = () => {
     setIsConnecting(true);
     
-    // This would actually connect to Profit Rhino API
     setTimeout(() => {
       setIsConnecting(false);
       setIsConnected(true);
@@ -136,13 +131,11 @@ export function ProfitRhinoIntegration() {
   };
 
   const handleSyncInventory = async () => {
-    // Mock implementation for syncing inventory
     toast({
       title: "Syncing inventory...",
       description: "Fetching latest inventory data from Profit Rhino.",
     });
     
-    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     toast({
@@ -354,7 +347,7 @@ export function ProfitRhinoIntegration() {
                     Configure how pricing is calculated and synced with Profit Rhino
                   </p>
                 </div>
-                <PriceTag className="h-8 w-8 text-primary" />
+                <Tag className="h-8 w-8 text-primary" />
               </div>
               
               <Form {...form}>
