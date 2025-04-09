@@ -34,7 +34,10 @@ import {
   ReceiptText,
   RefreshCw, 
   Check, 
-  X 
+  X,
+  Clock,
+  CalendarClock,
+  Users
 } from "lucide-react";
 
 const quickbooksSchema = z.object({
@@ -50,6 +53,12 @@ const quickbooksSchema = z.object({
   syncCustomers: z.boolean().default(true),
   syncInvoices: z.boolean().default(true),
   enableAutoPay: z.boolean().default(false),
+  // New timesheet sync settings
+  syncTimesheets: z.boolean().default(true),
+  payrollIntegration: z.boolean().default(true),
+  overtimeThreshold: z.number().default(40),
+  payrollCycleStart: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]).default("thursday"),
+  payrollCycleEnd: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]).default("wednesday"),
 });
 
 export function QuickbooksIntegration() {
@@ -74,6 +83,11 @@ export function QuickbooksIntegration() {
       syncCustomers: true,
       syncInvoices: true,
       enableAutoPay: false,
+      syncTimesheets: true,
+      payrollIntegration: true,
+      overtimeThreshold: 40,
+      payrollCycleStart: "thursday",
+      payrollCycleEnd: "wednesday",
     },
   });
 
@@ -145,11 +159,12 @@ export function QuickbooksIntegration() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="connection">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="connection">Connection</TabsTrigger>
             <TabsTrigger value="invoicing">Invoicing</TabsTrigger>
             <TabsTrigger value="autopay">AutoPay</TabsTrigger>
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
+            <TabsTrigger value="timesheets">Timesheets</TabsTrigger>
           </TabsList>
           
           <TabsContent value="connection" className="space-y-4 pt-4">
@@ -534,11 +549,231 @@ export function QuickbooksIntegration() {
               </Form>
             </div>
           </TabsContent>
+          
+          {/* New Timesheets Tab */}
+          <TabsContent value="timesheets" className="space-y-4 pt-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium">Timesheet Integration</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure timesheet synchronization with QuickBooks for payroll
+                  </p>
+                </div>
+                <Clock className="h-8 w-8 text-primary" />
+              </div>
+              
+              <Form {...form}>
+                <form className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="syncTimesheets"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Sync Timesheets</FormLabel>
+                          <FormDescription>
+                            Automatically sync employee time tracking data with QuickBooks
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="payrollIntegration"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <div className="space-y-0.5">
+                          <FormLabel>Payroll Integration</FormLabel>
+                          <FormDescription>
+                            Automatically send timesheet data to QuickBooks Payroll
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <h4 className="font-medium flex items-center">
+                      <CalendarClock className="mr-2 h-4 w-4" />
+                      Pay Period Settings
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Configure pay period cycle for timesheet synchronization
+                    </p>
+                    
+                    <div className="grid gap-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="payrollCycleStart"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pay Period Start Day</FormLabel>
+                              <FormControl>
+                                <select
+                                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                                  value={field.value}
+                                  onChange={(e) => field.onChange(e.target.value)}
+                                >
+                                  <option value="monday">Monday</option>
+                                  <option value="tuesday">Tuesday</option>
+                                  <option value="wednesday">Wednesday</option>
+                                  <option value="thursday">Thursday</option>
+                                  <option value="friday">Friday</option>
+                                  <option value="saturday">Saturday</option>
+                                  <option value="sunday">Sunday</option>
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="payrollCycleEnd"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Pay Period End Day</FormLabel>
+                              <FormControl>
+                                <select
+                                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                                  value={field.value}
+                                  onChange={(e) => field.onChange(e.target.value)}
+                                >
+                                  <option value="monday">Monday</option>
+                                  <option value="tuesday">Tuesday</option>
+                                  <option value="wednesday">Wednesday</option>
+                                  <option value="thursday">Thursday</option>
+                                  <option value="friday">Friday</option>
+                                  <option value="saturday">Saturday</option>
+                                  <option value="sunday">Sunday</option>
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="overtimeThreshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Overtime Threshold (hours/week)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Hours above this threshold will be marked as overtime
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <h4 className="font-medium flex items-center">
+                      <Users className="mr-2 h-4 w-4" />
+                      Employee Mapping
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Map your employees to QuickBooks employees
+                    </p>
+                    
+                    <div className="border rounded-md overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="text-left p-2 text-sm">Employee</th>
+                            <th className="text-left p-2 text-sm">QuickBooks Employee</th>
+                            <th className="text-left p-2 text-sm">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-t">
+                            <td className="p-2 text-sm">Mike Johnson</td>
+                            <td className="p-2 text-sm">
+                              <select className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm">
+                                <option>Mike Johnson</option>
+                                <option>-- Select Employee --</option>
+                              </select>
+                            </td>
+                            <td className="p-2 text-sm">
+                              <span className="text-green-600 flex items-center">
+                                <Check className="h-3 w-3 mr-1" />
+                                Mapped
+                              </span>
+                            </td>
+                          </tr>
+                          <tr className="border-t">
+                            <td className="p-2 text-sm">Sarah Williams</td>
+                            <td className="p-2 text-sm">
+                              <select className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm">
+                                <option>Sarah Williams</option>
+                                <option>-- Select Employee --</option>
+                              </select>
+                            </td>
+                            <td className="p-2 text-sm">
+                              <span className="text-green-600 flex items-center">
+                                <Check className="h-3 w-3 mr-1" />
+                                Mapped
+                              </span>
+                            </td>
+                          </tr>
+                          <tr className="border-t">
+                            <td className="p-2 text-sm">David Chen</td>
+                            <td className="p-2 text-sm">
+                              <select className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm">
+                                <option>-- Select Employee --</option>
+                                <option>David C.</option>
+                                <option>David Chen</option>
+                              </select>
+                            </td>
+                            <td className="p-2 text-sm">
+                              <span className="text-amber-600 flex items-center">
+                                <X className="h-3 w-3 mr-1" />
+                                Not Mapped
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  
+                  <Button type="submit">Save Timesheet Settings</Button>
+                </form>
+              </Form>
+            </div>
+          </TabsContent>
         </Tabs>
       </CardContent>
       <CardFooter className="border-t pt-4">
         <p className="text-sm text-muted-foreground">
-          QuickBooks integration allows you to sync your financial data, invoices, and inventory with QuickBooks Online.
+          QuickBooks integration allows you to sync your financial data, invoices, timesheets, and inventory with QuickBooks Online.
         </p>
       </CardFooter>
     </Card>

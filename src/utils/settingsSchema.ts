@@ -35,6 +35,12 @@ export const integrationSchema = z.object({
     syncCustomers: z.boolean().default(true),
     syncInvoices: z.boolean().default(true),
     enableAutoPay: z.boolean().default(false),
+    // Adding timesheet sync settings
+    syncTimesheets: z.boolean().default(true),
+    payrollIntegration: z.boolean().default(true),
+    overtimeThreshold: z.number().default(40), // Hours per week
+    payrollCycleStart: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]).default("thursday"),
+    payrollCycleEnd: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]).default("wednesday"),
   }),
   googleMaps: z.object({
     connected: z.boolean(),
@@ -43,6 +49,23 @@ export const integrationSchema = z.object({
   smsProvider: z.object({
     connected: z.boolean(),
     apiKey: z.string().optional().or(z.literal("")),
+  }),
+  // Adding Profit Rhino API integration
+  profitRhino: z.object({
+    connected: z.boolean().default(false),
+    apiKey: z.string().optional(),
+    apiSecret: z.string().optional(),
+    environment: z.enum(["sandbox", "production"]).default("sandbox"),
+    baseUrl: z.string().optional(),
+    autoSync: z.boolean().default(true),
+    syncInterval: z.number().default(3600000), // 1 hour in milliseconds
+    syncInventory: z.boolean().default(true),
+    syncPricing: z.boolean().default(true),
+    markupPercentage: z.number().default(30), // Default markup percentage
+    useCompanyMarkups: z.boolean().default(true),
+    useDefaultMaterialsCost: z.boolean().default(false),
+    useCustomPricebook: z.boolean().default(false),
+    pricebookId: z.string().optional(),
   }),
 });
 

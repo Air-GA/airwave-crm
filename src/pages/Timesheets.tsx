@@ -45,11 +45,15 @@ import {
   Timer,
   TimerOff,
   ClockAlert,
+  DollarSign,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
+import { SyncButton } from "@/components/SyncButton";
+import apiIntegrationService from "@/services/apiIntegrationService";
 
 interface TimesheetStats {
   hours: number;
@@ -82,7 +86,7 @@ interface TimeEntry {
 
 const Timesheets = () => {
   const isMobile = useIsMobile();
-  const { user, permissions } = useAuth();
+  const { user, permissions, userRole } = useAuth();
   const [selectedWeek, setSelectedWeek] = useState("current");
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);
@@ -93,6 +97,7 @@ const Timesheets = () => {
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   const [timesheetEntries, setTimesheetEntries] = useState<any[]>([]);
+  const [isSyncingWithQuickbooks, setIsSyncingWithQuickbooks] = useState(false);
   
   // Check if user has permission to view all timesheets
   const canViewAllTimesheets = 
@@ -319,6 +324,31 @@ const Timesheets = () => {
     });
   };
   
+  const handleSyncWithQuickbooks = async () => {
+    if (!weekStart || !weekEnd) return;
+    
+    setIsSyncingWithQuickbooks(true);
+    try {
+      // Format dates for API call
+      const fromDate = weekStart.toISOString().split('T')[0];
+      const toDate = weekEnd.toISOString().split('T')[0];
+      
+      // Call the integration service
+      const success = await apiIntegrationService.quickbooks.syncTimesheets(fromDate, toDate);
+      
+      if (success) {
+        toast.success("Timesheets synced with QuickBooks", {
+          description: `Pay period: ${formatDate(weekStart)} - ${formatDate(weekEnd)}`
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing with QuickBooks:', error);
+      toast.error("Failed to sync timesheets with QuickBooks");
+    } finally {
+      setIsSyncingWithQuickbooks(false);
+    }
+  };
+  
   const currentPayPeriod = weekStart && weekEnd ? 
     `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : 
     "Current Pay Period";
@@ -338,6 +368,22 @@ const Timesheets = () => {
             <Button variant="outline">
               <Upload className="mr-2 h-4 w-4" /> Export
             </Button>
+            
+            {/* QuickBooks Sync Button - Only for Admin/HR/Manager */}
+            {canViewAllTimesheets && (
+              <Button 
+                variant="outline"
+                onClick={handleSyncWithQuickbooks}
+                disabled={isSyncingWithQuickbooks}
+              >
+                {isSyncingWithQuickbooks ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <DollarSign className="mr-2 h-4 w-4" />
+                )}
+                Sync to QuickBooks
+              </Button>
+            )}
           </div>
         </div>
         
@@ -537,6 +583,7 @@ const Timesheets = () => {
                     <TableHead>Job/Customer</TableHead>
                     <TableHead className="text-right">Hours</TableHead>
                     <TableHead>Status</TableHead>
+                    {canViewAllTimesheets && <TableHead>QuickBooks Status</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -566,6 +613,19 @@ const Timesheets = () => {
                           </Badge>
                         )}
                       </TableCell>
+                      {canViewAllTimesheets && (
+                        <TableCell>
+                          {entry.id.includes('3') ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700">
+                              Not Synced
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-green-50 text-green-700">
+                              Synced
+                            </Badge>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -576,9 +636,25 @@ const Timesheets = () => {
             <Button variant="outline">
               <Clock className="mr-2 h-4 w-4" /> View Time Details
             </Button>
-            <Button variant="outline">
-              <FileText className="mr-2 h-4 w-4" /> Generate Report
-            </Button>
+            <div className="flex gap-2">
+              {canViewAllTimesheets && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleSyncWithQuickbooks}
+                  disabled={isSyncingWithQuickbooks}
+                >
+                  {isSyncingWithQuickbooks ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <DollarSign className="mr-2 h-4 w-4" />
+                  )}
+                  Sync to QuickBooks
+                </Button>
+              )}
+              <Button variant="outline">
+                <FileText className="mr-2 h-4 w-4" /> Generate Report
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </div>
