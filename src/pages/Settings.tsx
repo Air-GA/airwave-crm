@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -248,6 +249,10 @@ const Settings = () => {
               <TabsTrigger value="security" className="justify-start w-auto text-left">
                 <Shield className="h-4 w-4 mr-2" />
                 <span>Security</span>
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="justify-start w-auto text-left">
+                <CreditCard className="h-4 w-4 mr-2" />
+                <span>Billing</span>
               </TabsTrigger>
               <TabsTrigger value="integrations" className="justify-start w-auto text-left">
                 <Globe className="h-4 w-4 mr-2" />
@@ -886,4 +891,510 @@ const Settings = () => {
                       <h3 className="font-medium">Push Notifications</h3>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label htmlFor="push-all">Enable Push Notifications</
+                          <Label htmlFor="push-all">Enable Push Notifications</Label>
+                          <Switch id="push-all" />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button>Save Notification Settings</Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Security Settings</CardTitle>
+                    <CardDescription>Manage your account security preferences</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Change Password</h3>
+                      <div className="space-y-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="current-password">Current Password</Label>
+                          <Input id="current-password" type="password" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="new-password">New Password</Label>
+                          <Input id="new-password" type="password" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="confirm-password">Confirm New Password</Label>
+                          <Input id="confirm-password" type="password" />
+                        </div>
+                        <Button className="mt-1">Update Password</Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Two-Factor Authentication</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Add an extra layer of security to your account</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Two-Factor Authentication</p>
+                          <p className="text-sm text-muted-foreground">Currently disabled</p>
+                        </div>
+                        <Button variant="outline">Enable</Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Login Sessions</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Manage your active sessions</p>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">Current Session</p>
+                            <p className="text-sm text-muted-foreground">Windows • Chrome • Monroe, GA</p>
+                          </div>
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active Now</Badge>
+                        </div>
+                        <div className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">Mobile Session</p>
+                            <p className="text-sm text-muted-foreground">iOS • Safari • Atlanta, GA</p>
+                          </div>
+                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600">Sign Out</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="outline" className="text-red-500">Sign Out All Devices</Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="billing">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Billing & Subscription</CardTitle>
+                    <CardDescription>Manage your billing information and subscription plan</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Current Plan</h3>
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <Badge className="bg-blue-50 text-blue-700 border-blue-200">Professional</Badge>
+                            <Badge variant="outline">Annual</Badge>
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">Billed annually at $1,999.00</p>
+                          <p className="text-sm text-muted-foreground">Renews on October 1, 2025</p>
+                        </div>
+                        <Button variant="outline">Change Plan</Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Payment Method</h3>
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center">
+                            <CreditCard className="h-5 w-5 text-gray-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Visa ending in 4242</p>
+                            <p className="text-sm text-muted-foreground">Expires 12/2026</p>
+                          </div>
+                        </div>
+                        <Button variant="outline">Update</Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Billing History</h3>
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted px-4 py-2 flex items-center font-medium text-sm">
+                          <div className="w-1/3">Invoice</div>
+                          <div className="w-1/3">Date</div>
+                          <div className="w-1/3">Amount</div>
+                        </div>
+                        <div className="divide-y">
+                          <div className="px-4 py-3 flex items-center text-sm">
+                            <div className="w-1/3">
+                              <div className="flex items-center space-x-2">
+                                <span>INV-001</span>
+                                <Button variant="ghost" size="sm" className="h-7 px-2">
+                                  Download
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="w-1/3">October 1, 2024</div>
+                            <div className="w-1/3">$1,999.00</div>
+                          </div>
+                          <div className="px-4 py-3 flex items-center text-sm">
+                            <div className="w-1/3">
+                              <div className="flex items-center space-x-2">
+                                <span>INV-002</span>
+                                <Button variant="ghost" size="sm" className="h-7 px-2">
+                                  Download
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="w-1/3">October 1, 2023</div>
+                            <div className="w-1/3">$1,999.00</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <Button variant="outline" className="text-red-500">Cancel Subscription</Button>
+                    <Button>Download Tax Receipts</Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="integrations">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>QuickBooks Integration</CardTitle>
+                    <CardDescription>Connect your QuickBooks Online account</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-8 w-8" fill="#2CA01C">
+                          <path d="M21.308 9.885c0-4.745-3.984-8.585-8.89-8.585-3.355 0-6.282 1.84-7.794 4.53H2.831v8.105h1.794c1.526 2.699 4.455 4.525 7.793 4.525 4.906 0 8.89-3.84 8.89-8.575zm-5.225 5.356l-1.655-1.565c-.666.494-1.17.726-1.968.726-1.245 0-2.232-.926-2.232-2.222 0-1.296.987-2.301 2.232-2.301.883 0 1.513.313 2.017.812l1.588-1.735c-.911-.866-2.065-1.346-3.605-1.346-3.074 0-5.45 2.179-5.45 4.57 0 2.393 2.341 4.438 5.45 4.438 1.605 0 2.766-.485 3.623-1.377z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">QuickBooks Online</h3>
+                        <p className="text-sm text-muted-foreground">Sync customers, invoices, and payments</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4">
+                      <FormField
+                        control={integrationForm.control}
+                        name="quickbooks.connected"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel>Connection Status</FormLabel>
+                              <FormDescription>
+                                {field.value ? "Your QuickBooks account is connected" : "Connect to your QuickBooks account"}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      {integrationForm.watch("quickbooks.connected") && (
+                        <>
+                          <FormField
+                            control={integrationForm.control}
+                            name="quickbooks.apiKey"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>API Key</FormLabel>
+                                <div className="flex space-x-2">
+                                  <FormControl>
+                                    <Input
+                                      type={showApiKey.quickbooks ? "text" : "password"}
+                                      placeholder="Enter your QuickBooks API key"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => toggleShowApiKey("quickbooks")}
+                                  >
+                                    {showApiKey.quickbooks ? (
+                                      <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="space-y-2">
+                            <Label>Auto-Sync Settings</Label>
+                            <div className="rounded-md border p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="autosync">Enable Auto-Sync</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Automatically sync data with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="autosync" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="livesync">Live Sync</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Update QuickBooks in real-time when changes occur
+                                  </p>
+                                </div>
+                                <Switch id="livesync" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="syncinterval">Sync Interval</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    How often to sync with QuickBooks
+                                  </p>
+                                </div>
+                                <Select defaultValue="300000">
+                                  <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Select interval" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="60000">Every minute</SelectItem>
+                                    <SelectItem value="300000">Every 5 minutes</SelectItem>
+                                    <SelectItem value="900000">Every 15 minutes</SelectItem>
+                                    <SelectItem value="3600000">Every hour</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Data Sync Options</Label>
+                            <div className="rounded-md border p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="sync-invoices">Invoices</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Sync invoices with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="sync-invoices" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="sync-customers">Customers</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Sync customer data with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="sync-customers" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="sync-inventory">Inventory</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Sync inventory items with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="sync-inventory" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="autopay">Auto-Pay Invoices</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Automatically collect payments for invoices
+                                  </p>
+                                </div>
+                                <Switch id="autopay" />
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="button" onClick={() => integrationForm.handleSubmit(saveIntegrationForm)()}>
+                      Save QuickBooks Settings
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>Google Maps Integration</CardTitle>
+                    <CardDescription>Connect to Google Maps for location services</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-8 w-8">
+                          <path d="M5.77 17.2l-.61-.6a9.13 9.13 0 0 1 0-12.89l.61-.6L7.2 5.33l-.92 1.02c.67-.95 1.55-1.75 2.59-2.33L10.2 5.3c-.97.93-1.73 2.1-2.2 3.36h1.39l-.78 1.62h-.85c-.11.6-.17 1.22-.17 1.82v.17h1.8V14h-1.81c.06.91.22 1.77.48 2.58.44-.38.89-.71 1.36-1.01l1.1 1.69c-.6.39-1.16.84-1.67 1.34L5.77 17.2M19.25 12c0 .24-.01.48-.03.71h-1.77c.03-.23.05-.47.05-.71s-.02-.48-.05-.72h1.77c.02.24.03.48.03.72M12 19.25c-.24 0-.48-.01-.72-.03v-1.77c.24.03.48.05.72.05s.48-.02.72-.05v1.77c-.24.02-.48.03-.72.03m0-14.5c.24 0 .48.01.72.03V6.5l-.72-.05-.72.05v-1.8c.24-.02.48-.03.72-.03m5.03 10.2 1.27 1.27c-.17.18-.35.34-.53.5l-1.23-1.23c.17-.17.34-.35.49-.54M13.45 5h1.95c.28.27.54.56.77.86l-1.24 1.1c-.12-.16-.25-.31-.38-.46a5.82 5.82 0 0 0-1.1-1.05v-.45M7.55 12c0-2.46 2-4.46 4.45-4.46.37 0 .7.06 1.25.15l.68-1.46C13.12 6.09 12.57 6 12 6c-3.31 0-6 2.69-6 6 0 1.68.72 3.31 2.04 4.44l.96-1.23A4.4 4.4 0 0 1 7.55 12m9.55 2.44-.94-1.23c.42-.41.72-.94.87-1.49h1.81a5.9 5.9 0 0 1-1.74 2.72Z" fill="#1976D2"/>
+                          <path d="M18.89 13.77A6.98 6.98 0 0 0 19 12c0-.6-.09-1.19-.22-1.76h-2.08c.03.23.05.47.05.71 0 .24-.02.48-.05.71l2.19.11M12 19c-1.63 0-3.09-.64-4.19-1.67l-1.39 1.79C7.88 20.26 9.86 21 12 21c1.36 0 2.66-.31 3.81-.84l-.71-1.96c-.91.49-1.96.8-3.1.8m0-14c1.63 0 3.09.64 4.19 1.66l1.38-1.78C16.12 3.73 14.14 3 12 3c-1.36 0-2.66.31-3.81.84l.71 1.96C9.81 5.32 10.86 5 12 5Z" fill="#1976D2"/>
+                          <path d="m19.22 4.78-.71-.71-3.18 3.18c.21.3.39.63.53.97l3.36-3.44M4.78 19.22l.7.71 3.19-3.19c-.21-.3-.39-.62-.53-.97l-3.36 3.45M15.4 14.02c-.19.26-.4.5-.64.71l2.2 2.2c.39-.41.73-.87 1.03-1.35l-2.59-1.56M13.68 8.85C13.28 8.55 12.66 8 12 8c-2.21 0-4 1.79-4 4 0 .66.55 1.28.85 1.67l4.83-4.82Z" fill="#1976D2"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">Google Maps</h3>
+                        <p className="text-sm text-muted-foreground">Track technicians and optimize routes</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4">
+                      <FormField
+                        control={integrationForm.control}
+                        name="googleMaps.connected"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel>Connection Status</FormLabel>
+                              <FormDescription>
+                                {field.value ? "Google Maps API is connected" : "Connect to Google Maps API"}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      {integrationForm.watch("googleMaps.connected") && (
+                        <FormField
+                          control={integrationForm.control}
+                          name="googleMaps.apiKey"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>API Key</FormLabel>
+                              <div className="flex space-x-2">
+                                <FormControl>
+                                  <Input
+                                    type={showApiKey.googleMaps ? "text" : "password"}
+                                    placeholder="Enter your Google Maps API key"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => toggleShowApiKey("googleMaps")}
+                                >
+                                  {showApiKey.googleMaps ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="button" onClick={() => integrationForm.handleSubmit(saveIntegrationForm)()}>
+                      Save Google Maps Settings
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>SMS Provider</CardTitle>
+                    <CardDescription>Connect to SMS provider for text notifications</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center">
+                        <Smartphone className="h-8 w-8 text-purple-500" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">SMS Integration</h3>
+                        <p className="text-sm text-muted-foreground">Send automated text messages to customers</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4">
+                      <FormField
+                        control={integrationForm.control}
+                        name="smsProvider.connected"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel>Connection Status</FormLabel>
+                              <FormDescription>
+                                {field.value ? "SMS Provider is connected" : "Connect to SMS Provider"}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      {integrationForm.watch("smsProvider.connected") && (
+                        <FormField
+                          control={integrationForm.control}
+                          name="smsProvider.apiKey"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>API Key</FormLabel>
+                              <div className="flex space-x-2">
+                                <FormControl>
+                                  <Input
+                                    type={showApiKey.smsProvider ? "text" : "password"}
+                                    placeholder="Enter your SMS Provider API key"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => toggleShowApiKey("smsProvider")}
+                                >
+                                  {showApiKey.smsProvider ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="button" onClick={() => integrationForm.handleSubmit(saveIntegrationForm)()}>
+                      Save SMS Settings
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+            </div>
+          </div>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default Settings;
