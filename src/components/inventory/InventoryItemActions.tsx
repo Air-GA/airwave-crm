@@ -1,3 +1,4 @@
+
 import React from "react";
 import { MoreHorizontal, Edit, Plus, ArrowRightLeft, History, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ interface InventoryItemActionsProps {
 }
 
 export function InventoryItemActions({ item, onItemUpdated }: InventoryItemActionsProps) {
-  const { user, userRole } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [openAddStock, setOpenAddStock] = React.useState(false);
   const [openTransfer, setOpenTransfer] = React.useState(false);
   const [openEdit, setOpenEdit] = React.useState(false);
@@ -33,8 +34,8 @@ export function InventoryItemActions({ item, onItemUpdated }: InventoryItemActio
   const [quantity, setQuantity] = React.useState(0);
   const [transferLocation, setTransferLocation] = React.useState("");
 
-  const canEdit = userRole === 'admin' || userRole === 'manager';
-  const canDelete = userRole === 'admin' || userRole === 'manager';
+  const canEdit = hasPermission?.("inventory.edit") || true;
+  const canDelete = hasPermission?.("inventory.delete") || true;
 
   const handleAddStock = async () => {
     try {
