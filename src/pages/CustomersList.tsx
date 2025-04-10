@@ -7,8 +7,7 @@ import {
   User, 
   Phone, 
   Mail, 
-  Home,
-  Building2 
+  Home
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -59,16 +58,6 @@ const mockCustomers: Customer[] = [
     last_service: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
   },
   {
-    id: "2",
-    name: "Atlanta Office Towers",
-    email: "property@atlantaoffice.com",
-    phone: "404-555-5678",
-    address: "1000 Peachtree St, Atlanta, GA",
-    type: "commercial",
-    created_at: new Date().toISOString(),
-    last_service: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() // 15 days ago
-  },
-  {
     id: "3",
     name: "Sarah Wilson",
     email: "swilson@gmail.com",
@@ -77,26 +66,6 @@ const mockCustomers: Customer[] = [
     type: "residential",
     created_at: new Date().toISOString(),
     last_service: null
-  },
-  {
-    id: "4",
-    name: "Peachtree Mall",
-    email: "facilities@peachtreemall.com",
-    phone: "770-555-7890",
-    address: "2500 Commercial Blvd, Atlanta, GA",
-    type: "commercial",
-    created_at: new Date().toISOString(),
-    last_service: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() // 45 days ago
-  },
-  {
-    id: "5",
-    name: "Thompson Properties",
-    email: "info@thompsonproperties.com",
-    phone: "404-555-9012",
-    address: "789 Landlord Lane, Atlanta, GA",
-    type: "commercial",
-    created_at: new Date().toISOString(),
-    last_service: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days ago
   }
 ];
 
@@ -105,13 +74,14 @@ const CustomersList = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
 
-  // Fetch all customers
+  // Fetch all residential customers
   const { data: customers, isLoading, error, refetch } = useQuery({
     queryKey: ["customers-list"],
     queryFn: async () => {
       const { data, error } = await supabase.client
         .from("customers")
         .select("*")
+        .eq("type", "residential")
         .order("name", { ascending: true });
 
       if (error) {
@@ -119,9 +89,10 @@ const CustomersList = () => {
       }
       
       // If no data is found in the database, use mock data
+      // but filter out commercial customers
       if (!data || data.length === 0) {
-        console.log("No customers found in database, using mock data");
-        return mockCustomers;
+        console.log("No residential customers found in database, using mock data");
+        return mockCustomers.filter(customer => customer.type === "residential");
       }
       
       return data as Customer[];
@@ -178,9 +149,9 @@ const CustomersList = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>All Customers</CardTitle>
+              <CardTitle>All Residential Customers</CardTitle>
               <CardDescription>
-                Comprehensive alphabetical list of all customers in the system.
+                Comprehensive alphabetical list of all residential customers in the system.
               </CardDescription>
             </div>
             <SyncButton onSync={syncCustomers} label="Customers" />
@@ -213,7 +184,6 @@ const CustomersList = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[300px]">Customer Name</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Address</TableHead>
@@ -224,7 +194,6 @@ const CustomersList = () => {
                     Array.from({ length: 5 }).map((_, index) => (
                       <TableRow key={index}>
                         <TableCell><Skeleton className="h-6 w-[250px]" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-[80px]" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-[180px]" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-[120px]" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-[200px]" /></TableCell>
@@ -235,18 +204,9 @@ const CustomersList = () => {
                       <TableRow key={customer.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {customer.type === 'commercial' ? (
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <User className="h-4 w-4 text-muted-foreground" />
-                            )}
+                            <User className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium">{customer.name}</span>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={customer.type === 'commercial' ? "secondary" : "default"} className="capitalize">
-                            {customer.type}
-                          </Badge>
                         </TableCell>
                         <TableCell>
                           {customer.email ? (
@@ -282,8 +242,8 @@ const CustomersList = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                        No customers found. Try adjusting your search criteria.
+                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                        No residential customers found. Try adjusting your search criteria.
                       </TableCell>
                     </TableRow>
                   )}
