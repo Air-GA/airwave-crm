@@ -1,9 +1,12 @@
 
 import {
   BarChart3,
+  Building2,
   Calendar,
   ClipboardList,
+  ClipboardCheck,
   Clock,
+  FileText,
   LayoutDashboard,
   MapPin,
   MessageSquare,
@@ -43,6 +46,16 @@ export const navigationItems = [
     icon: Users,
   },
   {
+    title: "Customers List",
+    href: "/customers-list",
+    icon: Users,
+  },
+  {
+    title: "Service Addresses",
+    href: "/service-addresses",
+    icon: MapPin,
+  },
+  {
     title: "Work Orders",
     href: "/work-orders",
     icon: ClipboardList,
@@ -61,6 +74,11 @@ export const navigationItems = [
     title: "Inventory",
     href: "/inventory",
     icon: Package,
+  },
+  {
+    title: "Purchase Orders",
+    href: "/purchase-orders",
+    icon: FileText,
   },
   {
     title: "Invoices",
