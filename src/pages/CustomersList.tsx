@@ -46,6 +46,60 @@ interface Customer {
   last_service: string | null;
 }
 
+// Mock customer data to use when no data is found in the database
+const mockCustomers: Customer[] = [
+  {
+    id: "1",
+    name: "Johnson Family",
+    email: "johnson@example.com",
+    phone: "404-555-1234",
+    address: "123 Maple Street, Atlanta, GA",
+    type: "residential",
+    created_at: new Date().toISOString(),
+    last_service: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
+  },
+  {
+    id: "2",
+    name: "Atlanta Office Towers",
+    email: "property@atlantaoffice.com",
+    phone: "404-555-5678",
+    address: "1000 Peachtree St, Atlanta, GA",
+    type: "commercial",
+    created_at: new Date().toISOString(),
+    last_service: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() // 15 days ago
+  },
+  {
+    id: "3",
+    name: "Sarah Wilson",
+    email: "swilson@gmail.com",
+    phone: "678-555-3456",
+    address: "456 Oak Avenue, Marietta, GA",
+    type: "residential",
+    created_at: new Date().toISOString(),
+    last_service: null
+  },
+  {
+    id: "4",
+    name: "Peachtree Mall",
+    email: "facilities@peachtreemall.com",
+    phone: "770-555-7890",
+    address: "2500 Commercial Blvd, Atlanta, GA",
+    type: "commercial",
+    created_at: new Date().toISOString(),
+    last_service: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() // 45 days ago
+  },
+  {
+    id: "5",
+    name: "Thompson Properties",
+    email: "info@thompsonproperties.com",
+    phone: "404-555-9012",
+    address: "789 Landlord Lane, Atlanta, GA",
+    type: "commercial",
+    created_at: new Date().toISOString(),
+    last_service: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days ago
+  }
+];
+
 const CustomersList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -62,6 +116,12 @@ const CustomersList = () => {
 
       if (error) {
         throw new Error(error.message);
+      }
+      
+      // If no data is found in the database, use mock data
+      if (!data || data.length === 0) {
+        console.log("No customers found in database, using mock data");
+        return mockCustomers;
       }
       
       return data as Customer[];
