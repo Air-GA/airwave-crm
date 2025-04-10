@@ -1,5 +1,4 @@
-
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -8,7 +7,6 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import Unauthorized from "@/pages/Unauthorized";
-import Customers from "@/pages/Customers";
 import CustomersList from "@/pages/CustomersList";
 import ServiceAddresses from "@/pages/ServiceAddresses";
 import WorkOrders from "@/pages/WorkOrders";
@@ -39,12 +37,10 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
+              {/* Redirect from old customers path to the consolidated customers-list */}
+              <Route path="/customers" element={<Navigate replace to="/customers-list" />} />
+
               {/* Protected routes */}
-              <Route path="/customers" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "customer"]}>
-                  <Customers />
-                </RoleGuard>
-              } />
               <Route path="/customers-list" element={
                 <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "customer"]}>
                   <CustomersList />

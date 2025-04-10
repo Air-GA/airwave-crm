@@ -1,4 +1,3 @@
-
 import {
   BarChart3,
   Building2,
@@ -42,11 +41,6 @@ export const navigationItems = [
   },
   {
     title: "Customers",
-    href: "/customers",
-    icon: Users,
-  },
-  {
-    title: "Customers List",
     href: "/customers-list",
     icon: Users,
   },
