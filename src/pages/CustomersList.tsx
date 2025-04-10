@@ -7,7 +7,8 @@ import {
   User, 
   Phone, 
   Mail, 
-  Home 
+  Home,
+  Building2 
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -29,6 +30,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { SyncButton } from "@/components/SyncButton";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,6 +42,8 @@ interface Customer {
   phone: string | null;
   address: string | null;
   type: string;
+  created_at: string;
+  last_service: string | null;
 }
 
 const CustomersList = () => {
@@ -47,7 +52,7 @@ const CustomersList = () => {
   const { toast } = useToast();
 
   // Fetch all customers
-  const { data: customers, isLoading, error } = useQuery({
+  const { data: customers, isLoading, error, refetch } = useQuery({
     queryKey: ["customers-list"],
     queryFn: async () => {
       const { data, error } = await supabase.client
@@ -83,6 +88,19 @@ const CustomersList = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
 
+  // Sync customers from external system
+  const syncCustomers = async () => {
+    try {
+      // In a real app, this would connect to QuickBooks, CRM, etc.
+      // For now, we'll just refetch from our database
+      await refetch();
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error syncing customers:", error);
+      return Promise.reject(error);
+    }
+  };
+
   // Display error if query fails
   useEffect(() => {
     if (error) {
@@ -98,11 +116,14 @@ const CustomersList = () => {
     <MainLayout pageName="Customers List">
       <div className="container mx-auto py-6">
         <Card>
-          <CardHeader>
-            <CardTitle>All Customers</CardTitle>
-            <CardDescription>
-              Comprehensive alphabetical list of all customers in the system.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>All Customers</CardTitle>
+              <CardDescription>
+                Comprehensive alphabetical list of all customers in the system.
+              </CardDescription>
+            </div>
+            <SyncButton onSync={syncCustomers} label="Customers" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between mb-4">
@@ -152,11 +173,20 @@ const CustomersList = () => {
                   ) : sortedCustomers?.length ? (
                     sortedCustomers.map((customer) => (
                       <TableRow key={customer.id}>
-                        <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell>
-                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary-foreground">
+                          <div className="flex items-center gap-2">
+                            {customer.type === 'commercial' ? (
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <User className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span className="font-medium">{customer.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={customer.type === 'commercial' ? "secondary" : "default"} className="capitalize">
                             {customer.type}
-                          </span>
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {customer.email ? (
