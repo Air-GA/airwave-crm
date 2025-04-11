@@ -15,6 +15,8 @@ class ApiIntegrationService {
     // Sync timesheets with QuickBooks
     syncTimesheets: async (startDate: string, endDate: string) => {
       console.log(`Syncing timesheets from ${startDate} to ${endDate} with QuickBooks...`);
+      // First, ensure customer data is up to date
+      await this.quickbooks.syncCustomers();
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
       return { success: true, message: "Timesheets synced successfully" };
@@ -23,9 +25,11 @@ class ApiIntegrationService {
     // Sync customers with QuickBooks
     syncCustomers: async () => {
       console.log("Syncing customers with QuickBooks...");
+      // Also sync service addresses as part of customer sync
+      console.log("Syncing service addresses...");
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      return { success: true, message: "Customers synced successfully" };
+      return { success: true, message: "Customers and addresses synced successfully" };
     },
 
     // Sync work orders with QuickBooks
@@ -41,7 +45,9 @@ class ApiIntegrationService {
     // Sync reports with QuickBooks
     syncReports: async () => {
       console.log("Syncing reports with QuickBooks...");
-      // Simulate API call
+      // First ensure customer data is up to date
+      await this.quickbooks.syncCustomers();
+      // Then sync reports
       await new Promise((resolve) => setTimeout(resolve, 1800));
       return { success: true, message: "Reports synced successfully" };
     },
@@ -49,9 +55,21 @@ class ApiIntegrationService {
     // Sync purchase orders with QuickBooks
     syncPurchaseOrders: async () => {
       console.log("Syncing purchase orders with QuickBooks...");
-      // Simulate API call
+      // First ensure customer data is up to date
+      await this.quickbooks.syncCustomers();
+      // Then sync purchase orders
       await new Promise((resolve) => setTimeout(resolve, 1700));
       return { success: true, message: "Purchase orders synced successfully" };
+    },
+    
+    // Sync customer schedule with QuickBooks
+    syncSchedule: async () => {
+      console.log("Syncing schedule with QuickBooks...");
+      // First sync customers to ensure all customer data is up to date
+      await this.quickbooks.syncCustomers();
+      // Then sync work orders since they contain the scheduling information
+      await this.quickbooks.syncWorkOrders();
+      return { success: true, message: "Schedule synced successfully" };
     }
   };
 

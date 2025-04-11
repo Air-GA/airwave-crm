@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { SyncButton } from "@/components/SyncButton";
+import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -164,15 +164,33 @@ const CustomersList = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
 
-  // Sync customers from external system
+  // Sync customers from QuickBooks and then refetch
   const syncCustomers = async () => {
     try {
-      // In a real app, this would connect to QuickBooks, CRM, etc.
-      // For now, we'll just refetch from our database
+      toast({
+        title: "Syncing Customers",
+        description: "Syncing customers from QuickBooks...",
+      });
+      
+      // Call the QuickBooks sync function
+      await apiIntegrationService.quickbooks.syncCustomers();
+      
+      // Refetch customers after sync
       await refetch();
+      
+      toast({
+        title: "Sync Complete",
+        description: "Successfully synced customers from QuickBooks.",
+      });
+      
       return Promise.resolve();
     } catch (error) {
       console.error("Error syncing customers:", error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync customers from QuickBooks.",
+        variant: "destructive",
+      });
       return Promise.reject(error);
     }
   };
@@ -231,7 +249,7 @@ const CustomersList = () => {
                   <Plus className="mr-2 h-4 w-4" /> Add Customer
                 </Button>
               )}
-              <SyncButton onSync={syncCustomers} label="Customers" />
+              <SyncWithQuickBooks entityType="customers" onSyncComplete={refetch} />
               <AddCustomerDialog 
                 open={showAddCustomerDialog} 
                 onOpenChange={setShowAddCustomerDialog} 

@@ -52,8 +52,30 @@ const supabase = {
       address: customer.address || null,
       service_addresses: serviceAddresses,
       bill_address: customer.billAddress || null,
-      type: customer.type || 'residential',
+      type: customer.type || 'residential', // Default to residential
       created_at: customer.createdAt || new Date().toISOString()
+    };
+  },
+  
+  // Helper to convert DB data to Customer type
+  formatDbToCustomer: (dbCustomer: any): Customer => {
+    return {
+      id: dbCustomer.id,
+      name: dbCustomer.name,
+      email: dbCustomer.email || '',
+      phone: dbCustomer.phone || '',
+      address: dbCustomer.address || '',
+      billAddress: dbCustomer.bill_address || dbCustomer.address || '',
+      serviceAddress: dbCustomer.service_address || '',
+      serviceAddresses: dbCustomer.service_addresses?.map((addr: any) => ({
+        id: addr.id || `addr-${Math.random().toString(36).substring(2, 9)}`,
+        address: addr.address,
+        isPrimary: addr.is_primary || false,
+        notes: addr.notes || ''
+      })) || [],
+      type: dbCustomer.type || 'residential',
+      createdAt: dbCustomer.created_at,
+      lastService: dbCustomer.last_service
     };
   }
 };

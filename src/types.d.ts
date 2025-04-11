@@ -5,9 +5,9 @@ export interface Customer {
   email: string;
   phone: string;
   serviceAddresses?: ServiceAddress[];
-  billAddress: string;  // This is required per the error message
+  billAddress: string;  // This is required
   notes?: string;
-  type?: 'residential' | 'commercial';
+  type: 'residential' | 'commercial';
   createdAt?: string;
   lastService?: string;
   location?: {

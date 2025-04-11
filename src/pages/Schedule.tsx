@@ -58,6 +58,7 @@ import {
   PointerSensor,
   TouchSensor,
 } from "@dnd-kit/core";
+import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 
 const maintenanceOrderSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
@@ -165,7 +166,8 @@ const Schedule = () => {
         console.warn("No work orders data loaded");
         
         try {
-          console.log("Attempting to sync work orders from CRM...");
+          console.log("Attempting to sync work orders from CRM and QuickBooks...");
+          await apiIntegrationService.quickbooks.syncCustomers();
           const syncedOrders = await syncWorkOrdersFromCRM();
           if (syncedOrders && syncedOrders.length > 0) {
             console.log(`Successfully synced ${syncedOrders.length} work orders from CRM`);
@@ -174,7 +176,7 @@ const Schedule = () => {
             setSyncError("Unable to load work orders. Please try syncing manually.");
           }
         } catch (syncError) {
-          console.error("Error syncing work orders from CRM:", syncError);
+          console.error("Error syncing work orders:", syncError);
           setSyncError("Unable to load work orders. Please try syncing manually.");
         }
       }
@@ -196,6 +198,7 @@ const Schedule = () => {
 
   const handleSyncWorkOrders = async () => {
     try {
+      await apiIntegrationService.quickbooks.syncCustomers();
       const syncedOrders = await syncWorkOrdersFromCRM();
       if (syncedOrders && syncedOrders.length > 0) {
         setWorkOrders(syncedOrders);
@@ -439,7 +442,7 @@ const Schedule = () => {
             <p className="text-muted-foreground">Manage appointments and technician schedules</p>
           </div>
           <div className="flex gap-2">
-            <SyncButton onSync={handleSyncWorkOrders} label="Sync Work Orders" />
+            <SyncWithQuickBooks entityType="workOrders" onSyncComplete={handleSyncWorkOrders} />
             <Button onClick={handleQuickCreate} variant="outline">
               <Plus className="mr-2 h-4 w-4" /> Quick Create
             </Button>
