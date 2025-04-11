@@ -175,6 +175,8 @@ const ServiceAddresses = () => {
         description: "Syncing service addresses from QuickBooks...",
       });
       
+      // Since we're using entityType="workOrders" in the SyncWithQuickBooks component,
+      // we should call the appropriate API method
       await apiIntegrationService.quickbooks.syncServiceAddresses();
       
       await refetch();
