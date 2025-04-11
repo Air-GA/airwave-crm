@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -47,25 +46,7 @@ import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  billAddress?: string;
-  serviceAddress?: string;
-  serviceAddresses?: Array<{
-    id: string;
-    address: string;
-    isPrimary?: boolean;
-    notes?: string;
-  }>;
-  type: string;
-  created_at: string;
-  last_service: string | null;
-}
+import { Customer, ServiceAddress } from "@/types";
 
 // Mock customer data to use when no data is found in the database
 const mockCustomers: Customer[] = [
@@ -80,8 +61,8 @@ const mockCustomers: Customer[] = [
       { id: "addr-1", address: "123 Maple Street, Atlanta, GA", isPrimary: true }
     ],
     type: "residential",
-    created_at: new Date().toISOString(),
-    last_service: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
+    createdAt: new Date().toISOString(),
+    lastService: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
   },
   {
     id: "3",
@@ -94,8 +75,8 @@ const mockCustomers: Customer[] = [
       { id: "addr-3", address: "456 Oak Avenue, Marietta, GA", isPrimary: true }
     ],
     type: "residential",
-    created_at: new Date().toISOString(),
-    last_service: null
+    createdAt: new Date().toISOString(),
+    lastService: null
   }
 ];
 
@@ -133,9 +114,9 @@ const CustomersList = () => {
       }
       
       const formattedData = data.map(customer => {
-        // Ensure each customer has serviceAddresses property
+        // Ensure each customer has serviceAddresses property and billAddress
         if (!customer.serviceAddresses) {
-          const serviceAddresses = [];
+          const serviceAddresses: ServiceAddress[] = [];
           if (customer.service_address) {
             serviceAddresses.push({
               id: `legacy-${customer.id}`,
@@ -152,14 +133,14 @@ const CustomersList = () => {
           
           return {
             ...customer,
-            billAddress: customer.bill_address,
+            billAddress: customer.bill_address || customer.address || "",
             serviceAddresses 
-          };
+          } as Customer;
         }
-        return customer;
+        return customer as Customer;
       });
       
-      return formattedData as Customer[];
+      return formattedData;
     },
   });
 
