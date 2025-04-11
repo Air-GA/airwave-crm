@@ -47,8 +47,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Customer, ServiceAddress } from "@/types";
+import { apiIntegrationService } from "@/services/apiIntegrationService";
 
-// Mock customer data to use when no data is found in the database
 const mockCustomers: Customer[] = [
   {
     id: "1",
@@ -92,7 +92,6 @@ const CustomersList = () => {
   const isMobile = useIsMobile();
   const { permissions, user, userRole } = useAuth();
 
-  // Fetch all residential customers
   const { data: customers, isLoading, error, refetch } = useQuery({
     queryKey: ["customers-list"],
     queryFn: async () => {
@@ -106,15 +105,12 @@ const CustomersList = () => {
         throw new Error(error.message);
       }
       
-      // If no data is found in the database, use mock data
-      // but filter out commercial customers
       if (!data || data.length === 0) {
         console.log("No residential customers found in database, using mock data");
         return mockCustomers.filter(customer => customer.type === "residential");
       }
       
       const formattedData = data.map(customer => {
-        // Ensure each customer has serviceAddresses property and billAddress
         if (!customer.serviceAddresses) {
           const serviceAddresses: ServiceAddress[] = [];
           if (customer.service_address) {
@@ -144,14 +140,12 @@ const CustomersList = () => {
     },
   });
 
-  // Handle search
   const filteredCustomers = customers?.filter((customer) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (customer.phone && customer.phone.includes(searchTerm))
   );
 
-  // Sort customers based on name and current sort order
   const sortedCustomers = filteredCustomers?.sort((a, b) => {
     if (sortOrder === "asc") {
       return a.name.localeCompare(b.name);
@@ -164,7 +158,6 @@ const CustomersList = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
 
-  // Sync customers from QuickBooks and then refetch
   const syncCustomers = async () => {
     try {
       toast({
@@ -172,10 +165,8 @@ const CustomersList = () => {
         description: "Syncing customers from QuickBooks...",
       });
       
-      // Call the QuickBooks sync function
       await apiIntegrationService.quickbooks.syncCustomers();
       
-      // Refetch customers after sync
       await refetch();
       
       toast({
@@ -195,7 +186,6 @@ const CustomersList = () => {
     }
   };
   
-  // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
     refetch();
     toast({
@@ -204,9 +194,7 @@ const CustomersList = () => {
     });
   };
   
-  // Handle creating a new work order for a customer
   const handleCreateWorkOrder = (customer: Customer, serviceAddress?: string) => {
-    // Use the provided service address or get the primary one
     const addressToUse = serviceAddress || 
       (customer.serviceAddresses?.find(a => a.isPrimary)?.address || 
       customer.serviceAddresses?.[0]?.address || 
@@ -215,13 +203,11 @@ const CustomersList = () => {
     navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone || '')}&customerEmail=${encodeURIComponent(customer.email || '')}&customerAddress=${encodeURIComponent(addressToUse)}`);
   };
   
-  // Handle viewing customer details
   const handleViewCustomerDetails = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowCustomerDetails(true);
   };
 
-  // Display error if query fails
   useEffect(() => {
     if (error) {
       toast({
@@ -300,7 +286,6 @@ const CustomersList = () => {
               </div>
             </div>
             
-            {/* Loading State */}
             {isLoading && (
               viewMode === "list" ? (
                 <div className="rounded-md border">
@@ -345,7 +330,6 @@ const CustomersList = () => {
               )
             )}
             
-            {/* List View */}
             {!isLoading && viewMode === "list" && (
               <div className="rounded-md border">
                 <Table>
@@ -446,7 +430,6 @@ const CustomersList = () => {
               </div>
             )}
             
-            {/* Grid View */}
             {!isLoading && viewMode === "grid" && (
               <>
                 {sortedCustomers?.length ? (
@@ -483,7 +466,6 @@ const CustomersList = () => {
               </>
             )}
 
-            {/* Customer details dialog */}
             {selectedCustomer && (
               <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
                 <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -518,7 +500,6 @@ const CustomersList = () => {
                                   <p>{addr.address}</p>
                                   {addr.notes && <p className="text-sm text-muted-foreground mt-1">{addr.notes}</p>}
                                 </div>
-                                {/* Only show work order button if appropriate for the role */}
                                 {(!permissions.canViewOnlyAssociatedCustomers || 
                                   (user?.associatedIds?.includes(selectedCustomer.id))) && (
                                   <Button 
@@ -547,7 +528,6 @@ const CustomersList = () => {
                       <p>{selectedCustomer.billAddress || selectedCustomer.address || 'No billing address'}</p>
                     </div>
                     
-                    {/* Show financial information based on permissions */}
                     {permissions.canViewCustomerPaymentHistory && (
                       <div>
                         <h4 className="text-sm font-medium text-muted-foreground">Payment History</h4>
