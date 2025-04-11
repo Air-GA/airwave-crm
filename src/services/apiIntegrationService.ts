@@ -1,6 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { toast } from "sonner";
+import { syncWorkOrdersFromCRM } from '@/services/crmSyncService';
 
 // Types for API responses
 interface ProfitRhinoInventoryItem {
@@ -49,6 +50,112 @@ export interface ProfitRhinoPricebook {
 export const apiIntegrationService = {
   // QuickBooks Integration
   quickbooks: {
+    async syncCustomers(): Promise<boolean> {
+      try {
+        console.log('Syncing customers with QuickBooks');
+        
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Get customers from Supabase or localStorage
+        let customers = [];
+        const { data, error } = await supabase.from('customers').select('*');
+        
+        if (error) {
+          console.error('Error fetching customers from Supabase:', error);
+          // Fallback to localStorage
+          const localCustomers = localStorage.getItem('customers');
+          if (localCustomers) {
+            customers = JSON.parse(localCustomers);
+          }
+        } else {
+          customers = data;
+        }
+        
+        console.log(`Syncing ${customers.length} customers with QuickBooks`);
+        
+        toast.success("Customers synchronized with QuickBooks");
+        return true;
+      } catch (error) {
+        console.error('Error syncing customers with QuickBooks:', error);
+        toast.error("Failed to sync customers with QuickBooks");
+        return false;
+      }
+    },
+
+    async syncWorkOrders(): Promise<boolean> {
+      try {
+        console.log('Syncing work orders with QuickBooks');
+        
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // First ensure we have the latest work orders from CRM
+        try {
+          await syncWorkOrdersFromCRM();
+        } catch (error) {
+          console.warn('Warning: Could not sync latest work orders from CRM:', error);
+          // Continue with local work orders
+        }
+        
+        // Get work orders from Supabase or localStorage
+        let workOrders = [];
+        const { data, error } = await supabase.from('work_orders').select('*');
+        
+        if (error) {
+          console.error('Error fetching work orders from Supabase:', error);
+          // Fallback to localStorage
+          const localWorkOrders = localStorage.getItem('workOrders');
+          if (localWorkOrders) {
+            workOrders = JSON.parse(localWorkOrders);
+          }
+        } else {
+          workOrders = data;
+        }
+        
+        console.log(`Syncing ${workOrders.length} work orders with QuickBooks`);
+        
+        toast.success("Work orders synchronized with QuickBooks");
+        return true;
+      } catch (error) {
+        console.error('Error syncing work orders with QuickBooks:', error);
+        toast.error("Failed to sync work orders with QuickBooks");
+        return false;
+      }
+    },
+
+    async syncPurchaseOrders(): Promise<boolean> {
+      try {
+        console.log('Syncing purchase orders with QuickBooks');
+        
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        toast.success("Purchase orders synchronized with QuickBooks");
+        return true;
+      } catch (error) {
+        console.error('Error syncing purchase orders with QuickBooks:', error);
+        toast.error("Failed to sync purchase orders with QuickBooks");
+        return false;
+      }
+    },
+
+    async syncReports(): Promise<boolean> {
+      try {
+        console.log('Syncing reports with QuickBooks');
+        
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        toast.success("Reports synchronized with QuickBooks");
+        return true;
+      } catch (error) {
+        console.error('Error syncing reports with QuickBooks:', error);
+        toast.error("Failed to sync reports with QuickBooks");
+        return false;
+      }
+    },
+    
     async syncTimesheets(fromDate: string, toDate: string): Promise<boolean> {
       try {
         // Get timesheets from local storage

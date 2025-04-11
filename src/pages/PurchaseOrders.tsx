@@ -33,6 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 
 // Mock data for purchase orders since we don't have this table yet
 interface PurchaseOrder {
@@ -113,10 +114,11 @@ const getStatusBadgeVariant = (status: PurchaseOrder['status']) => {
 const PurchaseOrders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Mock query to fetch purchase orders
   const { data: purchaseOrders, isLoading } = useQuery({
-    queryKey: ["purchase-orders"],
+    queryKey: ["purchase-orders", refreshTrigger],
     queryFn: async () => {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -138,6 +140,11 @@ const PurchaseOrders = () => {
     }).format(amount);
   };
 
+  // Handle sync completion
+  const handleSyncComplete = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
     <MainLayout pageName="Purchase Orders">
       <div className="container mx-auto py-6">
@@ -149,10 +156,16 @@ const PurchaseOrders = () => {
                 View and manage purchase orders for inventory items.
               </CardDescription>
             </div>
-            <Button className="flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              New Purchase Order
-            </Button>
+            <div className="flex items-center gap-2">
+              <SyncWithQuickBooks 
+                entityType="purchaseOrders"
+                onSyncComplete={handleSyncComplete}
+              />
+              <Button className="flex items-center gap-1">
+                <Plus className="h-4 w-4" />
+                New Purchase Order
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
