@@ -1,10 +1,11 @@
+
 export interface Customer {
   id: string;
   name: string;
   email: string;
   phone: string;
   serviceAddresses?: ServiceAddress[];
-  billAddress: string;
+  billAddress: string;  // This is required per the error message
   notes?: string;
   type?: 'residential' | 'commercial';
   createdAt?: string;
