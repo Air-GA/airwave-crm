@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Search, Building2, User, FileText, Plus, MapPinOff } from "lucide-react";
@@ -44,7 +43,6 @@ interface ServiceAddressWithCustomer {
   customer_type?: string;
 }
 
-// Mock service addresses data
 const mockServiceAddresses: ServiceAddressWithCustomer[] = [
   {
     id: "addr-1",
@@ -100,12 +98,10 @@ const ServiceAddresses = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch all service addresses with customer info
   const { data: addresses, isLoading, error, refetch } = useQuery({
     queryKey: ["service-addresses"],
     queryFn: async () => {
       try {
-        // First get all service addresses
         const { data: addressesData, error: addressesError } = await supabase.client
           .from("service_addresses")
           .select("*")
@@ -115,7 +111,6 @@ const ServiceAddresses = () => {
           throw new Error(addressesError.message);
         }
 
-        // Then get all customers to join with addresses
         const { data: customersData, error: customersError } = await supabase.client
           .from("customers")
           .select("id, name, type")
@@ -125,13 +120,11 @@ const ServiceAddresses = () => {
           throw new Error(customersError.message);
         }
 
-        // If no data is returned from the database, use mock data
         if (!addressesData || addressesData.length === 0) {
           console.log("No service addresses found in database, using mock data");
           return mockServiceAddresses;
         }
 
-        // Join the data manually
         const enrichedAddresses = addressesData.map((address) => {
           const customer = customersData.find((c) => c.id === address.customer_id);
           return {
@@ -144,13 +137,11 @@ const ServiceAddresses = () => {
         return enrichedAddresses as ServiceAddressWithCustomer[];
       } catch (error) {
         console.error("Error fetching addresses:", error);
-        // Return mock data if there's an error
         return mockServiceAddresses;
       }
     },
   });
 
-  // Fetch customers for the add address dialog
   const { data: customers } = useQuery({
     queryKey: ["residential-customers"],
     queryFn: async () => {
@@ -175,8 +166,6 @@ const ServiceAddresses = () => {
         description: "Syncing service addresses from QuickBooks...",
       });
       
-      // Since we're using entityType="workOrders" in the SyncWithQuickBooks component,
-      // we should call the appropriate API method
       await apiIntegrationService.quickbooks.syncServiceAddresses();
       
       await refetch();
@@ -198,19 +187,16 @@ const ServiceAddresses = () => {
     }
   };
 
-  // Handle search
   const filteredAddresses = addresses?.filter((addr) =>
     addr.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
     addr.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (addr.notes && addr.notes.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Handle creating a work order for this address
   const handleCreateWorkOrder = (address: ServiceAddressWithCustomer) => {
     navigate(`/work-orders/create?customerId=${address.customer_id}&customerName=${encodeURIComponent(address.customer_name || '')}&customerAddress=${encodeURIComponent(address.address)}`);
   };
 
-  // Display error if query fails
   useEffect(() => {
     if (error) {
       toast({
@@ -221,7 +207,6 @@ const ServiceAddresses = () => {
     }
   }, [error, toast]);
 
-  // Form for adding new service address
   const AddServiceAddressForm = () => {
     const form = useForm({
       defaultValues: {
@@ -368,7 +353,7 @@ const ServiceAddresses = () => {
               <Button onClick={() => setShowAddAddressDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" /> Add Address
               </Button>
-              <SyncWithQuickBooks entityType="addresses" onSyncComplete={refetch} />
+              <SyncWithQuickBooks entityType="workOrders" onSyncComplete={refetch} />
             </div>
           </CardHeader>
           <CardContent>
@@ -472,7 +457,6 @@ const ServiceAddresses = () => {
         </Card>
       </div>
 
-      {/* Add Service Address Dialog */}
       <Dialog open={showAddAddressDialog} onOpenChange={setShowAddAddressDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
