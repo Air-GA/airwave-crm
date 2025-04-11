@@ -50,19 +50,17 @@ export function SyncWithQuickBooks({
       // Call the appropriate API based on entity type
       switch (entityType) {
         case 'customers':
-          // Call customers sync endpoint
-          await new Promise(resolve => setTimeout(resolve, 1500)); // Placeholder
+          await apiIntegrationService.quickbooks.syncCustomers();
           break;
         case 'workOrders':
-          // Call work orders sync endpoint
-          await new Promise(resolve => setTimeout(resolve, 1500)); // Placeholder
+          // Work orders sync also syncs customers to ensure data consistency
+          await apiIntegrationService.quickbooks.syncWorkOrders();
           break;
         case 'invoices':
           await apiIntegrationService.quickbooks.syncInvoices();
           break;
         case 'reports':
-          // Call reports sync endpoint
-          await new Promise(resolve => setTimeout(resolve, 1500)); // Placeholder
+          await apiIntegrationService.quickbooks.syncReports();
           break;
         case 'timesheets':
           await apiIntegrationService.quickbooks.syncTimesheets(
@@ -71,8 +69,7 @@ export function SyncWithQuickBooks({
           );
           break;
         case 'purchaseOrders':
-          // Call purchase orders sync endpoint
-          await new Promise(resolve => setTimeout(resolve, 1500)); // Placeholder
+          await apiIntegrationService.quickbooks.syncPurchaseOrders();
           break;
       }
       
