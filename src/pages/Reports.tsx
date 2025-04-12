@@ -1,24 +1,37 @@
 
 import { useState } from "react";
-import { Download, Filter, BarChart, FileText, Calendar, Users } from "lucide-react";
+import { Download, Filter, BarChart, FileText, Calendar, Users, CalendarRange } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
+import ReportViewer from "@/components/reports/ReportViewer";
+import { generateReportData, exportReportToCsv } from "@/services/reportService";
 
 // Mock reports data
 const mockReports = [
-  { id: 1, name: "Monthly Revenue", category: "financial", date: "2025-04-01" },
-  { id: 2, name: "Technician Performance", category: "performance", date: "2025-04-05" },
-  { id: 3, name: "Customer Satisfaction", category: "customer", date: "2025-04-07" },
-  { id: 4, name: "Inventory Status", category: "inventory", date: "2025-04-08" },
-  { id: 5, name: "Service Call Analysis", category: "service", date: "2025-04-10" },
+  { id: 1, name: "Monthly Revenue", category: "financial", date: "2025-04-01", type: "revenue" },
+  { id: 2, name: "Technician Performance", category: "performance", date: "2025-04-05", type: "technician" },
+  { id: 3, name: "Customer Satisfaction", category: "customer", date: "2025-04-07", type: "customer" },
+  { id: 4, name: "Inventory Status", category: "inventory", date: "2025-04-08", type: "inventory" },
+  { id: 5, name: "Service Call Analysis", category: "service", date: "2025-04-10", type: "workorder" },
+];
+
+// Time frame options
+const timeFrameOptions = [
+  { value: "last30days", label: "Last 30 Days" },
+  { value: "last90days", label: "Last 90 Days" },
+  { value: "lastYear", label: "Last Year" },
+  { value: "ytd", label: "Year to Date" },
+  { value: "custom", label: "Custom Range" }
 ];
 
 export default function Reports() {
   const [selectedReportCategory, setSelectedReportCategory] = useState<string>("all");
+  const [selectedTimeFrame, setSelectedTimeFrame] = useState<string>("last30days");
+  const [viewingReport, setViewingReport] = useState<{ report: any; data: any } | null>(null);
   
   const filteredReports = selectedReportCategory === "all" 
     ? mockReports 
@@ -27,6 +40,20 @@ export default function Reports() {
   const refreshReports = () => {
     // Would fetch the latest reports data
     console.log("Refreshing reports after sync");
+  };
+
+  const handleViewReport = (report) => {
+    const reportData = generateReportData(report.type, report.name);
+    setViewingReport({ report, data: reportData });
+  };
+  
+  const handleDownloadReport = (report) => {
+    const reportData = generateReportData(report.type, report.name);
+    exportReportToCsv(reportData, report.name);
+  };
+  
+  const handleCloseReportViewer = () => {
+    setViewingReport(null);
   };
 
   return (
@@ -54,15 +81,29 @@ export default function Reports() {
           
           <CardContent>
             <Tabs defaultValue="list">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
                 <TabsList>
                   <TabsTrigger value="list">List View</TabsTrigger>
                   <TabsTrigger value="grid">Grid View</TabsTrigger>
                 </TabsList>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full md:w-auto">
+                  <Select value={selectedTimeFrame} onValueChange={setSelectedTimeFrame}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <CalendarRange className="mr-2 h-4 w-4" />
+                      <SelectValue placeholder="Time Frame" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeFrameOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
                   <Select value={selectedReportCategory} onValueChange={setSelectedReportCategory}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -75,7 +116,7 @@ export default function Reports() {
                     </SelectContent>
                   </Select>
                   
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
                     <Filter className="mr-2 h-4 w-4" />
                     More Filters
                   </Button>
@@ -100,11 +141,19 @@ export default function Reports() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{report.category}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.date}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDownloadReport(report)}
+                            >
                               <Download className="h-4 w-4 mr-1" />
                               Download
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleViewReport(report)}
+                            >
                               <FileText className="h-4 w-4 mr-1" />
                               View
                             </Button>
@@ -139,11 +188,21 @@ export default function Reports() {
                       </CardContent>
                       <CardFooter>
                         <div className="flex space-x-2 w-full">
-                          <Button variant="outline" size="sm" className="flex-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={() => handleViewReport(report)}
+                          >
                             <FileText className="h-4 w-4 mr-1" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={() => handleDownloadReport(report)}
+                          >
                             <Download className="h-4 w-4 mr-1" />
                             Download
                           </Button>
@@ -160,9 +219,24 @@ export default function Reports() {
             <div className="text-sm text-muted-foreground">
               Showing {filteredReports.length} of {mockReports.length} reports
             </div>
+            <div className="text-sm text-muted-foreground">
+              Time frame: {timeFrameOptions.find(option => option.value === selectedTimeFrame)?.label}
+            </div>
           </CardFooter>
         </Card>
       </div>
+      
+      {viewingReport && (
+        <ReportViewer
+          isOpen={!!viewingReport}
+          onClose={handleCloseReportViewer}
+          reportName={viewingReport.report.name}
+          reportType={viewingReport.report.category}
+          reportData={viewingReport.data}
+          onDownload={() => handleDownloadReport(viewingReport.report)}
+          timeFrame={selectedTimeFrame}
+        />
+      )}
     </MainLayout>
   );
 }
