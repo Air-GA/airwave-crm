@@ -1,18 +1,13 @@
+
 import { useState } from "react";
 import { Download, Filter, FileText, Plus } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 
 export default function PurchaseOrders() {
   const [searchTerm, setSearchTerm] = useState("");
-  
-  const handleSyncComplete = () => {
-    // Refresh purchase orders data
-    console.log("Refreshing purchase orders after sync");
-  };
 
   return (
     <MainLayout pageName="Purchase Orders">
@@ -25,11 +20,7 @@ export default function PurchaseOrders() {
                 Manage purchase orders for inventory and equipment
               </CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <SyncWithQuickBooks 
-                entityType="purchaseOrders" 
-                onSyncComplete={handleSyncComplete}
-              />
+            <div>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 New Purchase Order

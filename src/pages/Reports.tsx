@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 
 // Mock reports data
 const mockReports = [
@@ -23,11 +22,6 @@ export default function Reports() {
   const filteredReports = selectedReportCategory === "all" 
     ? mockReports 
     : mockReports.filter(report => report.category === selectedReportCategory);
-  
-  const refreshReports = () => {
-    // Would fetch the latest reports data
-    console.log("Refreshing reports after sync");
-  };
 
   return (
     <MainLayout pageName="Reports">
@@ -41,10 +35,6 @@ export default function Reports() {
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-              <SyncWithQuickBooks 
-                entityType="reports" 
-                onSyncComplete={refreshReports}
-              />
               <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Export
