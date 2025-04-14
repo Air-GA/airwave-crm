@@ -28,7 +28,9 @@ export const SyncThreeCustomersButton = ({
       console.error("Error syncing customers:", error);
       toast({
         title: "Sync Failed",
-        description: error.message || "Failed to sync customers.",
+        description: error instanceof Error 
+          ? error.message 
+          : "Failed to sync customers. Please check console for details.",
         variant: "destructive",
       });
     } finally {

@@ -1,7 +1,6 @@
 
 import { supabase } from "@/lib/supabase";
 import { Customer } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 
 export const syncThreeCustomers = async (): Promise<Customer[]> => {
   try {
@@ -9,7 +8,7 @@ export const syncThreeCustomers = async (): Promise<Customer[]> => {
     
     if (error) {
       console.error("Error syncing three customers:", error);
-      throw error;
+      throw new Error(`Failed to sync customers: ${error.message}`);
     }
     
     if (!data || !data.data || !data.data.customers) {

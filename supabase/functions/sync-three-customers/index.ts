@@ -87,7 +87,7 @@ serve(async (req) => {
     const { error: deleteServiceAddressesError } = await supabase
       .from("service_addresses")
       .delete()
-      .neq("customer_id", "none"); // Delete all
+      .like("id", "%"); // Delete all records instead of using neq with "none"
       
     if (deleteServiceAddressesError) {
       console.error("Error deleting service addresses:", deleteServiceAddressesError);
@@ -98,7 +98,7 @@ serve(async (req) => {
     const { error: deleteCustomersError } = await supabase
       .from("customers")
       .delete()
-      .neq("id", "none"); // Delete all
+      .like("id", "%"); // Delete all records instead of using neq with "none"
       
     if (deleteCustomersError) {
       console.error("Error deleting customers:", deleteCustomersError);
