@@ -25,6 +25,7 @@ import DraggableWorkOrder from "./components/DraggableWorkOrder";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import DispatchMap from "@/components/maps/DispatchMap";
 import DispatchCalendarView from "@/components/schedule/DispatchCalendarView";
+import DispatchListView from "./components/DispatchListView";
 
 // Import UI components
 import { 
