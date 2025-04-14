@@ -29,6 +29,22 @@ export interface IntegrationSettings {
     connected: boolean;
     apiKey?: string;
   };
+  profitRhino?: {
+    connected: boolean;
+    apiKey?: string;
+    apiSecret?: string;
+    environment: "sandbox" | "production";
+    baseUrl?: string;
+    autoSync: boolean;
+    syncInterval: number;
+    syncInventory: boolean;
+    syncPricing: boolean;
+    markupPercentage: number;
+    useCompanyMarkups: boolean;
+    useDefaultMaterialsCost: boolean;
+    useCustomPricebook: boolean;
+    pricebookId?: string;
+  };
 }
 
 export interface UserSettings {

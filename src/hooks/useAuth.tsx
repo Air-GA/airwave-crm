@@ -31,6 +31,7 @@ interface AuthContextType {
   };
   login: (role: UserRole) => void;
   logout: () => void;
+  hasPermission: (permission: string) => boolean; // Add the missing method
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -153,8 +154,6 @@ const getRolePermissions = (role: UserRole | null) => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // For demo purposes, we're setting a default role
-  // In a real app, this would come from a login process
   const [userRole, setUserRole] = useState<UserRole | null>('admin');
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [user, setUser] = useState<AuthUser | null>({
@@ -166,27 +165,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   useEffect(() => {
-    // Check for role preview in URL query params
     const params = new URLSearchParams(window.location.search);
     const rolePreview = params.get('role_preview') as UserRole | null;
     
     if (rolePreview && ['admin', 'manager', 'csr', 'sales', 'hr', 'technician', 'customer'].includes(rolePreview)) {
-      // If this is a preview iframe, use the role from query params
       if (user && user.role === 'admin') {
-        // Create mock associated IDs for role preview
         let mockAssociatedIds: string[] = [];
         
-        // For sales, create mock customer IDs
         if (rolePreview === 'sales') {
-          mockAssociatedIds = ['customer-123', 'customer-456']; // Mock customer IDs
-        }
-        // For customer, create a mock ID representing themselves
-        else if (rolePreview === 'customer') {
-          mockAssociatedIds = ['customer-789']; // The customer's own ID
-        }
-        // For tech, create mock work order IDs they're assigned to
-        else if (rolePreview === 'technician') {
-          mockAssociatedIds = ['workorder-123', 'workorder-456']; // Mock work order IDs
+          mockAssociatedIds = ['customer-123', 'customer-456'];
+        } else if (rolePreview === 'customer') {
+          mockAssociatedIds = ['customer-789'];
+        } else if (rolePreview === 'technician') {
+          mockAssociatedIds = ['workorder-123', 'workorder-456'];
         }
         
         const previewUser = { 
@@ -202,19 +193,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const permissions = getRolePermissions(userRole);
+  
+  const hasPermission = (permission: string): boolean => {
+    if (!permissions) return false;
+    return Boolean((permissions as any)[permission]);
+  };
 
   const login = (role: UserRole) => {
-    // In a real app, you would verify credentials with Supabase here
-    // and fetch associated IDs based on the user's role
     let mockAssociatedIds: string[] = [];
     
-    // Set up mock associated IDs based on role
     if (role === 'sales') {
-      mockAssociatedIds = ['customer-123', 'customer-456']; // Mock customer IDs for sales
+      mockAssociatedIds = ['customer-123', 'customer-456'];
     } else if (role === 'customer') {
-      mockAssociatedIds = ['customer-789']; // Customer's own ID
+      mockAssociatedIds = ['customer-789'];
     } else if (role === 'technician') {
-      mockAssociatedIds = ['workorder-123', 'workorder-456']; // Work orders assigned to tech
+      mockAssociatedIds = ['workorder-123', 'workorder-456'];
     }
     
     setUserRole(role);
@@ -229,44 +222,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    // In a real app, you would sign out from Supabase here
     setUserRole(null);
     setIsAuthenticated(false);
     setUser(null);
   };
 
-  // In a real app with Supabase, we would check for an existing session here
   useEffect(() => {
-    // For demo purposes, we're setting a default role
-    // This would be replaced with a real session check
-    // Example:
-    // async function getInitialSession() {
-    //   const { data: { session } } = await supabase.auth.getSession();
-    //   if (session) {
-    //     // Get user profile data to determine role
-    //     const { data } = await supabase
-    //       .from('profiles')
-    //       .select('role')
-    //       .eq('id', session.user.id)
-    //       .single();
-    //
-    //     if (data) {
-    //       setUserRole(data.role as UserRole);
-    //       setUser({
-    //         id: session.user.id,
-    //         email: session.user.email || '',
-    //         role: data.role as UserRole,
-    //         name: data.name
-    //       });
-    //       setIsAuthenticated(true);
-    //     }
-    //   }
-    // }
-    // getInitialSession();
+    async function getInitialSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (data) {
+          setUserRole(data.role as UserRole);
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            role: data.role as UserRole,
+            name: data.name
+          });
+          setIsAuthenticated(true);
+        }
+      }
+    }
+    getInitialSession();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, userRole, permissions, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      user, 
+      userRole, 
+      permissions, 
+      login, 
+      logout,
+      hasPermission 
+    }}>
       {children}
     </AuthContext.Provider>
   );

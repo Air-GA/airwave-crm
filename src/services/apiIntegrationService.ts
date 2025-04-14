@@ -1,163 +1,136 @@
 
-import { supabase } from '@/lib/supabase';
-import { toast } from "sonner";
+/**
+ * API Integration Service
+ * 
+ * This service manages integrations with external APIs and services
+ */
 
-// Types for API responses
-interface ProfitRhinoInventoryItem {
+export interface ProfitRhinoInventoryItem {
   id: string;
   name: string;
   sku: string;
+  description: string;
   cost: number;
   price: number;
-  markup: number;
   category: string;
-  description?: string;
+  subcategory?: string;
+  manufacturer?: string;
+  unit?: string;
+  taxable: boolean;
 }
 
-interface ProfitRhinoPricebook {
+export interface ProfitRhinoPricebook {
   id: string;
   name: string;
-  description?: string;
-  isDefault: boolean;
+  description: string;
+  active: boolean;
+  default: boolean;
+  itemCount: number;
   lastUpdated: string;
 }
 
-/**
- * Service for handling API integrations with Profit Rhino
- */
-export const apiIntegrationService = {
-  // Profit Rhino Integration
+const apiIntegrationService = {
+  // Profit Rhino integration
   profitRhino: {
-    async syncInventory(): Promise<boolean> {
-      try {
-        // This would be an actual API call to Profit Rhino in a real implementation
-        console.log('Syncing inventory with Profit Rhino');
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Fetch mock inventory items
-        const items = await this.getInventoryItems();
-        
-        // Update inventory items with Profit Rhino pricing
-        const inventoryItems = await supabase.from('inventory').select('*');
-        
-        if (inventoryItems.error) {
-          throw new Error('Failed to fetch inventory items');
-        }
-        
-        // In a real implementation, we would update the inventory prices
-        console.log('Updating inventory items with Profit Rhino pricing', items);
-        
-        toast.success("Inventory synchronized with Profit Rhino");
-        return true;
-      } catch (error) {
-        console.error('Error syncing inventory with Profit Rhino:', error);
-        toast.error("Failed to sync inventory with Profit Rhino");
-        return false;
-      }
+    // Sync inventory with Profit Rhino
+    syncInventory: async (): Promise<boolean> => {
+      // Simulate API call with a delay
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          console.log('Synced inventory with Profit Rhino');
+          resolve(true);
+        }, 1500);
+      });
     },
-    
-    async getInventoryItems(): Promise<ProfitRhinoInventoryItem[]> {
-      try {
-        // This would be an actual API call to Profit Rhino in a real implementation
-        console.log('Fetching inventory items from Profit Rhino');
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Return mock data
-        return [
-          {
-            id: "pr1",
-            name: "Air Conditioner Compressor",
-            sku: "AC-COMP-2200",
-            cost: 245.99,
-            price: 319.99,
-            markup: 30,
-            category: "HVAC Parts"
-          },
-          {
-            id: "pr2",
-            name: "Furnace Motor",
-            sku: "FUR-MTR-1500",
-            cost: 189.50,
-            price: 246.35,
-            markup: 30,
-            category: "HVAC Parts"
-          },
-          {
-            id: "pr3",
-            name: "Refrigerant - R410A",
-            sku: "REF-R410A-10",
-            cost: 95.00,
-            price: 123.50,
-            markup: 30,
-            category: "Chemicals"
-          },
-          {
-            id: "pr4",
-            name: "Air Handler",
-            sku: "AIR-HND-3000",
-            cost: 499.99,
-            price: 649.99,
-            markup: 30,
-            category: "HVAC Units"
-          },
-          {
-            id: "pr5",
-            name: "Thermostat - Digital Programmable",
-            sku: "THERM-DIG-100",
-            cost: 65.00,
-            price: 84.50,
-            markup: 30,
-            category: "Controls"
-          }
-        ];
-      } catch (error) {
-        console.error('Error fetching inventory items from Profit Rhino:', error);
-        toast.error("Failed to fetch inventory items from Profit Rhino");
-        return [];
-      }
+
+    // Get inventory items from Profit Rhino
+    getInventoryItems: async (): Promise<ProfitRhinoInventoryItem[]> => {
+      // Simulate API call with a delay
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const items: ProfitRhinoInventoryItem[] = [
+            {
+              id: 'pr-001',
+              name: 'Air Filter 16x20',
+              sku: 'AF1620',
+              description: 'MERV 11 air filter',
+              cost: 8.50,
+              price: 22.99,
+              category: 'supplies',
+              subcategory: 'filters',
+              manufacturer: 'FilterPro',
+              unit: 'each',
+              taxable: true
+            },
+            {
+              id: 'pr-002',
+              name: 'Capacitor 45/5 MFD',
+              sku: 'CAP455',
+              description: '45/5 MFD 370V Dual Run Capacitor',
+              cost: 12.75,
+              price: 68.50,
+              category: 'parts',
+              subcategory: 'electrical',
+              manufacturer: 'TEMCo',
+              unit: 'each',
+              taxable: true
+            },
+            {
+              id: 'pr-003',
+              name: 'R410A Refrigerant',
+              sku: 'R410A-25',
+              description: 'R410A Refrigerant - 25lb Cylinder',
+              cost: 85.00,
+              price: 195.00,
+              category: 'supplies',
+              subcategory: 'refrigerant',
+              manufacturer: 'Chemours',
+              unit: 'cylinder',
+              taxable: true
+            }
+          ];
+          resolve(items);
+        }, 1000);
+      });
     },
-    
-    async getPricebooks(): Promise<ProfitRhinoPricebook[]> {
-      try {
-        // This would be an actual API call to Profit Rhino in a real implementation
-        console.log('Fetching pricebooks from Profit Rhino');
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Return mock data
-        return [
-          {
-            id: "pb1",
-            name: "Standard HVAC Pricing",
-            description: "Standard pricing for residential HVAC services",
-            isDefault: true,
-            lastUpdated: "2025-03-15T10:00:00Z"
-          },
-          {
-            id: "pb2",
-            name: "Commercial HVAC",
-            description: "Pricing for commercial HVAC services",
-            isDefault: false,
-            lastUpdated: "2025-03-10T14:30:00Z"
-          },
-          {
-            id: "pb3",
-            name: "Premium Residential",
-            description: "Premium pricing for high-end residential customers",
-            isDefault: false,
-            lastUpdated: "2025-02-28T09:15:00Z"
-          }
-        ];
-      } catch (error) {
-        console.error('Error fetching pricebooks from Profit Rhino:', error);
-        toast.error("Failed to fetch pricebooks from Profit Rhino");
-        return [];
-      }
+
+    // Get pricebooks from Profit Rhino
+    getPricebooks: async (): Promise<ProfitRhinoPricebook[]> => {
+      // Simulate API call with a delay
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const pricebooks: ProfitRhinoPricebook[] = [
+            {
+              id: 'pb-001',
+              name: 'Standard Residential',
+              description: 'Standard pricing for residential customers',
+              active: true,
+              default: true,
+              itemCount: 1250,
+              lastUpdated: '2023-06-15T10:30:00Z'
+            },
+            {
+              id: 'pb-002',
+              name: 'Commercial',
+              description: 'Pricing for commercial customers',
+              active: true,
+              default: false,
+              itemCount: 1120,
+              lastUpdated: '2023-06-10T14:15:00Z'
+            },
+            {
+              id: 'pb-003',
+              name: 'Maintenance Plan Members',
+              description: 'Special pricing for maintenance plan members',
+              active: true,
+              default: false,
+              itemCount: 1250,
+              lastUpdated: '2023-06-12T09:45:00Z'
+            }
+          ];
+          resolve(pricebooks);
+        }, 1000);
+      });
     }
   }
 };
