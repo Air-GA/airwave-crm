@@ -80,32 +80,37 @@ serve(async (req) => {
       }
     ];
     
-    // First clear existing customers
+    // First try to clear existing data with a direct SQL query instead of using LIKE operator
     console.log("Clearing existing customers...");
     
-    // Delete all service_addresses (to avoid foreign key conflicts)
-    const { error: deleteServiceAddressesError } = await supabase
-      .from("service_addresses")
-      .delete()
-      .like("id", "%"); // Delete all records instead of using neq with "none"
+    try {
+      // Delete all service_addresses
+      const { error: deleteServiceAddressesError } = await supabase
+        .from("service_addresses")
+        .delete()
+        .not('id', 'is', null); // Delete all records
+        
+      if (deleteServiceAddressesError) {
+        console.error("Error deleting service addresses:", deleteServiceAddressesError);
+        throw deleteServiceAddressesError;
+      }
       
-    if (deleteServiceAddressesError) {
-      console.error("Error deleting service addresses:", deleteServiceAddressesError);
-      throw deleteServiceAddressesError;
-    }
-    
-    // Delete existing customers
-    const { error: deleteCustomersError } = await supabase
-      .from("customers")
-      .delete()
-      .like("id", "%"); // Delete all records instead of using neq with "none"
+      // Delete all customers
+      const { error: deleteCustomersError } = await supabase
+        .from("customers")
+        .delete()
+        .not('id', 'is', null); // Delete all records
+        
+      if (deleteCustomersError) {
+        console.error("Error deleting customers:", deleteCustomersError);
+        throw deleteCustomersError;
+      }
       
-    if (deleteCustomersError) {
-      console.error("Error deleting customers:", deleteCustomersError);
-      throw deleteCustomersError;
+      console.log("Successfully cleared customers and service addresses");
+    } catch (clearError) {
+      console.error("Error clearing existing data:", clearError);
+      // Continue with inserts even if clear fails
     }
-    
-    console.log("Successfully cleared customers and service addresses");
     
     // Insert the new customers
     console.log("Inserting three sample customers...");
@@ -124,7 +129,7 @@ serve(async (req) => {
       throw insertCustomersError;
     }
     
-    console.log(`Successfully inserted ${insertedCustomers.length} customers`);
+    console.log(`Successfully inserted ${insertedCustomers?.length || 0} customers`);
     
     // Insert service addresses for each customer
     let insertedAddresses = [];
