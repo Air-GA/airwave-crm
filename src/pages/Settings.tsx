@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ import {
   UserSettings
 } from "@/utils/settingsStorage";
 import { companyFormSchema, userFormSchema, integrationSchema } from "@/utils/settingsSchema";
+import { apiIntegrationService } from "@/services/apiIntegrationService";
 
 const Settings = () => {
   // Load settings from local storage
@@ -875,4 +877,609 @@ const Settings = () => {
                           <Label htmlFor="email-customer">Customer Messages</Label>
                           <Switch id="email-customer" defaultChecked />
                         </div>
-                        <div className="flex items-center justify-
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="email-inventory">Inventory Alerts</Label>
+                          <Switch id="email-inventory" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-medium">SMS Notifications</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="sms-workorders">Work Order Assignments</Label>
+                          <Switch id="sms-workorders" defaultChecked />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="sms-urgent">Urgent Matters</Label>
+                          <Switch id="sms-urgent" defaultChecked />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Push Notifications</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="push-all">Enable Push Notifications</Label>
+                          <Switch id="push-all" defaultChecked />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="push-sound">Notification Sounds</Label>
+                          <Switch id="push-sound" defaultChecked />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {/* Security Tab */}
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Security Settings</CardTitle>
+                    <CardDescription>Manage your account security preferences</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Password</h3>
+                      <div className="space-y-2">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="current-password">Current Password</Label>
+                            <Input id="current-password" type="password" />
+                          </div>
+                          <div></div>
+                          <div className="space-y-2">
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input id="new-password" type="password" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm New Password</Label>
+                            <Input id="confirm-password" type="password" />
+                          </div>
+                        </div>
+                        <Button variant="outline" className="mt-2">
+                          Change Password
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Two-Factor Authentication</h3>
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Two-Factor Authentication</p>
+                            <p className="text-sm text-muted-foreground">
+                              Add an extra layer of security to your account
+                            </p>
+                          </div>
+                          <Switch id="2fa" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Session Management</h3>
+                      <div className="rounded-lg border divide-y">
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">Current Session</p>
+                              <p className="text-sm text-muted-foreground">
+                                Chrome on Windows • Atlanta, GA • Started 2 hours ago
+                              </p>
+                            </div>
+                            <Badge>Active</Badge>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">Mobile App</p>
+                              <p className="text-sm text-muted-foreground">
+                                iPhone 13 • Atlanta, GA • Last active 12 min ago
+                              </p>
+                            </div>
+                            <Button variant="outline" size="sm">
+                              Logout
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="outline">Logout of All Devices</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {/* Billing Tab */}
+              <TabsContent value="billing">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Billing Information</CardTitle>
+                    <CardDescription>Manage your subscription and payment methods</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-lg border p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">Current Plan</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Professional Plan • $49.99/month
+                          </p>
+                        </div>
+                        <Badge variant="outline">Active</Badge>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Change Plan
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
+                          Cancel Subscription
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Payment Methods</h3>
+                      <div className="rounded-lg border divide-y">
+                        <div className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="h-6 w-6" />
+                            <div>
+                              <p className="font-medium">Visa ending in 4242</p>
+                              <p className="text-sm text-muted-foreground">
+                                Expires 12/2024
+                              </p>
+                            </div>
+                          </div>
+                          <Badge>Default</Badge>
+                        </div>
+                        <div className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="h-6 w-6" />
+                            <div>
+                              <p className="font-medium">Mastercard ending in 5555</p>
+                              <p className="text-sm text-muted-foreground">
+                                Expires 09/2025
+                              </p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm">
+                            Make Default
+                          </Button>
+                        </div>
+                      </div>
+                      <Button variant="outline" className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Payment Method
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Billing History</h3>
+                      <div className="rounded-lg border divide-y">
+                        <div className="p-4 flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">April 2023 • $49.99</p>
+                            <p className="text-sm text-muted-foreground">
+                              Professional Plan
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="sm">
+                            Download
+                          </Button>
+                        </div>
+                        <div className="p-4 flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">March 2023 • $49.99</p>
+                            <p className="text-sm text-muted-foreground">
+                              Professional Plan
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="sm">
+                            Download
+                          </Button>
+                        </div>
+                        <div className="p-4 flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">February 2023 • $49.99</p>
+                            <p className="text-sm text-muted-foreground">
+                              Professional Plan
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="sm">
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {/* Integrations Tab */}
+              <TabsContent value="integrations" className="space-y-4">
+                <Form {...integrationForm}>
+                  <form onSubmit={integrationForm.handleSubmit(saveIntegrationForm)}>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Integrations & API</CardTitle>
+                        <CardDescription>Connect third-party services and APIs</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">Google Maps API</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Used for mapping and geolocation features
+                              </p>
+                            </div>
+                            <FormField
+                              control={integrationForm.control}
+                              name="googleMaps.connected"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Switch 
+                                      checked={field.value} 
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          {integrationForm.watch("googleMaps.connected") && (
+                            <div className="rounded-lg border p-4">
+                              <FormField
+                                control={integrationForm.control}
+                                name="googleMaps.apiKey"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>API Key</FormLabel>
+                                    <div className="flex">
+                                      <FormControl>
+                                        <Input 
+                                          type={showApiKey.googleMaps ? "text" : "password"} 
+                                          {...field} 
+                                          className="flex-1"
+                                        />
+                                      </FormControl>
+                                      <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => toggleShowApiKey('googleMaps')}
+                                        className="ml-2"
+                                      >
+                                        {showApiKey.googleMaps ? (
+                                          <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                          <Eye className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="flex justify-end mt-4">
+                                <Button variant="outline" size="sm" type="button" onClick={async () => {
+                                  try {
+                                    await apiIntegrationService.verifyConnection('googleMaps', {
+                                      apiKey: integrationForm.getValues('googleMaps.apiKey')
+                                    });
+                                    toast.success('Google Maps API connection verified successfully!');
+                                  } catch (error) {
+                                    toast.error('Failed to verify Google Maps API connection');
+                                  }
+                                }}>
+                                  Verify Connection
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">SMS Service Provider</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Used for sending text message notifications
+                              </p>
+                            </div>
+                            <FormField
+                              control={integrationForm.control}
+                              name="smsProvider.connected"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Switch 
+                                      checked={field.value} 
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          {integrationForm.watch("smsProvider.connected") && (
+                            <div className="rounded-lg border p-4">
+                              <FormField
+                                control={integrationForm.control}
+                                name="smsProvider.apiKey"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>API Key</FormLabel>
+                                    <div className="flex">
+                                      <FormControl>
+                                        <Input 
+                                          type={showApiKey.smsProvider ? "text" : "password"} 
+                                          {...field}
+                                          className="flex-1"
+                                        />
+                                      </FormControl>
+                                      <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={() => toggleShowApiKey('smsProvider')}
+                                        className="ml-2"
+                                      >
+                                        {showApiKey.smsProvider ? (
+                                          <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                          <Eye className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="flex justify-end mt-4">
+                                <Button variant="outline" size="sm" type="button" onClick={async () => {
+                                  try {
+                                    await apiIntegrationService.verifyConnection('smsProvider', {
+                                      apiKey: integrationForm.getValues('smsProvider.apiKey')
+                                    });
+                                    toast.success('SMS Provider connection verified successfully!');
+                                  } catch (error) {
+                                    toast.error('Failed to verify SMS Provider connection');
+                                  }
+                                }}>
+                                  Verify Connection
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">Profit Rhino Integration</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Sync pricing books and service items
+                              </p>
+                            </div>
+                            <FormField
+                              control={integrationForm.control}
+                              name="profitRhino.connected"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Switch 
+                                      checked={field.value} 
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          {integrationForm.watch("profitRhino.connected") && (
+                            <div className="rounded-lg border p-4">
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                <FormField
+                                  control={integrationForm.control}
+                                  name="profitRhino.apiKey"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>API Key</FormLabel>
+                                      <FormControl>
+                                        <Input {...field} type="password" />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={integrationForm.control}
+                                  name="profitRhino.environment"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Environment</FormLabel>
+                                      <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value || "sandbox"}
+                                      >
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select environment" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="sandbox">Sandbox</SelectItem>
+                                          <SelectItem value="production">Production</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              
+                              <div className="mt-4">
+                                <FormField
+                                  control={integrationForm.control}
+                                  name="profitRhino.autoSync"
+                                  render={({ field }) => (
+                                    <FormItem className="flex items-center space-x-2">
+                                      <FormControl>
+                                        <Switch 
+                                          checked={field.value} 
+                                          onCheckedChange={field.onChange}
+                                        />
+                                      </FormControl>
+                                      <FormLabel>Enable Auto-Sync</FormLabel>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                              
+                              {integrationForm.watch("profitRhino.autoSync") && (
+                                <div className="mt-4">
+                                  <FormField
+                                    control={integrationForm.control}
+                                    name="profitRhino.syncInterval"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Sync Interval (Hours)</FormLabel>
+                                        <Select
+                                          onValueChange={(value) => field.onChange(parseInt(value) * 3600000)}
+                                          value={(parseInt(String(field.value || 3600000)) / 3600000).toString()}
+                                        >
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select interval" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            <SelectItem value="1">Every hour</SelectItem>
+                                            <SelectItem value="6">Every 6 hours</SelectItem>
+                                            <SelectItem value="12">Every 12 hours</SelectItem>
+                                            <SelectItem value="24">Once a day</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                              )}
+                              
+                              <div className="mt-4 space-y-4">
+                                <h4 className="text-sm font-medium">Sync Options</h4>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                  <FormField
+                                    control={integrationForm.control}
+                                    name="profitRhino.syncInventory"
+                                    render={({ field }) => (
+                                      <FormItem className="flex items-center space-x-2">
+                                        <FormControl>
+                                          <Switch 
+                                            checked={field.value} 
+                                            onCheckedChange={field.onChange}
+                                          />
+                                        </FormControl>
+                                        <FormLabel>Sync Inventory</FormLabel>
+                                      </FormItem>
+                                    )}
+                                  />
+                                  
+                                  <FormField
+                                    control={integrationForm.control}
+                                    name="profitRhino.syncPricing"
+                                    render={({ field }) => (
+                                      <FormItem className="flex items-center space-x-2">
+                                        <FormControl>
+                                          <Switch 
+                                            checked={field.value} 
+                                            onCheckedChange={field.onChange}
+                                          />
+                                        </FormControl>
+                                        <FormLabel>Sync Pricing</FormLabel>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-end mt-4 space-x-2">
+                                <Button variant="outline" size="sm" type="button" onClick={async () => {
+                                  try {
+                                    await apiIntegrationService.verifyConnection('profitRhino', {
+                                      apiKey: integrationForm.getValues('profitRhino.apiKey'),
+                                      environment: integrationForm.getValues('profitRhino.environment')
+                                    });
+                                    toast.success('Profit Rhino connection verified successfully!');
+                                  } catch (error) {
+                                    toast.error('Failed to verify Profit Rhino connection');
+                                  }
+                                }}>
+                                  Verify Connection
+                                </Button>
+                                
+                                <Button type="button" size="sm" onClick={async () => {
+                                  try {
+                                    await apiIntegrationService.syncData('profitRhino', {
+                                      apiKey: integrationForm.getValues('profitRhino.apiKey'),
+                                      environment: integrationForm.getValues('profitRhino.environment'),
+                                      syncInventory: integrationForm.getValues('profitRhino.syncInventory'),
+                                      syncPricing: integrationForm.getValues('profitRhino.syncPricing')
+                                    });
+                                    toast.success('Profit Rhino data synced successfully!');
+                                  } catch (error) {
+                                    toast.error('Failed to sync Profit Rhino data');
+                                  }
+                                }}>
+                                  Sync Now
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button type="submit">
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Integration Settings
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </form>
+                </Form>
+              </TabsContent>
+            </div>
+          </div>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default Settings;
