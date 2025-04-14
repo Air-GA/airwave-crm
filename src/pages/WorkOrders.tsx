@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { WorkOrder } from "@/types";
@@ -14,22 +15,6 @@ import { FileText, Plus, Search, Activity, Truck, Calendar, Filter } from "lucid
 import { Badge as BadgeIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wrench, Home, ClipboardCheck, Settings } from "lucide-react";
-
-const getTypeIcon = (type: string) => {
-  switch (type) {
-    case "repair":
-      return <Wrench className="h-4 w-4 mr-1" />;
-    case "maintenance":
-      return <Settings className="h-4 w-4 mr-1" />;
-    case "installation":
-      return <Home className="h-4 w-4 mr-1" />;
-    case "inspection":
-      return <ClipboardCheck className="h-4 w-4 mr-1" />;
-    default:
-      return <Activity className="h-4 w-4 mr-1" />;
-  }
-};
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -47,13 +32,17 @@ const WorkOrders = () => {
       try {
         const data = await getWorkOrders();
         
+        // Filter out any commercial jobs, we only want residential
         const residentialJobs = data.filter(order => {
-          return true;
+          // In a real implementation, this would check the customer type directly
+          // For now, we'll enforce residential-only as per the service configuration
+          return order.type !== 'commercial'; // This will filter out any explicitly marked commercial jobs
         });
         
         setWorkOrders(residentialJobs);
         setFilteredWorkOrders(residentialJobs);
         
+        // Update the global store so other components have access to the same data
         workOrderStore.setWorkOrders(residentialJobs);
         
         setLoading(false);
@@ -74,6 +63,7 @@ const WorkOrders = () => {
   useEffect(() => {
     let result = workOrders;
 
+    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
@@ -85,10 +75,12 @@ const WorkOrders = () => {
       );
     }
 
+    // Apply status filter
     if (statusFilter !== "all") {
       result = result.filter((order) => order.status === statusFilter);
     }
 
+    // Apply type filter
     if (typeFilter !== "all") {
       result = result.filter((order) => order.type === typeFilter);
     }
@@ -182,10 +174,14 @@ const WorkOrders = () => {
               <SyncWithQuickBooks 
                 entityType="workOrders" 
                 onSyncComplete={() => {
+                  // Refresh data after sync
                   getWorkOrders().then(data => {
-                    setWorkOrders(data);
-                    setFilteredWorkOrders(data);
-                    workOrderStore.setWorkOrders(data);
+                    const residentialJobs = data.filter(order => 
+                      order.type !== 'commercial'
+                    );
+                    setWorkOrders(residentialJobs);
+                    setFilteredWorkOrders(residentialJobs);
+                    workOrderStore.setWorkOrders(residentialJobs);
                   });
                 }} 
               />
