@@ -39,6 +39,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
+import { SyncThreeCustomersButton } from "@/components/SyncThreeCustomersButton";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -237,6 +238,7 @@ const CustomersList = () => {
                   <Plus className="mr-2 h-4 w-4" /> Add Customer
                 </Button>
               )}
+              <SyncThreeCustomersButton onSyncComplete={refetch} />
               <SyncWithQuickBooks entityType="customers" onSyncComplete={refetch} />
               <AddCustomerDialog 
                 open={showAddCustomerDialog} 
@@ -419,7 +421,7 @@ const CustomersList = () => {
                                 size="sm" 
                                 onClick={() => setShowAddCustomerDialog(true)}
                               >
-                                <Plus className="h-4 w-4 mr-1.5" />
+                                <Plus className="mr-2 h-4 w-4" />
                                 Add Customer
                               </Button>
                             )}
