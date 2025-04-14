@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,6 @@ import {
   ChevronDown, 
   Download, 
   Eye, 
-  ExternalLink,
   Filter, 
   FileText, 
   MoreHorizontal, 
@@ -30,23 +30,14 @@ import {
   Printer, 
   Search, 
   Send,
-  ReceiptText,
+  CreditCard,
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { useAuth } from "@/hooks/useAuth";
-import { SyncButton } from "@/components/SyncButton";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { userRole, permissions } = useAuth();
-  const [syncingWithQuickbooks, setSyncingWithQuickbooks] = useState(false);
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   
   // Only admins can see profit information
   const canViewProfitNumbers = userRole === 'admin';
@@ -122,41 +113,6 @@ const Invoices = () => {
     invoice.workOrderId.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleSyncWithQuickbooks = async () => {
-    setSyncingWithQuickbooks(true);
-    
-    // Simulate syncing with a delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setSyncingWithQuickbooks(false);
-    
-    // Show toast or notification that sync is complete
-    return true; // Return success to the SyncButton component
-  };
-  
-  // Check for new invoices and sync with QuickBooks in real-time (mock implementation)
-  useEffect(() => {
-    // This would be replaced with a real WebSocket or polling mechanism
-    const checkForNewInvoices = () => {
-      console.log("Checking for new invoices to sync with QuickBooks...");
-      // In a real implementation, this would check for new/updated invoices
-      // and sync them with QuickBooks automatically
-    };
-    
-    // Only set up listener if auto-sync is enabled and user is admin
-    if (autoSyncEnabled && userRole === 'admin') {
-      // Initial check
-      checkForNewInvoices();
-      
-      // Set up a listener for real-time updates (mock implementation)
-      const listener = setInterval(checkForNewInvoices, 60000); // Every minute
-      
-      return () => {
-        clearInterval(listener);
-      };
-    }
-  }, [autoSyncEnabled, userRole]);
-  
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -172,64 +128,8 @@ const Invoices = () => {
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" /> Export
             </Button>
-            
-            {/* QuickBooks sync button - only visible to admin */}
-            {userRole === 'admin' && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <SyncButton
-                        onSync={handleSyncWithQuickbooks}
-                        label="QuickBooks"
-                        autoSync={autoSyncEnabled}
-                        syncInterval={300000} // 5 minutes
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="space-y-2">
-                      <p>Sync invoices with QuickBooks</p>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="checkbox" 
-                          id="auto-sync" 
-                          checked={autoSyncEnabled}
-                          onChange={(e) => setAutoSyncEnabled(e.target.checked)}
-                          className="h-4 w-4" 
-                        />
-                        <label htmlFor="auto-sync" className="text-sm">Enable auto-sync</label>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
           </div>
         </div>
-        
-        {/* Live sync status indicator - only for admin */}
-        {userRole === 'admin' && autoSyncEnabled && (
-          <div className="bg-green-50 border border-green-200 rounded-md p-2 flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="relative mr-2">
-                <div className="h-3 w-3 bg-green-500 rounded-full"></div>
-                <div className="h-3 w-3 bg-green-500 rounded-full absolute top-0 animate-ping"></div>
-              </div>
-              <span className="text-sm text-green-800">
-                Live sync with QuickBooks is active
-              </span>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setAutoSyncEnabled(false)}
-              className="text-xs h-7 text-green-800"
-            >
-              Disable
-            </Button>
-          </div>
-        )}
         
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-lg border p-3">
@@ -312,7 +212,7 @@ const Invoices = () => {
               <Filter className="mr-1 h-4 w-4" /> Date Range
             </Button>
             
-            {/* AutoPay filter - added for QuickBooks integration */}
+            {/* AutoPay filter */}
             <Button variant="outline">
               <CreditCard className="mr-1 h-4 w-4" /> AutoPay Status
             </Button>
@@ -343,11 +243,6 @@ const Invoices = () => {
                 
                 {/* Add AutoPay column */}
                 <TableHead className="text-center">AutoPay</TableHead>
-                
-                {/* Add QuickBooks column for admin */}
-                {userRole === 'admin' && (
-                  <TableHead className="text-center">QuickBooks</TableHead>
-                )}
                 
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -389,39 +284,6 @@ const Invoices = () => {
                     </Badge>
                   </TableCell>
                   
-                  {/* QuickBooks column for admin */}
-                  {userRole === 'admin' && (
-                    <TableCell className="text-center">
-                      {invoice.id.includes('1') || invoice.id.includes('4') ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-flex items-center text-green-600">
-                                <Check className="h-4 w-4 mr-1" /> Synced
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Synced with QuickBooks</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-flex items-center text-amber-600 cursor-pointer">
-                                <AlertCircle className="h-4 w-4 mr-1" /> Not Synced
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Click to sync with QuickBooks</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </TableCell>
-                  )}
-                  
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -443,13 +305,6 @@ const Invoices = () => {
                         <DropdownMenuItem>
                           <Download className="mr-2 h-4 w-4" /> Download PDF
                         </DropdownMenuItem>
-                        
-                        {/* QuickBooks actions - only for admin */}
-                        {userRole === 'admin' && (
-                          <DropdownMenuItem>
-                            <ExternalLink className="mr-2 h-4 w-4" /> View in QuickBooks
-                          </DropdownMenuItem>
-                        )}
                         
                         {/* AutoPay setup action */}
                         <DropdownMenuItem>
@@ -478,7 +333,7 @@ const Invoices = () => {
   );
 };
 
-// Need to add the missing CreditCard and Check icons
+// Need to add the CreditCard icon
 const CreditCard = ({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -494,23 +349,6 @@ const CreditCard = ({ className }: { className?: string }) => (
   >
     <rect width="20" height="14" x="2" y="5" rx="2" />
     <line x1="2" x2="22" y1="10" y2="10" />
-  </svg>
-);
-
-const Check = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
