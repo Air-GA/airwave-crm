@@ -1,5 +1,4 @@
 
-// First, let's create a separate file to avoid having everything in one huge file
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,10 +21,10 @@ import { fetchWorkOrders, assignWorkOrder, unassignWorkOrder, useWorkOrderStore 
 // Import components
 import TechnicianDropTarget from "./components/TechnicianDropTarget";
 import DraggableWorkOrder from "./components/DraggableWorkOrder";
+import DispatchListView from "./components/DispatchListView";
+import DispatchCalendarView from "./components/DispatchCalendarView";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import DispatchMap from "@/components/maps/DispatchMap";
-import DispatchCalendarView from "@/components/schedule/DispatchCalendarView";
-import DispatchListView from "./components/DispatchListView";
 
 // Import UI components
 import { 
@@ -42,7 +41,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, User, Briefcase, MapIcon } from "lucide-react";
+import { Calendar, MapPin, User, MapIcon } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 
 const Dispatch = () => {
@@ -99,7 +98,12 @@ const Dispatch = () => {
   
   const sensors = useSensors(mouseSensor, touchSensor);
   
-  const activeWorkOrders = workOrders.filter(
+  // Filter out commercial jobs as requested
+  const nonCommercialWorkOrders = workOrders.filter(
+    order => !order.type.toLowerCase().includes('commercial')
+  );
+  
+  const activeWorkOrders = nonCommercialWorkOrders.filter(
     order => order.status === 'pending' || order.status === 'scheduled'
   );
   
@@ -126,6 +130,22 @@ const Dispatch = () => {
     
     const workOrderId = active.id as string;
     const technicianId = over.id as string;
+    
+    // Check if dropping on the calendar
+    if (technicianId === 'calendar-drop-area') {
+      const workOrder = workOrders.find(order => order.id === workOrderId);
+      if (workOrder) {
+        setCurrentWorkOrderId(workOrderId);
+        setCurrentTechnicianId(selectedTechnicianId);
+        
+        const now = new Date();
+        setScheduledDate(now.toISOString().split('T')[0]);
+        setScheduledTime(now.toTimeString().substring(0, 5));
+        
+        setIsScheduleModalOpen(true);
+      }
+      return;
+    }
     
     if (workOrderId && technicianId) {
       setCurrentWorkOrderId(workOrderId);
@@ -229,7 +249,6 @@ const Dispatch = () => {
     }
   };
 
-  const currentTechnician = technicians.find(tech => tech.id === currentTechnicianId);
   const currentWorkOrder = workOrders.find(order => order.id === currentWorkOrderId);
   
   if (loading) {
@@ -314,7 +333,6 @@ const Dispatch = () => {
               </TabsList>
 
               <TabsContent value="list" className="pt-4">
-                {/* ... List view content moved to a separate component */}
                 <DispatchListView 
                   unassignedWorkOrders={unassignedWorkOrders}
                   technicians={technicians}
@@ -391,11 +409,13 @@ const Dispatch = () => {
                 
                   <div>
                     <DispatchCalendarView 
-                      workOrders={workOrders}
+                      workOrders={nonCommercialWorkOrders}
                       technicians={technicians}
                       selectedTechnicianId={selectedTechnicianId}
                       onDateSelect={handleCalendarDateSelect}
                       onWorkOrderClick={handleWorkOrderClick}
+                      activeOrderId={activeOrderId}
+                      unassignedWorkOrders={unassignedWorkOrders}
                     />
                   </div>
                 </div>
@@ -675,7 +695,7 @@ const Dispatch = () => {
                 {currentTechnicianId && scheduledDate && (
                   <TechnicianScheduleView
                     technician={technicians.find(t => t.id === currentTechnicianId) || null}
-                    workOrders={workOrders}
+                    workOrders={nonCommercialWorkOrders}
                     selectedDate={new Date(`${scheduledDate}T00:00:00`)}
                   />
                 )}
