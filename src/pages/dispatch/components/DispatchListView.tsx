@@ -1,12 +1,11 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WorkOrder, Technician } from '@/types';
 import DraggableWorkOrder from './DraggableWorkOrder';
 import TechnicianDropTarget from './TechnicianDropTarget';
 import { Button } from '@/components/ui/button';
 import { CircleX } from 'lucide-react';
-import { useWorkOrderStore } from '@/services/workOrderService';
 
 interface DispatchListViewProps {
   unassignedWorkOrders: WorkOrder[];
@@ -27,14 +26,6 @@ const DispatchListView = ({
   onSelectTechnician,
   onUnassignWorkOrder
 }: DispatchListViewProps) => {
-  // Use the work order store to ensure sync
-  const syncWithCustomers = useWorkOrderStore(state => state.syncWithCustomers);
-  
-  // Sync customer data with work orders when component mounts
-  useEffect(() => {
-    syncWithCustomers();
-  }, [syncWithCustomers]);
-  
   return (
     <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
       <div className="space-y-6">
