@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { WorkOrder, Technician } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { useDroppable } from '@dnd-kit/core';
-import { formatDate } from '@/lib/date-utils';
 
 // Set up the localizer
 const localizer = momentLocalizer(moment);
