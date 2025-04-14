@@ -12,9 +12,10 @@ interface WorkOrderStore {
   updateWorkOrder: (updatedOrder: WorkOrder) => void;
   addWorkOrder: (newOrder: WorkOrder) => void;
   removeWorkOrder: (orderId: string) => void;
+  syncWithCustomers: () => Promise<void>;
 }
 
-export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
+export const useWorkOrderStore = create<WorkOrderStore>((set, get) => ({
   workOrders: [],
   setWorkOrders: (workOrders) => set({ workOrders }),
   updateWorkOrder: (updatedOrder) => set((state) => ({
@@ -28,6 +29,39 @@ export const useWorkOrderStore = create<WorkOrderStore>((set) => ({
   removeWorkOrder: (orderId) => set((state) => ({
     workOrders: state.workOrders.filter((order) => order.id !== orderId)
   })),
+  syncWithCustomers: async () => {
+    try {
+      // Get customers first
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('type', 'residential');
+      
+      if (customerError) throw customerError;
+      
+      const customers = customerData || [];
+      
+      // Get current work orders
+      const currentWorkOrders = get().workOrders;
+      
+      // Update customer information in work orders
+      const updatedWorkOrders = currentWorkOrders.map(order => {
+        const matchingCustomer = customers.find(c => c.id === order.customerId);
+        if (matchingCustomer) {
+          return {
+            ...order,
+            customerName: matchingCustomer.name,
+            address: order.address || matchingCustomer.service_address || matchingCustomer.address,
+          };
+        }
+        return order;
+      });
+      
+      set({ workOrders: updatedWorkOrders });
+    } catch (error) {
+      console.error("Error syncing work orders with customers:", error);
+    }
+  }
 }));
 
 // Function to create a customer from work order data
@@ -90,44 +124,98 @@ export async function getWorkOrders(): Promise<WorkOrder[]> {
     if (error) throw error;
     
     if (data && data.length > 0) {
+      // Get customers to ensure we have accurate customer data
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('*');
+      
+      if (customerError) {
+        console.warn("Error fetching customers to sync with work orders:", customerError);
+      }
+      
+      const customers = customerData || [];
+      
       // Filter out commercial jobs and only include residential
       const filteredData = data.filter(order => {
         // If we have customer data, check if they're residential
-        // Otherwise include them and we'll filter properly in the UI
-        const customerType = order.customer_type || 'residential';
-        return customerType !== 'commercial';
+        const matchingCustomer = customers.find(c => c.id === order.customer_id);
+        if (matchingCustomer) {
+          return matchingCustomer.type !== 'commercial';
+        }
+        // Otherwise include them by default and we'll filter properly in the UI if needed
+        return true;
       });
       
-      return filteredData.map((order: any) => ({
-        id: order.id,
-        customerId: order.customer_id,
-        customerName: order.customer_name,
-        address: order.address,
-        status: order.status,
-        priority: order.priority,
-        type: order.type,
-        description: order.description,
-        scheduledDate: order.scheduled_date,
-        technicianId: order.technician_id,
-        technicianName: order.technician_name,
-        createdAt: order.created_at,
-        completedAt: order.completed_at,
-        notes: order.notes,
-        partsUsed: order.parts_used
-      }));
+      const mappedWorkOrders = filteredData.map((order: any) => {
+        // Find matching customer to ensure data is in sync
+        const matchingCustomer = customers.find(c => c.id === order.customer_id);
+        
+        return {
+          id: order.id,
+          customerId: order.customer_id,
+          customerName: matchingCustomer?.name || order.customer_name,
+          address: order.address || matchingCustomer?.service_address || matchingCustomer?.address,
+          status: order.status,
+          priority: order.priority,
+          type: order.type,
+          description: order.description,
+          scheduledDate: order.scheduled_date,
+          technicianId: order.technician_id,
+          technicianName: order.technician_name,
+          createdAt: order.created_at,
+          completedAt: order.completed_at,
+          notes: order.notes,
+          partsUsed: order.parts_used,
+          email: matchingCustomer?.email,
+          phoneNumber: matchingCustomer?.phone
+        };
+      });
+      
+      // Update the store with synced data
+      useWorkOrderStore.getState().setWorkOrders(mappedWorkOrders);
+      
+      return mappedWorkOrders;
     }
   } catch (err) {
     console.error("Error fetching work orders:", err);
   }
   
   // Fall back to mock data or localStorage
-  const storedWorkOrders = JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
-  
-  // Filter out commercial jobs from mock/localStorage data
-  return storedWorkOrders.filter((order: WorkOrder) => {
-    // If we don't have explicit customer type info, assume residential
-    return true; // We'll handle filtering in the UI components
-  });
+  try {
+    const storedWorkOrders = JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
+    
+    // Get customers to sync with work orders
+    const storedCustomers = JSON.parse(localStorage.getItem('customers') || JSON.stringify(mockCustomers));
+    
+    // Sync customer information with work orders
+    const syncedWorkOrders = storedWorkOrders.map((order: WorkOrder) => {
+      const matchingCustomer = storedCustomers.find((c: Customer) => c.id === order.customerId);
+      if (matchingCustomer) {
+        return {
+          ...order,
+          customerName: matchingCustomer.name,
+          address: order.address || matchingCustomer.serviceAddress || matchingCustomer.address,
+          email: matchingCustomer.email,
+          phoneNumber: matchingCustomer.phone
+        };
+      }
+      return order;
+    });
+    
+    // Filter out commercial jobs
+    const residentialOrders = syncedWorkOrders.filter((order: WorkOrder) => {
+      const matchingCustomer = storedCustomers.find((c: Customer) => c.id === order.customerId);
+      return !matchingCustomer || matchingCustomer.type !== 'commercial';
+    });
+    
+    // Update the store with synced data
+    useWorkOrderStore.getState().setWorkOrders(residentialOrders);
+    
+    return residentialOrders;
+  } catch (error) {
+    console.error("Error processing local work orders:", error);
+    return mockWorkOrders;
+  }
 }
 
 export const fetchWorkOrders = getWorkOrders;
@@ -767,5 +855,74 @@ export async function getWorkOrderById(workOrderId: string): Promise<WorkOrder |
   } catch (err) {
     console.error("Error fetching work order from localStorage:", err);
     return null;
+  }
+}
+
+/**
+ * Sync work orders with customer information
+ * This ensures that work orders always have the latest customer data
+ */
+export async function syncWorkOrdersWithCustomers(): Promise<void> {
+  try {
+    const workOrders = await getWorkOrders();
+    
+    // Fetch latest customer data
+    const { data: customerData, error } = await supabase
+      .from('customers')
+      .select('*');
+      
+    if (error) {
+      throw error;
+    }
+    
+    const customers = customerData || [];
+    
+    // Update work orders with current customer information
+    const updatedWorkOrders = workOrders.map(order => {
+      const matchingCustomer = customers.find(c => c.id === order.customerId);
+      if (matchingCustomer) {
+        return {
+          ...order,
+          customerName: matchingCustomer.name,
+          address: order.address || matchingCustomer.service_address || matchingCustomer.address,
+          email: matchingCustomer.email,
+          phoneNumber: matchingCustomer.phone
+        };
+      }
+      return order;
+    });
+    
+    // Update the store
+    useWorkOrderStore.getState().setWorkOrders(updatedWorkOrders);
+    
+    // Update local storage for fallback
+    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
+    
+  } catch (error) {
+    console.error("Error syncing work orders with customers:", error);
+    
+    // Fallback to local sync if database sync fails
+    const storedWorkOrders = JSON.parse(localStorage.getItem('workOrders') || '[]');
+    const storedCustomers = JSON.parse(localStorage.getItem('customers') || '[]');
+    
+    const updatedWorkOrders = storedWorkOrders.map((order: WorkOrder) => {
+      const matchingCustomer = storedCustomers.find((c: any) => c.id === order.customerId);
+      if (matchingCustomer) {
+        return {
+          ...order,
+          customerName: matchingCustomer.name,
+          address: order.address || matchingCustomer.serviceAddress || matchingCustomer.address,
+          email: matchingCustomer.email,
+          phoneNumber: matchingCustomer.phone
+        };
+      }
+      return order;
+    });
+    
+    // Update the store
+    useWorkOrderStore.getState().setWorkOrders(updatedWorkOrders);
+    
+    // Update local storage
+    localStorage.setItem('workOrders', JSON.stringify(updatedWorkOrders));
   }
 }

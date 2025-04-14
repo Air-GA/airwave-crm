@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import MainLayout from "@/components/layout/MainLayout";
 import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
-import { getWorkOrders } from "@/services/workOrderService";
+import { getWorkOrders, useWorkOrderStore } from "@/services/workOrderService";
 import { FileText, Plus, Search, Activity, Truck, Calendar, Filter } from "lucide-react";
 import { Badge as BadgeIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -25,6 +25,7 @@ const WorkOrders = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const workOrderStore = useWorkOrderStore();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,13 +34,17 @@ const WorkOrders = () => {
         
         // Filter out any commercial jobs, we only want residential
         const residentialJobs = data.filter(order => {
-          // In a real implementation, this would check the customer type
-          // For now, include all since we're enforcing residential-only in the service
-          return true;
+          // In a real implementation, this would check the customer type directly
+          // For now, we'll enforce residential-only as per the service configuration
+          return order.type !== 'commercial'; // This will filter out any explicitly marked commercial jobs
         });
         
         setWorkOrders(residentialJobs);
         setFilteredWorkOrders(residentialJobs);
+        
+        // Update the global store so other components have access to the same data
+        workOrderStore.setWorkOrders(residentialJobs);
+        
         setLoading(false);
       } catch (error) {
         console.error("Error fetching work orders:", error);
@@ -53,7 +58,7 @@ const WorkOrders = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, workOrderStore]);
 
   useEffect(() => {
     let result = workOrders;
@@ -63,10 +68,10 @@ const WorkOrders = () => {
       const term = searchTerm.toLowerCase();
       result = result.filter(
         (order) =>
-          order.customerName.toLowerCase().includes(term) ||
-          order.address.toLowerCase().includes(term) ||
-          order.description.toLowerCase().includes(term) ||
-          order.id.toLowerCase().includes(term)
+          order.customerName?.toLowerCase().includes(term) ||
+          order.address?.toLowerCase().includes(term) ||
+          order.description?.toLowerCase().includes(term) ||
+          order.id?.toLowerCase().includes(term)
       );
     }
 
@@ -153,21 +158,6 @@ const WorkOrders = () => {
     navigate("/work-orders/create");
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "repair":
-        return <Activity className="h-4 w-4 text-red-500" />;
-      case "maintenance":
-        return <Calendar className="h-4 w-4 text-green-500" />;
-      case "installation":
-        return <Truck className="h-4 w-4 text-blue-500" />;
-      case "inspection":
-        return <BadgeIcon className="h-4 w-4 text-amber-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
   return (
     <MainLayout pageName="Work Orders">
       <div className="container mx-auto py-6">
@@ -181,7 +171,20 @@ const WorkOrders = () => {
               <Button onClick={handleCreateWorkOrder}>
                 <Plus className="mr-2 h-4 w-4" /> Create Work Order
               </Button>
-              <SyncWithQuickBooks entityType="workOrders" onSyncComplete={() => {}} />
+              <SyncWithQuickBooks 
+                entityType="workOrders" 
+                onSyncComplete={() => {
+                  // Refresh data after sync
+                  getWorkOrders().then(data => {
+                    const residentialJobs = data.filter(order => 
+                      order.type !== 'commercial'
+                    );
+                    setWorkOrders(residentialJobs);
+                    setFilteredWorkOrders(residentialJobs);
+                    workOrderStore.setWorkOrders(residentialJobs);
+                  });
+                }} 
+              />
             </div>
           </CardHeader>
           <CardContent>
