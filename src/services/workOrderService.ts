@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { WorkOrder, Customer } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -99,6 +100,9 @@ export const getWorkOrders = async (): Promise<WorkOrder[]> => {
   }
 };
 
+// Add alias for getWorkOrders function to match imported names
+export const fetchWorkOrders = getWorkOrders;
+
 // Helper function to get mock work orders for residential customers only
 const getResidentialMockWorkOrders = (): WorkOrder[] => {
   // Import mock data
@@ -112,4 +116,323 @@ const getResidentialMockWorkOrders = (): WorkOrder[] => {
   return allMockWorkOrders.filter((order: WorkOrder) => 
     residentialCustomerIds.includes(order.customerId)
   );
+};
+
+// Function to update a work order
+export const updateWorkOrder = async (
+  workOrderId: string, 
+  updates: Partial<WorkOrder>
+): Promise<WorkOrder | null> => {
+  try {
+    const store = useWorkOrderStore.getState();
+    const currentOrder = store.getWorkOrderById(workOrderId);
+    
+    if (!currentOrder) {
+      console.error("Work order not found:", workOrderId);
+      return null;
+    }
+    
+    // Create the updated order
+    const updatedOrder = {
+      ...currentOrder,
+      ...updates
+    };
+    
+    // Try to update in Supabase
+    try {
+      const { error } = await supabase.client
+        .from('work_orders')
+        .update({
+          technician_id: updatedOrder.technicianId,
+          technician_name: updatedOrder.technicianName,
+          status: updatedOrder.status,
+          notes: updatedOrder.notes,
+          // Add other fields as needed
+        })
+        .eq('id', workOrderId);
+        
+      if (error) {
+        console.error("Error updating work order in Supabase:", error);
+        // Continue with local update even if Supabase fails
+      }
+    } catch (error) {
+      console.error("Failed to update work order in Supabase:", error);
+      // Continue with local update even if Supabase fails
+    }
+    
+    // Update in local store
+    store.updateWorkOrder(updatedOrder);
+    
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in updateWorkOrder:", error);
+    return null;
+  }
+};
+
+// Function to assign a work order to a technician
+export const assignWorkOrder = async (
+  workOrderId: string,
+  technicianId: string,
+  technicianName: string,
+  scheduledDate?: string
+): Promise<WorkOrder> => {
+  try {
+    const store = useWorkOrderStore.getState();
+    const currentOrder = store.getWorkOrderById(workOrderId);
+    
+    if (!currentOrder) {
+      throw new Error(`Work order with ID ${workOrderId} not found`);
+    }
+    
+    const updatedOrder: WorkOrder = {
+      ...currentOrder,
+      technicianId,
+      technicianName,
+      status: 'scheduled',
+      scheduledDate: scheduledDate || currentOrder.scheduledDate
+    };
+    
+    // Try to update in Supabase
+    try {
+      const { error } = await supabase.client
+        .from('work_orders')
+        .update({
+          technician_id: technicianId,
+          technician_name: technicianName,
+          status: 'scheduled',
+          scheduled_date: scheduledDate || currentOrder.scheduledDate
+        })
+        .eq('id', workOrderId);
+        
+      if (error) {
+        console.error("Error assigning work order in Supabase:", error);
+        // Continue with local update even if Supabase fails
+      }
+    } catch (error) {
+      console.error("Failed to assign work order in Supabase:", error);
+      // Continue with local update even if Supabase fails
+    }
+    
+    // Update in local store
+    store.updateWorkOrder(updatedOrder);
+    
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in assignWorkOrder:", error);
+    throw error;
+  }
+};
+
+// Function to unassign a work order from a technician
+export const unassignWorkOrder = async (workOrderId: string): Promise<WorkOrder> => {
+  try {
+    const store = useWorkOrderStore.getState();
+    const currentOrder = store.getWorkOrderById(workOrderId);
+    
+    if (!currentOrder) {
+      throw new Error(`Work order with ID ${workOrderId} not found`);
+    }
+    
+    const updatedOrder: WorkOrder = {
+      ...currentOrder,
+      technicianId: undefined,
+      technicianName: undefined,
+      status: 'pending'
+    };
+    
+    // Try to update in Supabase
+    try {
+      const { error } = await supabase.client
+        .from('work_orders')
+        .update({
+          technician_id: null,
+          technician_name: null,
+          status: 'pending'
+        })
+        .eq('id', workOrderId);
+        
+      if (error) {
+        console.error("Error unassigning work order in Supabase:", error);
+        // Continue with local update even if Supabase fails
+      }
+    } catch (error) {
+      console.error("Failed to unassign work order in Supabase:", error);
+      // Continue with local update even if Supabase fails
+    }
+    
+    // Update in local store
+    store.updateWorkOrder(updatedOrder);
+    
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in unassignWorkOrder:", error);
+    throw error;
+  }
+};
+
+// Function to create a new work order
+export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promise<WorkOrder> => {
+  try {
+    // Generate a unique ID for the new work order
+    const newWorkOrder: WorkOrder = {
+      id: crypto.randomUUID(),
+      customerId: workOrderData.customerId || '',
+      customerName: workOrderData.customerName || '',
+      address: workOrderData.address || '',
+      type: workOrderData.type || 'repair',
+      description: workOrderData.description || '',
+      priority: workOrderData.priority || 'medium',
+      status: workOrderData.status || 'pending',
+      scheduledDate: workOrderData.scheduledDate || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      technicianId: workOrderData.technicianId,
+      technicianName: workOrderData.technicianName,
+      notes: workOrderData.notes || [],
+      // Include other fields from workOrderData
+      ...workOrderData
+    };
+    
+    // Try to insert into Supabase
+    try {
+      const { error } = await supabase.client
+        .from('work_orders')
+        .insert({
+          id: newWorkOrder.id,
+          customer_id: newWorkOrder.customerId,
+          customer_name: newWorkOrder.customerName,
+          address: newWorkOrder.address,
+          type: newWorkOrder.type,
+          description: newWorkOrder.description,
+          priority: newWorkOrder.priority,
+          status: newWorkOrder.status,
+          scheduled_date: newWorkOrder.scheduledDate,
+          technician_id: newWorkOrder.technicianId,
+          technician_name: newWorkOrder.technicianName,
+          notes: newWorkOrder.notes
+        });
+        
+      if (error) {
+        console.error("Error creating work order in Supabase:", error);
+        // Continue with local update even if Supabase fails
+      }
+    } catch (error) {
+      console.error("Failed to create work order in Supabase:", error);
+      // Continue with local update even if Supabase fails
+    }
+    
+    // Add to local store
+    const store = useWorkOrderStore.getState();
+    const updatedWorkOrders = [...store.workOrders, newWorkOrder];
+    store.setWorkOrders(updatedWorkOrders);
+    
+    return newWorkOrder;
+  } catch (error) {
+    console.error("Error in createWorkOrder:", error);
+    throw error;
+  }
+};
+
+// Function for creating maintenance work orders
+export const createMaintenanceWorkOrder = async (
+  maintenanceItem: any,
+  technicianId?: string,
+  technicianName?: string,
+  scheduledDate?: string
+): Promise<WorkOrder> => {
+  try {
+    const workOrderData: Partial<WorkOrder> = {
+      customerName: maintenanceItem.customerName,
+      customerId: maintenanceItem.customerId || '',
+      address: maintenanceItem.address,
+      type: 'maintenance',
+      description: `Scheduled HVAC maintenance for ${maintenanceItem.customerName}`,
+      priority: 'medium',
+      status: technicianId ? 'scheduled' : 'pending',
+      scheduledDate: scheduledDate || new Date().toISOString(),
+      technicianId,
+      technicianName,
+      isMaintenancePlan: true,
+      maintenanceTimePreference: maintenanceItem.preferredTime
+    };
+    
+    return await createWorkOrder(workOrderData);
+  } catch (error) {
+    console.error("Error in createMaintenanceWorkOrder:", error);
+    throw error;
+  }
+};
+
+// Function for rescheduling maintenance work orders
+export const rescheduleMaintenanceWorkOrder = async (
+  workOrderId: string,
+  scheduledDate: string
+): Promise<WorkOrder | null> => {
+  return await updateWorkOrder(workOrderId, {
+    scheduledDate,
+    status: 'scheduled'
+  });
+};
+
+// Function to mark a work order as completed
+export const completeWorkOrder = async (
+  workOrderId: string, 
+  notes?: string
+): Promise<WorkOrder | null> => {
+  try {
+    const store = useWorkOrderStore.getState();
+    const currentOrder = store.getWorkOrderById(workOrderId);
+    
+    if (!currentOrder) {
+      console.error("Work order not found:", workOrderId);
+      return null;
+    }
+    
+    const completedDate = new Date().toISOString();
+    const updatedNotes = notes 
+      ? [...(currentOrder.notes || []), notes] 
+      : currentOrder.notes;
+    
+    const updates: Partial<WorkOrder> = {
+      status: 'completed',
+      completedDate,
+      notes: updatedNotes,
+      completionRequired: false
+    };
+    
+    return await updateWorkOrder(workOrderId, updates);
+  } catch (error) {
+    console.error("Error in completeWorkOrder:", error);
+    return null;
+  }
+};
+
+// Function to mark a work order as pending completion
+export const markOrderPendingCompletion = async (
+  workOrderId: string, 
+  pendingReason: string
+): Promise<WorkOrder | null> => {
+  try {
+    const store = useWorkOrderStore.getState();
+    const currentOrder = store.getWorkOrderById(workOrderId);
+    
+    if (!currentOrder) {
+      console.error("Work order not found:", workOrderId);
+      return null;
+    }
+    
+    const updatedNotes = [...(currentOrder.notes || []), `Pending reason: ${pendingReason}`];
+    
+    const updates: Partial<WorkOrder> = {
+      status: 'pending-completion',
+      pendingReason,
+      notes: updatedNotes,
+      completionRequired: true
+    };
+    
+    return await updateWorkOrder(workOrderId, updates);
+  } catch (error) {
+    console.error("Error in markOrderPendingCompletion:", error);
+    return null;
+  }
 };

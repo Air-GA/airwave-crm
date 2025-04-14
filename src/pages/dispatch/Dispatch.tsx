@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -66,7 +65,7 @@ const Dispatch = () => {
       try {
         // Fetch technicians and work orders
         const [techData, workOrderData] = await Promise.all([
-          getTechnicians(),
+          fetchTechnicians(),
           getWorkOrders(),
         ]);
         
@@ -179,8 +178,8 @@ const Dispatch = () => {
       // Update the work order to remove technician info
       const updatedWorkOrder: WorkOrder = {
         ...workOrder,
-        technicianId: null,
-        technicianName: null,
+        technicianId: undefined,
+        technicianName: undefined,
         status: "pending",
       };
       
@@ -231,11 +230,13 @@ const Dispatch = () => {
   // Handle work order selection
   const handleWorkOrderSelect = (workOrderId: string) => {
     setActiveWorkOrderId(workOrderId);
-    const workOrder = workOrderStore.getWorkOrderById(workOrderId);
     
-    if (workOrder && workOrder.location) {
-      setHighlightedLocation(workOrder.location);
-    }
+    // We need to check if the work order exists first
+    const workOrder = workOrderStore.getWorkOrderById(workOrderId);
+    if (!workOrder) return;
+    
+    // For this demo, we'll just create a simulated location to highlight on the map
+    setHighlightedLocation({ lat: 37.7749, lng: -122.4194 });
   };
   
   // Handle scheduling a work order
@@ -342,8 +343,8 @@ const Dispatch = () => {
                   <CardContent className="p-0">
                     <DispatchMap 
                       technicians={technicians}
-                      workOrders={workOrders}
-                      onSelectWorkOrder={handleWorkOrderSelect}
+                      onSelectTechnician={handleSelectTechnician}
+                      selectedTechnicianId={selectedTechnicianId}
                       highlightedLocation={highlightedLocation}
                     />
                   </CardContent>

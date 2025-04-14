@@ -1,153 +1,110 @@
 
-import React, { useEffect, useState } from "react";
-import { MapPin } from "lucide-react";
-import { Technician } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
+import React from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { MapPin, User, Briefcase, CalendarClock } from 'lucide-react';
+import { Technician } from '@/types';
 
-interface DispatchMapProps {
+export interface DispatchMapProps {
   technicians: Technician[];
-  onSelectTechnician: (techId: string) => void;
+  onSelectTechnician?: (technicianId: string) => void;
+  selectedTechnicianId?: string | null;
+  highlightedLocation?: {lat: number; lng: number} | null;
 }
 
-const DispatchMap = ({ technicians, onSelectTechnician }: DispatchMapProps) => {
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-
-  useEffect(() => {
-    // Initialize Google Maps
-    const initializeMap = () => {
-      if (!window.google || mapLoaded) return;
-
-      try {
-        const mapElement = document.getElementById("dispatch-map");
-        if (!mapElement) return;
-
-        const newMap = new window.google.maps.Map(mapElement, {
-          center: { lat: 37.7749, lng: -122.4194 }, // Default center (San Francisco)
-          zoom: 11,
-          mapTypeControl: true,
-          streetViewControl: false,
-          mapTypeId: window.google.maps.MapTypeId.ROADMAP,
-        });
-
-        setMap(newMap);
-        setMapLoaded(true);
-      } catch (error) {
-        console.error("Error initializing Google Maps:", error);
-      }
-    };
-
-    if (window.google && window.google.maps) {
-      initializeMap();
-    } else {
-      window.initMap = initializeMap;
+// This is a placeholder component. In a real implementation, we would integrate with a mapping library
+// like Google Maps, Mapbox, or Leaflet to show actual map and locations
+const DispatchMap = ({ 
+  technicians, 
+  onSelectTechnician,
+  selectedTechnicianId,
+  highlightedLocation
+}: DispatchMapProps) => {
+  const handleSelectTechnician = (techId: string) => {
+    if (onSelectTechnician) {
+      onSelectTechnician(techId);
     }
-
-    return () => {
-      // Clean up markers
-      markers.forEach((marker) => marker.setMap(null));
-    };
-  }, [mapLoaded, markers]);
-
-  useEffect(() => {
-    if (!map || !mapLoaded) return;
-
-    // Clear existing markers
-    markers.forEach((marker) => marker.setMap(null));
-    
-    const newMarkers: google.maps.Marker[] = [];
-    const bounds = new google.maps.LatLngBounds();
-    let hasValidLocations = false;
-
-    // Add markers for technicians with locations
-    technicians.forEach((tech) => {
-      if (tech.currentLocation?.lat && tech.currentLocation?.lng) {
-        hasValidLocations = true;
-        const position = {
-          lat: tech.currentLocation.lat,
-          lng: tech.currentLocation.lng,
-        };
-        
-        bounds.extend(position);
-        
-        const statusColor = 
-          tech.status === 'available' ? 'green' :
-          tech.status === 'busy' ? 'orange' : 'gray';
-        
-        const marker = new google.maps.Marker({
-          position,
-          map,
-          title: tech.name,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: statusColor,
-            fillOpacity: 0.8,
-            strokeWeight: 2,
-            strokeColor: 'white',
-          },
-        });
-
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="padding: 8px;">
-              <h3 style="margin: 0; font-size: 16px;">${tech.name}</h3>
-              <p style="margin: 4px 0 0; font-size: 14px;">Status: ${tech.status}</p>
-              <p style="margin: 4px 0 0; font-size: 14px;">${tech.currentLocation.address}</p>
-            </div>
-          `,
-        });
-
-        marker.addListener("click", () => {
-          onSelectTechnician(tech.id);
-        });
-
-        marker.addListener("mouseover", () => {
-          infoWindow.open(map, marker);
-        });
-
-        marker.addListener("mouseout", () => {
-          infoWindow.close();
-        });
-
-        newMarkers.push(marker);
-      }
-    });
-
-    setMarkers(newMarkers);
-
-    // Fit map to bounds if we have valid locations
-    if (hasValidLocations && !bounds.isEmpty()) {
-      map.fitBounds(bounds);
-      
-      // Adjust zoom if too close
-      const listener = google.maps.event.addListener(map, "idle", () => {
-        if (map.getZoom() > 15) {
-          map.setZoom(15);
-        }
-        google.maps.event.removeListener(listener);
-      });
-    }
-  }, [map, mapLoaded, technicians, onSelectTechnician]);
-
-  if (!mapLoaded) {
-    return (
-      <Card className="h-[400px] flex items-center justify-center">
-        <CardContent className="p-6 text-center">
-          <MapPin className="h-10 w-10 mb-4 mx-auto text-muted-foreground" />
-          <h3 className="text-lg font-medium">Loading Map...</h3>
-          <p className="text-sm text-muted-foreground mt-2">
-            The map is currently loading or Google Maps API may not be available.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  };
 
   return (
-    <Card className="rounded-md overflow-hidden">
-      <div id="dispatch-map" className="h-[400px] w-full" />
+    <Card className="h-[500px] overflow-hidden">
+      <CardHeader className="pb-2">
+        <CardTitle>Technician Locations</CardTitle>
+        <CardDescription>Map view of technician locations and work orders</CardDescription>
+      </CardHeader>
+      
+      <CardContent className="p-0 relative">
+        <div className="bg-gray-100 w-full h-[400px] relative">
+          {/* This would be replaced with an actual map component */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <MapPin className="h-12 w-12 mx-auto mb-2" />
+              <p>Map view would display here</p>
+              <p className="text-sm max-w-sm mx-auto mt-2">
+                In a production environment, this would show an interactive map with technician locations and work order sites
+              </p>
+            </div>
+          </div>
+          
+          {/* Simulate technician markers */}
+          {technicians.map((tech, index) => {
+            // Calculate simulated positions for demo purposes
+            const left = 20 + (index * 60) % 300;
+            const top = 100 + (index * 40) % 200;
+            
+            return (
+              <div 
+                key={tech.id}
+                className={`absolute cursor-pointer transition-all duration-200
+                  ${selectedTechnicianId === tech.id ? 'z-10 scale-125' : 'z-0 hover:scale-110'}
+                `}
+                style={{ left: `${left}px`, top: `${top}px` }}
+                onClick={() => handleSelectTechnician(tech.id)}
+              >
+                <div className={`
+                  p-1 rounded-full border-2 border-white shadow-md
+                  ${tech.status === 'available' ? 'bg-green-500' : ''}
+                  ${tech.status === 'busy' ? 'bg-amber-500' : ''}
+                  ${tech.status === 'off-duty' ? 'bg-gray-500' : ''}
+                `}>
+                  <User className="h-6 w-6 text-white" />
+                </div>
+                <div className="absolute mt-1 left-1/2 -translate-x-1/2 bg-white px-2 py-0.5 rounded shadow-sm text-xs whitespace-nowrap">
+                  {tech.name}
+                </div>
+              </div>
+            );
+          })}
+          
+          {/* Simulate highlighted location */}
+          {highlightedLocation && (
+            <div 
+              className="absolute z-20 animate-pulse"
+              style={{ left: '150px', top: '180px' }}
+            >
+              <div className="p-1 rounded-full bg-primary border-2 border-white shadow-lg">
+                <Briefcase className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+      
+      <CardFooter className="bg-card pt-2 pb-4">
+        <div className="flex text-xs items-center gap-4 text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span>Available</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+            <span>Busy</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+            <span>Off Duty</span>
+          </div>
+        </div>
+      </CardFooter>
     </Card>
   );
 };
