@@ -87,6 +87,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface ExtendedInventoryItem extends InventoryItem {
   sku: string;
@@ -131,6 +133,22 @@ interface RemovalDialogData {
   invoiceNumber?: string;
 }
 
+// Add Item form schema
+const inventoryItemSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  sku: z.string().min(1, "SKU is required"),
+  category: z.string().min(1, "Category is required"),
+  inStock: z.number().min(0, "Quantity can't be negative"),
+  minStock: z.number().min(0, "Minimum stock can't be negative"),
+  price: z.number().min(0, "Price can't be negative"),
+  supplier: z.string().optional(),
+  description: z.string().optional(),
+  location: z.string().default("Main Warehouse"),
+});
+
+// Edit item schema
+const editItemSchema = inventoryItemSchema.partial();
+
 const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all-inventory");
@@ -146,6 +164,33 @@ const Inventory = () => {
     invoiceNumber: ""
   });
   const [removalQuantity, setRemovalQuantity] = useState<number>(1);
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<ExtendedInventoryItem | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<ExtendedInventoryItem | null>(null);
+  
+  // Add Item form
+  const addItemForm = useForm<z.infer<typeof inventoryItemSchema>>({
+    resolver: zodResolver(inventoryItemSchema),
+    defaultValues: {
+      name: "",
+      sku: "",
+      category: "",
+      inStock: 0,
+      minStock: 0,
+      price: 0,
+      supplier: "",
+      description: "",
+      location: "Main Warehouse",
+    }
+  });
+
+  // Edit Item form
+  const editItemForm = useForm<z.infer<typeof editItemSchema>>({
+    resolver: zodResolver(editItemSchema),
+  });
+  
   const [transferHistory, setTransferHistory] = useState<InventoryTransfer[]>([
     {
       id: "TR001",
@@ -182,7 +227,7 @@ const Inventory = () => {
     }
   ]);
   
-  const { permissions } = useAuth();
+  const { permissions, userRole } = useAuth();
   const isMobile = useIsMobile();
   
   const transferForm = useForm<TransferFormData>({
@@ -305,7 +350,8 @@ const Inventory = () => {
     item.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleEditMinStock = (itemId: string) => {
+  // Edit min stock level
+  const handleEditMinStock = (itemId: string, newValue?: number) => {
     if (!permissions.canEditData) {
       toast.error("Permission denied", {
         description: "You do not have permission to edit inventory settings."
@@ -313,8 +359,153 @@ const Inventory = () => {
       return;
     }
     
+    if (newValue !== undefined) {
+      setInventoryItems(prev => 
+        prev.map(item => 
+          item.id === itemId ? { ...item, minStock: newValue } : item
+        )
+      );
+    }
+    
     toast.success("Min stock level updated", {
       description: "The minimum stock level has been updated."
+    });
+  };
+
+  // Add new inventory item
+  const handleAddItem = (data: z.infer<typeof inventoryItemSchema>) => {
+    if (!permissions.canEditData) {
+      toast.error("Permission denied", {
+        description: "You do not have permission to add inventory items."
+      });
+      return;
+    }
+
+    const newItem: ExtendedInventoryItem = {
+      id: `INV${String(inventoryItems.length + 1).padStart(3, '0')}`,
+      name: data.name,
+      sku: data.sku,
+      category: data.category,
+      inStock: data.inStock,
+      minStock: data.minStock,
+      price: data.price,
+      supplier: data.supplier || "",
+      description: data.description || "",
+      location: data.location,
+      quantity: data.inStock,
+      reorderLevel: data.minStock,
+      mobileUnits: []
+    };
+
+    setInventoryItems(prev => [...prev, newItem]);
+    setIsAddItemDialogOpen(false);
+    addItemForm.reset();
+
+    toast.success("Item added", {
+      description: `${data.name} has been added to inventory.`
+    });
+  };
+
+  // Open edit item dialog
+  const handleOpenEditDialog = (item: ExtendedInventoryItem) => {
+    if (!permissions.canEditData) {
+      toast.error("Permission denied", {
+        description: "You do not have permission to edit inventory items."
+      });
+      return;
+    }
+
+    setItemToEdit(item);
+    editItemForm.reset({
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      inStock: item.inStock,
+      minStock: item.minStock,
+      price: item.price,
+      supplier: item.supplier,
+      description: item.description,
+      location: item.location
+    });
+    setIsEditItemDialogOpen(true);
+  };
+
+  // Save edited item
+  const handleSaveEditedItem = (data: z.infer<typeof editItemSchema>) => {
+    if (!itemToEdit) return;
+
+    setInventoryItems(prev => 
+      prev.map(item => 
+        item.id === itemToEdit.id 
+          ? { 
+              ...item, 
+              ...data,
+              quantity: data.inStock !== undefined ? data.inStock : item.quantity,
+              reorderLevel: data.minStock !== undefined ? data.minStock : item.reorderLevel
+            } 
+          : item
+      )
+    );
+
+    setIsEditItemDialogOpen(false);
+    toast.success("Item updated", {
+      description: `${itemToEdit.name} has been updated.`
+    });
+  };
+
+  // Open delete confirmation dialog
+  const handleOpenDeleteDialog = (item: ExtendedInventoryItem) => {
+    if (!permissions.canEditData) {
+      toast.error("Permission denied", {
+        description: "You do not have permission to delete inventory items."
+      });
+      return;
+    }
+
+    setItemToDelete(item);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Delete inventory item
+  const handleDeleteItem = () => {
+    if (!itemToDelete) return;
+
+    setInventoryItems(prev => prev.filter(item => item.id !== itemToDelete.id));
+    setIsDeleteDialogOpen(false);
+
+    toast.success("Item deleted", {
+      description: `${itemToDelete.name} has been removed from inventory.`
+    });
+  };
+
+  // Add stock to an item
+  const handleAddStock = (item: ExtendedInventoryItem) => {
+    if (!permissions.canEditData) {
+      toast.error("Permission denied", {
+        description: "You do not have permission to modify inventory levels."
+      });
+      return;
+    }
+
+    // This would typically open a dialog to add stock
+    // For simplicity, we'll just add 5 units
+    const additionalStock = 5;
+    
+    setInventoryItems(prev => 
+      prev.map(i => 
+        i.id === item.id 
+          ? { 
+              ...i, 
+              inStock: i.inStock + additionalStock,
+              quantity: i.quantity + additionalStock,
+              lastRestocked: new Date().toISOString()
+            } 
+          : i
+      )
+    );
+
+    toast.success("Stock added", {
+      description: `Added ${additionalStock} units of ${item.name} to inventory.`
     });
   };
 
@@ -594,6 +785,14 @@ const Inventory = () => {
     return Object.values(itemsByInvoice);
   };
 
+  // View item details or history
+  const handleViewItemHistory = (item: ExtendedInventoryItem) => {
+    toast.info("Viewing item history", {
+      description: `Viewing transaction history for ${item.name}.`
+    });
+    // This would typically open a detailed view or navigate to a history page
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -603,7 +802,7 @@ const Inventory = () => {
             <p className="text-muted-foreground">Manage HVAC parts and materials</p>
           </div>
           <div className="flex gap-2">
-            <Button>
+            <Button onClick={() => setIsAddItemDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" /> Add Item
             </Button>
             <Button variant="outline">
@@ -812,13 +1011,21 @@ const Inventory = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Edit Item</DropdownMenuItem>
-                              <DropdownMenuItem>Add Stock</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenEditDialog(item)}>
+                                Edit Item
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleAddStock(item)}>
+                                Add Stock
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openTransferDialog(item)}>
                                 Transfer Inventory
                               </DropdownMenuItem>
-                              <DropdownMenuItem>View History</DropdownMenuItem>
-                              <DropdownMenuItem>Delete Item</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewItemHistory(item)}>
+                                View History
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenDeleteDialog(item)}>
+                                Delete Item
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -1130,6 +1337,351 @@ const Inventory = () => {
         </Tabs>
       </div>
       
+      {/* Add Item Dialog */}
+      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Inventory Item</DialogTitle>
+            <DialogDescription>
+              Add a new item to the inventory management system
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...addItemForm}>
+            <form onSubmit={addItemForm.handleSubmit(handleAddItem)} className="space-y-4">
+              <FormField
+                control={addItemForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Item Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter item name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={addItemForm.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU</FormLabel>
+                      <FormControl>
+                        <Input placeholder="SKU" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={addItemForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Filters">Filters</SelectItem>
+                          <SelectItem value="Refrigerants">Refrigerants</SelectItem>
+                          <SelectItem value="Motors">Motors</SelectItem>
+                          <SelectItem value="Electrical">Electrical</SelectItem>
+                          <SelectItem value="Controls">Controls</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={addItemForm.control}
+                  name="inStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Initial Stock</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field}
+                          onChange={e => field.onChange(Number(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={addItemForm.control}
+                  name="minStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Min Stock</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field}
+                          onChange={e => field.onChange(Number(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={addItemForm.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price ($)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          {...field}
+                          onChange={e => field.onChange(Number(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={addItemForm.control}
+                name="supplier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Supplier</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Supplier name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={addItemForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Item description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="submit">Add Item</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Inventory Item</DialogTitle>
+            <DialogDescription>
+              Update inventory item details
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editItemForm}>
+            <form onSubmit={editItemForm.handleSubmit(handleSaveEditedItem)} className="space-y-4">
+              <FormField
+                control={editItemForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Item Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editItemForm.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editItemForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Filters">Filters</SelectItem>
+                          <SelectItem value="Refrigerants">Refrigerants</SelectItem>
+                          <SelectItem value="Motors">Motors</SelectItem>
+                          <SelectItem value="Electrical">Electrical</SelectItem>
+                          <SelectItem value="Controls">Controls</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={editItemForm.control}
+                  name="inStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>In Stock</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field}
+                          onChange={e => field.onChange(Number(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editItemForm.control}
+                  name="minStock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Min Stock</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          {...field}
+                          onChange={e => field.onChange(Number(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editItemForm.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price ($)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          {...field}
+                          onChange={e => field.onChange(Number(e.target.value))} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={editItemForm.control}
+                name="supplier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Supplier</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editItemForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Inventory Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {itemToDelete?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteItem} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Transfer Dialog */}
       <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -1308,6 +1860,7 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
       
+      {/* Removal Dialog */}
       <AlertDialog open={removalDialog.isOpen} onOpenChange={closeRemovalDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

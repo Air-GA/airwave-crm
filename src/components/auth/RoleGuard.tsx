@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
-type AllowedRoles = Array<'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user'>;
+type AllowedRoles = Array<'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'technician' | 'customer'>;
 
 interface RoleGuardProps {
   allowedRoles: AllowedRoles;

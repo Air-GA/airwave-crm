@@ -1,8 +1,10 @@
+
 import {
   BarChart3,
   Calendar,
   ClipboardList,
   Clock,
+  FileText,
   LayoutDashboard,
   MapPin,
   MessageSquare,
@@ -30,7 +32,6 @@ interface NavItem {
   icon: any;
 }
 
-// Update the navigation items to remove the import data page
 export const navigationItems = [
   {
     title: "Dashboard",
@@ -39,8 +40,13 @@ export const navigationItems = [
   },
   {
     title: "Customers",
-    href: "/customers",
+    href: "/customers-list",
     icon: Users,
+  },
+  {
+    title: "Service Addresses",
+    href: "/service-addresses",
+    icon: MapPin,
   },
   {
     title: "Work Orders",
@@ -61,6 +67,11 @@ export const navigationItems = [
     title: "Inventory",
     href: "/inventory",
     icon: Package,
+  },
+  {
+    title: "Purchase Orders",
+    href: "/purchase-orders",
+    icon: FileText,
   },
   {
     title: "Invoices",
@@ -120,8 +131,8 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
           <img 
-            src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-            alt="Air Georgia Logo" 
+            src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" 
+            alt="Air Georgia Home Comfort Systems" 
             className="h-10 w-auto" 
           />
           <button onClick={handleClose}>
@@ -133,13 +144,13 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
       
       {/* Desktop sidebar */}
       <Sidebar 
-        className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
+        className="hidden md:block md:w-64 md:flex-shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
         collapsible="none"
       >
         <SidebarHeader className="flex h-16 items-center px-4 border-b border-sidebar-border">
           <img 
-            src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
-            alt="Air Georgia Logo" 
+            src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" 
+            alt="Air Georgia Home Comfort Systems" 
             className="h-10 w-auto" 
           />
         </SidebarHeader>
@@ -151,7 +162,6 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
   );
 };
 
-// Extracted common menu component
 SideNav.Menu = function SideNavMenu() {
   return (
     <SidebarMenu className="flex flex-col space-y-0.5 p-2">

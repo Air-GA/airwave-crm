@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { apiIntegrationService } from "@/services/apiIntegrationService";
 import {
   Form,
   FormControl,
@@ -59,8 +60,8 @@ import {
   PointerSensor,
   TouchSensor,
 } from "@dnd-kit/core";
+import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 
-// Maintenance order schema
 const maintenanceOrderSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
   address: z.string().min(5, "Valid address is required"),
@@ -76,7 +77,6 @@ const maintenanceOrderSchema = z.object({
 
 type MaintenanceOrderFormValues = z.infer<typeof maintenanceOrderSchema>;
 
-// Quick work order schema for the dialog
 const quickWorkOrderSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
   address: z.string().min(5, "Valid address is required"),
@@ -105,7 +105,6 @@ const Schedule = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Setup drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -120,24 +119,20 @@ const Schedule = () => {
     })
   );
   
-  // Use the work orders from the store
   const workOrders = useWorkOrderStore(state => state.workOrders);
   const setWorkOrders = useWorkOrderStore(state => state.setWorkOrders);
   const updateWorkOrderInStore = useWorkOrderStore(state => state.updateWorkOrder);
   
-  // Default values for the quick work order form
   const defaultValues: Partial<QuickWorkOrderFormValues> = {
     type: "maintenance",
     priority: "medium",
   };
 
-  // Form for quick work order creation
   const form = useForm<QuickWorkOrderFormValues>({
     resolver: zodResolver(quickWorkOrderSchema),
     defaultValues,
   });
   
-  // Form for maintenance appointment creation
   const maintenanceForm = useForm<MaintenanceOrderFormValues>({
     resolver: zodResolver(maintenanceOrderSchema),
   });
@@ -148,7 +143,6 @@ const Schedule = () => {
       setSyncError(null);
       console.log("Loading schedule data...");
       
-      // Load technicians and work orders in parallel
       const [techData, ordersData] = await Promise.all([
         fetchTechnicians().catch(error => {
           console.error("Error fetching technicians:", error);
@@ -160,7 +154,6 @@ const Schedule = () => {
         })
       ]);
       
-      // Even if one of the requests failed, we can still update the UI with what we have
       if (techData && techData.length > 0) {
         console.log(`Loaded ${techData.length} technicians`);
         setTechnicians(techData);
@@ -174,9 +167,9 @@ const Schedule = () => {
       } else {
         console.warn("No work orders data loaded");
         
-        // If we failed to load work orders from the regular fetch, attempt to sync from CRM
         try {
-          console.log("Attempting to sync work orders from CRM...");
+          console.log("Attempting to sync work orders from CRM and QuickBooks...");
+          await apiIntegrationService.quickbooks.syncCustomers();
           const syncedOrders = await syncWorkOrdersFromCRM();
           if (syncedOrders && syncedOrders.length > 0) {
             console.log(`Successfully synced ${syncedOrders.length} work orders from CRM`);
@@ -185,7 +178,7 @@ const Schedule = () => {
             setSyncError("Unable to load work orders. Please try syncing manually.");
           }
         } catch (syncError) {
-          console.error("Error syncing work orders from CRM:", syncError);
+          console.error("Error syncing work orders:", syncError);
           setSyncError("Unable to load work orders. Please try syncing manually.");
         }
       }
@@ -205,9 +198,9 @@ const Schedule = () => {
     loadData();
   }, [toast]);
 
-  // Sync function for work orders
   const handleSyncWorkOrders = async () => {
     try {
+      await apiIntegrationService.quickbooks.syncCustomers();
       const syncedOrders = await syncWorkOrdersFromCRM();
       if (syncedOrders && syncedOrders.length > 0) {
         setWorkOrders(syncedOrders);
@@ -222,7 +215,6 @@ const Schedule = () => {
     }
   };
   
-  // Filter work orders for the selected date, but preserve the original time
   const dateWorkOrders = workOrders.filter(order => {
     const orderDate = new Date(order.scheduledDate);
     return (
@@ -232,25 +224,20 @@ const Schedule = () => {
     );
   });
   
-  // Sort work orders by time
   dateWorkOrders.sort((a, b) => 
     new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
   );
   
-  // Get the selected technician
   const selectedTechnician = technicians.find(tech => tech.id === selectedTechnicianId);
 
-  // Handle work order click to show details
   const handleWorkOrderClick = (workOrder: WorkOrder) => {
     setSelectedWorkOrder(workOrder);
     setIsWorkOrderDetailOpen(true);
   };
 
-  // Handle status update for work order
   const handleWorkOrderStatusUpdate = async () => {
     if (selectedWorkOrder) {
       try {
-        // Refresh data after status change
         await loadData();
         toast({
           title: "Success",
@@ -267,7 +254,6 @@ const Schedule = () => {
     }
   };
 
-  // Handle unassign technician
   const handleUnassignTechnician = async (workOrderId: string) => {
     try {
       const currentOrder = workOrders.find(order => order.id === workOrderId);
@@ -281,7 +267,7 @@ const Schedule = () => {
       
       if (updatedOrder) {
         updateWorkOrderInStore(updatedOrder);
-        await loadData(); // Reload data to reflect changes
+        await loadData();
         toast({
           title: "Success",
           description: `Work order unassigned successfully`,
@@ -297,24 +283,19 @@ const Schedule = () => {
     }
   };
 
-  // Navigate to create new appointment
   const handleNewAppointment = () => {
     navigate('/work-orders/create');
   };
 
-  // Open quick create dialog
   const handleQuickCreate = () => {
     setIsCreateWorkOrderOpen(true);
   };
 
-  // Handle quick create form submission
   const onSubmitQuickCreate = async (data: QuickWorkOrderFormValues) => {
     try {
-      // Set the time part of the date
       const scheduledDate = new Date(date);
-      scheduledDate.setHours(10, 0, 0, 0); // Default to 10:00 AM
+      scheduledDate.setHours(10, 0, 0, 0);
       
-      // Create the work order
       const newWorkOrder = await createWorkOrder({
         customerName: data.customerName,
         email: data.email,
@@ -331,13 +312,9 @@ const Schedule = () => {
           : undefined
       });
 
-      // Refresh work orders
       await loadData();
       
-      // Close the dialog
       setIsCreateWorkOrderOpen(false);
-      
-      // Reset the form
       form.reset();
 
       toast({
@@ -354,26 +331,21 @@ const Schedule = () => {
     }
   };
   
-  // Handle maintenance item drag start
   const handleMaintenanceDragStart = (item: any) => {
     console.log("Maintenance drag started:", item);
   };
   
-  // Handle maintenance item drag end
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (!over) return;
     
-    // Check if we dropped onto the calendar area
     if (over.id === "calendar-drop-area") {
       const maintenanceItem = active.data.current;
       setSelectedMaintenanceItem(maintenanceItem);
       
-      // Pre-populate the maintenance form
       const scheduledDate = new Date(date);
       
-      // Parse the preferred time to set default time slot
       let timeSlot = maintenanceItem.preferredTime || "8:00 AM - 11:00 AM";
       
       maintenanceForm.reset({
@@ -390,11 +362,9 @@ const Schedule = () => {
     }
   };
   
-  // Handle maintenance schedule click
   const handleMaintenanceSchedule = (item: any) => {
     setSelectedMaintenanceItem(item);
     
-    // Pre-populate the maintenance form
     const scheduledDate = new Date(date);
     
     maintenanceForm.reset({
@@ -410,10 +380,8 @@ const Schedule = () => {
     setIsMaintenanceOrderOpen(true);
   };
   
-  // Handle maintenance form submission
   const onSubmitMaintenanceCreate = async (data: MaintenanceOrderFormValues) => {
     try {
-      // Parse the time slot to get start time
       const timeSlot = data.timeSlot;
       const startTimeMatch = timeSlot.match(/(\d+):(\d+)\s*([AP]M)/);
       
@@ -433,16 +401,13 @@ const Schedule = () => {
       if (isPM) hours += 12;
       if (startTimeMatch[3] === "AM" && hours === 12) hours = 0;
       
-      // Create a scheduled date with the correct time
       const scheduledDate = new Date(data.scheduledDate);
       scheduledDate.setHours(hours, minutes, 0, 0);
       
-      // Get the technician name if a technician was selected
       const technicianName = data.technicianId 
         ? technicians.find(t => t.id === data.technicianId)?.name 
         : undefined;
       
-      // Create the maintenance work order
       const workOrder = await createMaintenanceWorkOrder(
         selectedMaintenanceItem,
         data.technicianId,
@@ -450,13 +415,10 @@ const Schedule = () => {
         scheduledDate.toISOString()
       );
 
-      // Refresh work orders
       await loadData();
       
-      // Close the dialog
       setIsMaintenanceOrderOpen(false);
       
-      // Reset the form
       maintenanceForm.reset();
 
       toast({
@@ -482,7 +444,7 @@ const Schedule = () => {
             <p className="text-muted-foreground">Manage appointments and technician schedules</p>
           </div>
           <div className="flex gap-2">
-            <SyncButton onSync={handleSyncWorkOrders} label="Sync Work Orders" />
+            <SyncWithQuickBooks entityType="workOrders" onSyncComplete={handleSyncWorkOrders} />
             <Button onClick={handleQuickCreate} variant="outline">
               <Plus className="mr-2 h-4 w-4" /> Quick Create
             </Button>
@@ -870,7 +832,7 @@ const Schedule = () => {
                               <Button
                                 variant={"outline"}
                                 className={cn(
-                                  "pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal",
                                   !field.value && "text-muted-foreground"
                                 )}
                               >

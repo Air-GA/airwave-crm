@@ -1,8 +1,7 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user';
+type UserRole = 'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'technician' | 'customer';
 
 interface AuthUser {
   id: string;
@@ -108,7 +107,7 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewFuturePaymentPlans: false,
         canViewOnlyOwnWorkOrders: false, // HR doesn't see work orders
       };
-    case 'tech':
+    case 'technician':
       return {
         canViewProfitNumbers: false,
         canEditData: false,
@@ -135,20 +134,6 @@ const getRolePermissions = (role: UserRole | null) => {
         canViewCustomerPaymentHistory: true, // Customers can see their payment history
         canViewFuturePaymentPlans: true, // Customers can see future payment plans
         canViewOnlyOwnWorkOrders: true, // Customers only see own work orders
-      };
-    case 'user':
-      return {
-        canViewProfitNumbers: false,
-        canEditData: true,
-        canViewAllWorkOrders: true,
-        canViewFinancials: false,
-        canViewHRInfo: false,
-        canViewTechnicianData: false,
-        canDispatchTechnicians: false,
-        canViewOnlyAssociatedCustomers: false,
-        canViewCustomerPaymentHistory: true,
-        canViewFuturePaymentPlans: true,
-        canViewOnlyOwnWorkOrders: false,
       };
     default:
       return {
@@ -185,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const params = new URLSearchParams(window.location.search);
     const rolePreview = params.get('role_preview') as UserRole | null;
     
-    if (rolePreview && ['admin', 'manager', 'csr', 'sales', 'hr', 'tech', 'customer', 'user'].includes(rolePreview)) {
+    if (rolePreview && ['admin', 'manager', 'csr', 'sales', 'hr', 'technician', 'customer'].includes(rolePreview)) {
       // If this is a preview iframe, use the role from query params
       if (user && user.role === 'admin') {
         // Create mock associated IDs for role preview
@@ -200,7 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           mockAssociatedIds = ['customer-789']; // The customer's own ID
         }
         // For tech, create mock work order IDs they're assigned to
-        else if (rolePreview === 'tech') {
+        else if (rolePreview === 'technician') {
           mockAssociatedIds = ['workorder-123', 'workorder-456']; // Mock work order IDs
         }
         
@@ -228,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mockAssociatedIds = ['customer-123', 'customer-456']; // Mock customer IDs for sales
     } else if (role === 'customer') {
       mockAssociatedIds = ['customer-789']; // Customer's own ID
-    } else if (role === 'tech') {
+    } else if (role === 'technician') {
       mockAssociatedIds = ['workorder-123', 'workorder-456']; // Work orders assigned to tech
     }
     

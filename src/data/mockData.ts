@@ -93,13 +93,13 @@ export const customers: Customer[] = [
   },
   {
     id: 'c2',
-    name: 'Georgia Tech University',
-    email: 'maintenance@gatech.edu',
+    name: 'Technical College',
+    email: 'maintenance@techcollege.edu',
     phone: '404-555-2345',
     address: '225 North Ave NW, Atlanta, GA 30332',
     serviceAddress: '225 North Ave NW, Atlanta, GA 30332',
     billAddress: 'PO Box 34578, Atlanta, GA 30332',
-    type: 'commercial',
+    type: 'residential',
     createdAt: '2025-01-22T10:15:00Z',
     lastService: '2025-03-05T13:45:00Z',
     serviceAddresses: [
@@ -112,7 +112,7 @@ export const customers: Customer[] = [
         id: 'sa3',
         address: '266 Ferst Drive, Atlanta, GA 30332',
         isPrimary: false,
-        notes: 'Research Building'
+        notes: 'Second Home'
       }
     ]
   },
@@ -137,13 +137,13 @@ export const customers: Customer[] = [
   },
   {
     id: 'c4',
-    name: 'Peachtree Office Center',
-    email: 'facilities@peachtreecenter.com',
+    name: 'Robert Matthews',
+    email: 'robert@example.com',
     phone: '404-555-4567',
     address: '1100 Peachtree St NE, Atlanta, GA 30309',
     serviceAddress: '1100 Peachtree St NE, Atlanta, GA 30309',
     billAddress: '1100 Peachtree St NE, Suite 200, Atlanta, GA 30309',
-    type: 'commercial',
+    type: 'residential',
     createdAt: '2025-01-11T08:45:00Z',
     lastService: '2025-05-01T15:30:00Z',
     serviceAddresses: [
@@ -156,7 +156,7 @@ export const customers: Customer[] = [
         id: 'sa6',
         address: '1120 Peachtree St NE, Atlanta, GA 30309',
         isPrimary: false,
-        notes: 'Annex Building'
+        notes: 'Vacation Home'
       }
     ]
   },
@@ -200,7 +200,7 @@ export const workOrders: WorkOrder[] = [
   {
     id: 'wo2',
     customerId: 'c2',
-    customerName: 'Georgia Tech University',
+    customerName: 'Technical College',
     address: '225 North Ave NW, Atlanta, GA 30332',
     status: 'in-progress',
     priority: 'high',
@@ -226,7 +226,7 @@ export const workOrders: WorkOrder[] = [
   {
     id: 'wo4',
     customerId: 'c4',
-    customerName: 'Peachtree Office Center',
+    customerName: 'Robert Matthews',
     address: '1100 Peachtree St NE, Atlanta, GA 30309',
     status: 'completed',
     priority: 'medium',
