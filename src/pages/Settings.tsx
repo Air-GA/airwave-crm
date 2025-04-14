@@ -79,9 +79,9 @@ const Settings = () => {
   
   // UI State
   const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({
+    quickbooks: false,
     googleMaps: false,
-    smsProvider: false,
-    profitRhino: false
+    smsProvider: false
   });
 
   // Setup forms with react-hook-form
@@ -112,6 +112,10 @@ const Settings = () => {
   const integrationForm = useForm<z.infer<typeof integrationSchema>>({
     resolver: zodResolver(integrationSchema),
     defaultValues: {
+      quickbooks: {
+        connected: integrationSettings.quickbooks.connected,
+        apiKey: integrationSettings.quickbooks.apiKey || "",
+      },
       googleMaps: {
         connected: integrationSettings.googleMaps.connected,
         apiKey: integrationSettings.googleMaps.apiKey || "",
@@ -120,18 +124,6 @@ const Settings = () => {
         connected: integrationSettings.smsProvider.connected,
         apiKey: integrationSettings.smsProvider.apiKey || "",
       },
-      profitRhino: integrationSettings.profitRhino 
-        ? {
-            connected: integrationSettings.profitRhino.connected || false,
-            apiKey: integrationSettings.profitRhino.apiKey || "",
-            apiSecret: integrationSettings.profitRhino.apiSecret || "",
-            environment: integrationSettings.profitRhino.environment || "sandbox",
-            autoSync: integrationSettings.profitRhino.autoSync || false,
-            syncInterval: integrationSettings.profitRhino.syncInterval || 3600000,
-            syncInventory: integrationSettings.profitRhino.syncInventory || false,
-            syncPricing: integrationSettings.profitRhino.syncPricing || false,
-          }
-        : undefined,
     },
   });
 
@@ -177,6 +169,10 @@ const Settings = () => {
   const saveIntegrationForm = (data: z.infer<typeof integrationSchema>) => {
     const updatedSettings = {
       ...integrationSettings,
+      quickbooks: {
+        connected: data.quickbooks.connected,
+        apiKey: data.quickbooks.apiKey,
+      },
       googleMaps: {
         connected: data.googleMaps.connected,
         apiKey: data.googleMaps.apiKey,
@@ -185,7 +181,6 @@ const Settings = () => {
         connected: data.smsProvider.connected,
         apiKey: data.smsProvider.apiKey,
       },
-      profitRhino: data.profitRhino || integrationSettings.profitRhino,
     };
     
     saveIntegrationSettings(updatedSettings);
@@ -1066,6 +1061,176 @@ const Settings = () => {
               <TabsContent value="integrations">
                 <Card>
                   <CardHeader>
+                    <CardTitle>QuickBooks Integration</CardTitle>
+                    <CardDescription>Connect your QuickBooks Online account</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-8 w-8" fill="#2CA01C">
+                          <path d="M21.308 9.885c0-4.745-3.984-8.585-8.89-8.585-3.355 0-6.282 1.84-7.794 4.53H2.831v8.105h1.794c1.526 2.699 4.455 4.525 7.793 4.525 4.906 0 8.89-3.84 8.89-8.575zm-5.225 5.356l-1.655-1.565c-.666.494-1.17.726-1.968.726-1.245 0-2.232-.926-2.232-2.222 0-1.296.987-2.301 2.232-2.301.883 0 1.513.313 2.017.812l1.588-1.735c-.911-.866-2.065-1.346-3.605-1.346-3.074 0-5.45 2.179-5.45 4.57 0 2.393 2.341 4.438 5.45 4.438 1.605 0 2.766-.485 3.623-1.377z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">QuickBooks Online</h3>
+                        <p className="text-sm text-muted-foreground">Sync customers, invoices, and payments</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4">
+                      <FormField
+                        control={integrationForm.control}
+                        name="quickbooks.connected"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel>Connection Status</FormLabel>
+                              <FormDescription>
+                                {field.value ? "Your QuickBooks account is connected" : "Connect to your QuickBooks account"}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      {integrationForm.watch("quickbooks.connected") && (
+                        <>
+                          <FormField
+                            control={integrationForm.control}
+                            name="quickbooks.apiKey"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>API Key</FormLabel>
+                                <div className="flex space-x-2">
+                                  <FormControl>
+                                    <Input
+                                      type={showApiKey.quickbooks ? "text" : "password"}
+                                      placeholder="Enter your QuickBooks API key"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => toggleShowApiKey("quickbooks")}
+                                  >
+                                    {showApiKey.quickbooks ? (
+                                      <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="space-y-2">
+                            <Label>Auto-Sync Settings</Label>
+                            <div className="rounded-md border p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="autosync">Enable Auto-Sync</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Automatically sync data with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="autosync" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="livesync">Live Sync</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Update QuickBooks in real-time when changes occur
+                                  </p>
+                                </div>
+                                <Switch id="livesync" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="syncinterval">Sync Interval</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    How often to sync with QuickBooks
+                                  </p>
+                                </div>
+                                <Select defaultValue="300000">
+                                  <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Select interval" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="60000">Every minute</SelectItem>
+                                    <SelectItem value="300000">Every 5 minutes</SelectItem>
+                                    <SelectItem value="900000">Every 15 minutes</SelectItem>
+                                    <SelectItem value="3600000">Every hour</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Data Sync Options</Label>
+                            <div className="rounded-md border p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="sync-invoices">Invoices</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Sync invoices with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="sync-invoices" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="sync-customers">Customers</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Sync customer data with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="sync-customers" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="sync-inventory">Inventory</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Sync inventory items with QuickBooks
+                                  </p>
+                                </div>
+                                <Switch id="sync-inventory" defaultChecked />
+                              </div>
+                              <Separator />
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                  <Label htmlFor="autopay">Auto-Pay Invoices</Label>
+                                  <p className="text-sm text-muted-foreground">
+                                    Automatically collect payments for invoices
+                                  </p>
+                                </div>
+                                <Switch id="autopay" />
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="button" onClick={() => integrationForm.handleSubmit(saveIntegrationForm)()}>
+                      Save QuickBooks Settings
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                <Card className="mt-4">
+                  <CardHeader>
                     <CardTitle>Google Maps Integration</CardTitle>
                     <CardDescription>Connect to Google Maps for location services</CardDescription>
                   </CardHeader>
@@ -1220,248 +1385,6 @@ const Settings = () => {
                   <CardFooter>
                     <Button type="button" onClick={() => integrationForm.handleSubmit(saveIntegrationForm)()}>
                       Save SMS Settings
-                    </Button>
-                  </CardFooter>
-                </Card>
-
-                <Card className="mt-4">
-                  <CardHeader>
-                    <CardTitle>Profit Rhino Integration</CardTitle>
-                    <CardDescription>Connect to Profit Rhino for service pricing and inventory</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-8 w-8">
-                          <rect width="24" height="24" rx="4" fill="#f0fdf4" />
-                          <path d="M18 8.5c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zM16 15c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55-.45-1-1-1zM8 9c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zM11.5 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zM17.5 12c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="#15803d" />
-                          <path d="M18 5c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1V6c0-.55-.45-1-1-1zM7 16c-.55 0-1 .45-1 1v1c0 .55.45 1 1 1s1-.45 1-1v-1c0-.55-.45-1-1-1zM19.5 11c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM12 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="#16a34a" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="font-medium">Profit Rhino</h3>
-                        <p className="text-sm text-muted-foreground">Sync pricing and inventory data</p>
-                      </div>
-                    </div>
-                    <div className="grid gap-4">
-                      {integrationForm.watch("profitRhino") && (
-                        <>
-                          <FormField
-                            control={integrationForm.control}
-                            name="profitRhino.connected"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between space-x-2 space-y-0 rounded-md border p-4">
-                                <div className="space-y-0.5">
-                                  <FormLabel>Connection Status</FormLabel>
-                                  <FormDescription>
-                                    {field.value ? "Connected to Profit Rhino API" : "Connect to Profit Rhino API"}
-                                  </FormDescription>
-                                </div>
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          
-                          {integrationForm.watch("profitRhino.connected") && (
-                            <>
-                              <FormField
-                                control={integrationForm.control}
-                                name="profitRhino.apiKey"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>API Key</FormLabel>
-                                    <div className="flex space-x-2">
-                                      <FormControl>
-                                        <Input
-                                          type={showApiKey.profitRhino ? "text" : "password"}
-                                          placeholder="Enter your Profit Rhino API key"
-                                          {...field}
-                                        />
-                                      </FormControl>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => toggleShowApiKey("profitRhino")}
-                                      >
-                                        {showApiKey.profitRhino ? (
-                                          <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                          <Eye className="h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </div>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              
-                              <FormField
-                                control={integrationForm.control}
-                                name="profitRhino.apiSecret"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>API Secret</FormLabel>
-                                    <div className="flex space-x-2">
-                                      <FormControl>
-                                        <Input
-                                          type="password"
-                                          placeholder="Enter your Profit Rhino API secret"
-                                          {...field}
-                                        />
-                                      </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              
-                              <FormField
-                                control={integrationForm.control}
-                                name="profitRhino.environment"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Environment</FormLabel>
-                                    <Select 
-                                      onValueChange={field.onChange} 
-                                      defaultValue={field.value}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select environment" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                                        <SelectItem value="production">Production</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              
-                              <div className="space-y-2">
-                                <Label>Sync Settings</Label>
-                                <div className="rounded-md border p-4 space-y-4">
-                                  <FormField
-                                    control={integrationForm.control}
-                                    name="profitRhino.autoSync"
-                                    render={({ field }) => (
-                                      <FormItem className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                          <FormLabel>Enable Auto-Sync</FormLabel>
-                                          <FormDescription>
-                                            Automatically sync data with Profit Rhino
-                                          </FormDescription>
-                                        </div>
-                                        <FormControl>
-                                          <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                  
-                                  <Separator />
-                                  
-                                  <FormField
-                                    control={integrationForm.control}
-                                    name="profitRhino.syncInterval"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Sync Interval</FormLabel>
-                                        <FormDescription>
-                                          How often to sync with Profit Rhino
-                                        </FormDescription>
-                                        <Select 
-                                          onValueChange={(value) => field.onChange(parseInt(value))} 
-                                          defaultValue={field.value?.toString()}
-                                        >
-                                          <FormControl>
-                                            <SelectTrigger className="w-full">
-                                              <SelectValue placeholder="Select interval" />
-                                            </SelectTrigger>
-                                          </FormControl>
-                                          <SelectContent>
-                                            <SelectItem value="300000">Every 5 minutes</SelectItem>
-                                            <SelectItem value="900000">Every 15 minutes</SelectItem>
-                                            <SelectItem value="1800000">Every 30 minutes</SelectItem>
-                                            <SelectItem value="3600000">Every hour</SelectItem>
-                                            <SelectItem value="86400000">Once a day</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <Label>Data Sync Options</Label>
-                                <div className="rounded-md border p-4 space-y-4">
-                                  <FormField
-                                    control={integrationForm.control}
-                                    name="profitRhino.syncInventory"
-                                    render={({ field }) => (
-                                      <FormItem className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                          <FormLabel>Inventory</FormLabel>
-                                          <FormDescription>
-                                            Sync inventory items with Profit Rhino
-                                          </FormDescription>
-                                        </div>
-                                        <FormControl>
-                                          <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                  
-                                  <Separator />
-                                  
-                                  <FormField
-                                    control={integrationForm.control}
-                                    name="profitRhino.syncPricing"
-                                    render={({ field }) => (
-                                      <FormItem className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                          <FormLabel>Pricing</FormLabel>
-                                          <FormDescription>
-                                            Sync pricing data with Profit Rhino
-                                          </FormDescription>
-                                        </div>
-                                        <FormControl>
-                                          <Switch
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button type="button" onClick={() => integrationForm.handleSubmit(saveIntegrationForm)()}>
-                      Save Profit Rhino Settings
                     </Button>
                   </CardFooter>
                 </Card>
