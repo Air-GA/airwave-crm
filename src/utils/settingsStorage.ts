@@ -29,7 +29,7 @@ export interface IntegrationSettings {
     connected: boolean;
     apiKey?: string;
   };
-  profitRhino?: {
+  profitRhino: {
     connected: boolean;
     apiKey?: string;
     apiSecret?: string;

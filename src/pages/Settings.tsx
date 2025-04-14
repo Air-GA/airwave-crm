@@ -183,6 +183,7 @@ const Settings = () => {
   };
 
   const saveIntegrationForm = (data: z.infer<typeof integrationSchema>) => {
+    // Create updatedSettings with proper type enforcement
     const updatedSettings: IntegrationSettings = {
       googleMaps: {
         connected: data.googleMaps.connected,
@@ -192,7 +193,22 @@ const Settings = () => {
         connected: data.smsProvider.connected,
         apiKey: data.smsProvider.apiKey,
       },
-      profitRhino: data.profitRhino
+      profitRhino: {
+        connected: data.profitRhino?.connected || false,
+        apiKey: data.profitRhino?.apiKey || "",
+        apiSecret: data.profitRhino?.apiSecret || "",
+        environment: data.profitRhino?.environment || "sandbox",
+        baseUrl: data.profitRhino?.baseUrl || "",
+        autoSync: data.profitRhino?.autoSync || true,
+        syncInterval: data.profitRhino?.syncInterval || 3600000,
+        syncInventory: data.profitRhino?.syncInventory || true,
+        syncPricing: data.profitRhino?.syncPricing || true,
+        markupPercentage: data.profitRhino?.markupPercentage || 30,
+        useCompanyMarkups: data.profitRhino?.useCompanyMarkups || true,
+        useDefaultMaterialsCost: data.profitRhino?.useDefaultMaterialsCost || false,
+        useCustomPricebook: data.profitRhino?.useCustomPricebook || false,
+        pricebookId: data.profitRhino?.pricebookId || "",
+      }
     };
     
     saveIntegrationSettings(updatedSettings);
