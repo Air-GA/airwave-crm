@@ -29,6 +29,22 @@ export interface IntegrationSettings {
     connected: boolean;
     apiKey?: string;
   };
+  profitRhino?: {
+    connected: boolean;
+    apiKey?: string;
+    apiSecret?: string;
+    environment: "sandbox" | "production";
+    baseUrl?: string;
+    autoSync: boolean;
+    syncInterval: number;
+    syncInventory: boolean;
+    syncPricing: boolean;
+    markupPercentage: number;
+    useCompanyMarkups: boolean;
+    useDefaultMaterialsCost: boolean;
+    useCustomPricebook: boolean;
+    pricebookId?: string;
+  };
 }
 
 export interface UserSettings {
@@ -73,6 +89,20 @@ export const defaultIntegrationSettings: IntegrationSettings = {
   smsProvider: {
     connected: false,
     apiKey: "",
+  },
+  profitRhino: {
+    connected: false,
+    apiKey: "",
+    apiSecret: "",
+    environment: "sandbox",
+    autoSync: true,
+    syncInterval: 3600000,
+    syncInventory: true,
+    syncPricing: true,
+    markupPercentage: 30,
+    useCompanyMarkups: true,
+    useDefaultMaterialsCost: false,
+    useCustomPricebook: false,
   }
 };
 

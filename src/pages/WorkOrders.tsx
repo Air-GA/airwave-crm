@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -11,7 +10,8 @@ import {
   User,
   AlarmClock,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 
 import MainLayout from "@/components/layout/MainLayout";
@@ -91,6 +91,12 @@ export default function WorkOrders() {
     }
   };
 
+  // Handle data sync completion
+  const handleDataSyncComplete = () => {
+    setRefreshTrigger(prev => prev + 1);
+    refetch();
+  };
+
   // Filter work orders based on search query and filters
   const filteredWorkOrders = workOrders
     ? workOrders.filter((order) => {
@@ -155,12 +161,6 @@ export default function WorkOrders() {
     });
   };
 
-  // Handle QuickBooks sync completion
-  const handleQuickBooksSyncComplete = () => {
-    setRefreshTrigger(prev => prev + 1);
-    refetch();
-  };
-
   return (
     <MainLayout pageName="Work Orders">
       <div className="container mx-auto py-6">
@@ -194,7 +194,7 @@ export default function WorkOrders() {
               
               <SyncWithQuickBooks 
                 entityType="workOrders"
-                onSyncComplete={handleQuickBooksSyncComplete}
+                onSyncComplete={handleDataSyncComplete}
               />
               
               <Button asChild>

@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Clock, Plus, UserRound, CalendarClock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Plus, UserRound, CalendarClock, RefreshCw } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { formatDate } from "@/lib/date-utils";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
@@ -168,8 +167,7 @@ const Schedule = () => {
         console.warn("No work orders data loaded");
         
         try {
-          console.log("Attempting to sync work orders from CRM and QuickBooks...");
-          await apiIntegrationService.quickbooks.syncCustomers();
+          console.log("Attempting to sync work orders from CRM...");
           const syncedOrders = await syncWorkOrdersFromCRM();
           if (syncedOrders && syncedOrders.length > 0) {
             console.log(`Successfully synced ${syncedOrders.length} work orders from CRM`);
@@ -200,7 +198,6 @@ const Schedule = () => {
 
   const handleSyncWorkOrders = async () => {
     try {
-      await apiIntegrationService.quickbooks.syncCustomers();
       const syncedOrders = await syncWorkOrdersFromCRM();
       if (syncedOrders && syncedOrders.length > 0) {
         setWorkOrders(syncedOrders);
