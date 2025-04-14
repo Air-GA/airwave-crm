@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Search, Building2, User, FileText, Plus, MapPinOff } from "lucide-react";
@@ -24,14 +25,12 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { Customer, ServiceAddress } from "@/types";
-import { apiIntegrationService } from "@/services/apiIntegrationService";
 
 interface ServiceAddressWithCustomer {
   id: string;
@@ -158,34 +157,6 @@ const ServiceAddresses = () => {
       return data || [];
     },
   });
-
-  const syncAddressesWithQuickBooks = async () => {
-    try {
-      toast({
-        title: "Syncing Service Addresses",
-        description: "Syncing service addresses from QuickBooks...",
-      });
-      
-      await apiIntegrationService.quickbooks.syncServiceAddresses();
-      
-      await refetch();
-      
-      toast({
-        title: "Sync Complete",
-        description: "Successfully synced service addresses from QuickBooks.",
-      });
-      
-      return Promise.resolve();
-    } catch (error) {
-      console.error("Error syncing service addresses:", error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync service addresses from QuickBooks.",
-        variant: "destructive",
-      });
-      return Promise.reject(error);
-    }
-  };
 
   const filteredAddresses = addresses?.filter((addr) =>
     addr.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -353,7 +324,6 @@ const ServiceAddresses = () => {
               <Button onClick={() => setShowAddAddressDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" /> Add Address
               </Button>
-              <SyncWithQuickBooks entityType="workOrders" onSyncComplete={refetch} />
             </div>
           </CardHeader>
           <CardContent>

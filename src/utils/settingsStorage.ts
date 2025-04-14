@@ -21,10 +21,6 @@ export interface CompanySettings {
 }
 
 export interface IntegrationSettings {
-  quickbooks: {
-    connected: boolean;
-    apiKey?: string;
-  };
   googleMaps: {
     connected: boolean;
     apiKey?: string;
@@ -70,10 +66,6 @@ export const defaultCompanySettings: CompanySettings = {
 };
 
 export const defaultIntegrationSettings: IntegrationSettings = {
-  quickbooks: {
-    connected: true,
-    apiKey: "",
-  },
   googleMaps: {
     connected: false,
     apiKey: "",

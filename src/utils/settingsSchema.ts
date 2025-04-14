@@ -20,28 +20,6 @@ export const userFormSchema = z.object({
 });
 
 export const integrationSchema = z.object({
-  quickbooks: z.object({
-    connected: z.boolean().default(false),
-    apiKey: z.string().optional(),
-    clientId: z.string().optional(),
-    clientSecret: z.string().optional(),
-    environment: z.enum(["sandbox", "production"]).default("sandbox"),
-    redirectUri: z.string().optional(),
-    companyId: z.string().optional(),
-    autoSync: z.boolean().default(true),
-    autoSyncInterval: z.number().default(300000), // 5 minutes in milliseconds
-    liveSyncEnabled: z.boolean().default(true),
-    syncInventory: z.boolean().default(true),
-    syncCustomers: z.boolean().default(true),
-    syncInvoices: z.boolean().default(true),
-    enableAutoPay: z.boolean().default(false),
-    // Adding timesheet sync settings
-    syncTimesheets: z.boolean().default(true),
-    payrollIntegration: z.boolean().default(true),
-    overtimeThreshold: z.number().default(40), // Hours per week
-    payrollCycleStart: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]).default("thursday"),
-    payrollCycleEnd: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]).default("wednesday"),
-  }),
   googleMaps: z.object({
     connected: z.boolean(),
     apiKey: z.string().min(5, { message: "API Key is required" }).optional().or(z.literal("")),
