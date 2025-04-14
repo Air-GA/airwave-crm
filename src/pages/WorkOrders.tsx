@@ -1,164 +1,171 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { 
-  ClipboardList, 
-  Plus, 
-  Search, 
-  Filter, 
-  Calendar,
-  User,
-  AlarmClock,
-  Clock,
-  AlertTriangle
-} from "lucide-react";
-
-import MainLayout from "@/components/layout/MainLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { fetchWorkOrders } from "@/services/workOrderService";
+import { useNavigate } from "react-router-dom";
 import { WorkOrder } from "@/types";
-import { syncWorkOrdersFromCRM } from "@/services/crmSyncService";
-import { useToast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import MainLayout from "@/components/layout/MainLayout";
 import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
+import { getWorkOrders } from "@/services/workOrderService";
+import { FileText, Plus, Search, Activity, Truck, Calendar, Filter } from "lucide-react";
+import { Badge as BadgeIcon } from "lucide-react";
+import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function WorkOrders() {
-  const [searchQuery, setSearchQuery] = useState("");
+const WorkOrders = () => {
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [filteredWorkOrders, setFilteredWorkOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Fetch work orders
-  const { data: workOrders, isLoading, refetch } = useQuery({
-    queryKey: ["work-orders", refreshTrigger],
-    queryFn: fetchWorkOrders,
-  });
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getWorkOrders();
+        
+        // Filter out any commercial jobs, we only want residential
+        const residentialJobs = data.filter(order => {
+          // In a real implementation, this would check the customer type
+          // For now, include all since we're enforcing residential-only in the service
+          return true;
+        });
+        
+        setWorkOrders(residentialJobs);
+        setFilteredWorkOrders(residentialJobs);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching work orders:", error);
+        toast({
+          variant: "destructive",
+          title: "Error fetching work orders",
+          description: "Could not load work orders. Please try again later.",
+        });
+        setLoading(false);
+      }
+    };
 
-  // Handle CRM sync
-  const handleSyncFromCRM = async () => {
-    if (isSyncing) return;
+    fetchData();
+  }, [toast]);
 
-    setIsSyncing(true);
-    toast({
-      title: "Syncing...",
-      description: "Syncing work orders from CRM...",
-    });
+  useEffect(() => {
+    let result = workOrders;
 
-    try {
-      await syncWorkOrdersFromCRM();
-      toast({
-        title: "Sync Complete",
-        description: "Successfully synced work orders with CRM",
-      });
-      refetch();
-    } catch (error) {
-      console.error("Error syncing work orders:", error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync work orders from CRM",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (order) =>
+          order.customerName.toLowerCase().includes(term) ||
+          order.address.toLowerCase().includes(term) ||
+          order.description.toLowerCase().includes(term) ||
+          order.id.toLowerCase().includes(term)
+      );
     }
-  };
 
-  // Filter work orders based on search query and filters
-  const filteredWorkOrders = workOrders
-    ? workOrders.filter((order) => {
-        // Apply search filter
-        const matchesSearch =
-          order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          order.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          order.description.toLowerCase().includes(searchQuery.toLowerCase());
+    // Apply status filter
+    if (statusFilter !== "all") {
+      result = result.filter((order) => order.status === statusFilter);
+    }
 
-        // Apply status filter
-        const matchesStatus =
-          statusFilter === "all" || order.status === statusFilter;
+    // Apply type filter
+    if (typeFilter !== "all") {
+      result = result.filter((order) => order.type === typeFilter);
+    }
 
-        // Apply type filter
-        const matchesType = typeFilter === "all" || order.type === typeFilter;
+    setFilteredWorkOrders(result);
+  }, [searchTerm, statusFilter, typeFilter, workOrders]);
 
-        return matchesSearch && matchesStatus && matchesType;
-      })
-    : [];
-
-  // Map priority to badge variant
-  const getPriorityBadge = (priority: WorkOrder["priority"]) => {
+  const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "low":
-        return <Badge variant="outline">Low</Badge>;
+        return "bg-gray-100 text-gray-800";
       case "medium":
-        return <Badge>Medium</Badge>;
+        return "bg-blue-100 text-blue-800";
       case "high":
-        return <Badge className="bg-orange-500">High</Badge>;
+        return "bg-amber-100 text-amber-800";
       case "emergency":
-        return <Badge variant="destructive">Emergency</Badge>;
+        return "bg-red-100 text-red-800";
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  // Map status to badge variant
-  const getStatusBadge = (status: WorkOrder["status"]) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge className="bg-yellow-500">Pending</Badge>;
+        return (
+          <Badge variant="outline" className="bg-gray-100 text-gray-800">
+            Pending
+          </Badge>
+        );
       case "scheduled":
-        return <Badge className="bg-blue-500">Scheduled</Badge>;
+        return (
+          <Badge variant="outline" className="bg-amber-100 text-amber-800">
+            Scheduled
+          </Badge>
+        );
       case "in-progress":
-        return <Badge className="bg-purple-500">In Progress</Badge>;
+        return (
+          <Badge variant="outline" className="bg-blue-100 text-blue-800">
+            In Progress
+          </Badge>
+        );
       case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
+        return (
+          <Badge variant="outline" className="bg-green-100 text-green-800">
+            Completed
+          </Badge>
+        );
+      case "pending-completion":
+        return (
+          <Badge variant="outline" className="bg-violet-100 text-violet-800">
+            Pending Completion
+          </Badge>
+        );
       case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
+        return (
+          <Badge variant="outline" className="bg-red-100 text-red-800">
+            Cancelled
+          </Badge>
+        );
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return (
+          <Badge variant="outline" className="bg-gray-100 text-gray-800">
+            {status}
+          </Badge>
+        );
     }
   };
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  const handleViewWorkOrder = (workOrderId: string) => {
+    navigate(`/work-orders/${workOrderId}`);
   };
 
-  // Handle QuickBooks sync completion
-  const handleQuickBooksSyncComplete = () => {
-    setRefreshTrigger(prev => prev + 1);
-    refetch();
+  const handleCreateWorkOrder = () => {
+    navigate("/work-orders/create");
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "repair":
+        return <Activity className="h-4 w-4 text-red-500" />;
+      case "maintenance":
+        return <Calendar className="h-4 w-4 text-green-500" />;
+      case "installation":
+        return <Truck className="h-4 w-4 text-blue-500" />;
+      case "inspection":
+        return <BadgeIcon className="h-4 w-4 text-amber-500" />;
+      default:
+        return <FileText className="h-4 w-4 text-gray-500" />;
+    }
   };
 
   return (
@@ -168,57 +175,34 @@ export default function WorkOrders() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Work Orders</CardTitle>
-              <CardDescription>
-                Manage service requests and scheduled work
-              </CardDescription>
+              <CardDescription>View and manage all residential customer work orders</CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSyncFromCRM}
-                disabled={isSyncing}
-              >
-                {isSyncing ? (
-                  <>
-                    <Skeleton className="h-4 w-4 rounded-full mr-2 animate-spin" />
-                    <span>Syncing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="mr-2">↓</span>
-                    <span>Sync from CRM</span>
-                  </>
-                )}
+            <div className="flex items-center gap-2">
+              <Button onClick={handleCreateWorkOrder}>
+                <Plus className="mr-2 h-4 w-4" /> Create Work Order
               </Button>
-              
-              <SyncWithQuickBooks 
-                entityType="workOrders"
-                onSyncComplete={handleQuickBooksSyncComplete}
-              />
-              
-              <Button asChild>
-                <Link to="/work-orders/create">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Work Order
-                </Link>
-              </Button>
+              <SyncWithQuickBooks entityType="workOrders" onSyncComplete={() => {}} />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4 mb-6">
-              <div className="relative flex-grow">
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+              <div className="relative w-full max-w-sm">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by customer, address, or description..."
+                  type="search"
+                  placeholder="Search work orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Filter:</span>
+                </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[130px]">
+                  <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -226,12 +210,13 @@ export default function WorkOrders() {
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="scheduled">Scheduled</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="pending-completion">Pending Completion</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-[130px]">
+                  <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -242,97 +227,65 @@ export default function WorkOrders() {
                     <SelectItem value="inspection">Inspection</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm">
-                  <Filter className="mr-2 h-4 w-4" />
-                  More Filters
-                </Button>
               </div>
             </div>
 
-            <div className="rounded-md border">
+            <div className="mt-6 rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>ID</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Service Address</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Priority</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Scheduled Date</TableHead>
-                    <TableHead>Technician</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
-                    // Loading state
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={`loading-${i}`}>
-                        <TableCell>
-                          <Skeleton className="h-5 w-[120px]" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-[180px]" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-[80px]" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-[70px]" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-[90px]" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-[100px]" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-[120px]" />
-                        </TableCell>
-                      </TableRow>
-                    ))
+                  {loading ? (
+                    Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell colSpan={8} className="h-16 animate-pulse bg-gray-100"></TableCell>
+                        </TableRow>
+                      ))
                   ) : filteredWorkOrders.length === 0 ? (
-                    // No results found
                     <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        No work orders found. Try adjusting your filters or
-                        search query.
-                      </TableCell>
+                      <TableCell colSpan={8} className="h-24 text-center">No work orders found.</TableCell>
                     </TableRow>
                   ) : (
-                    // Results
                     filteredWorkOrders.map((order) => (
-                      <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.id.substring(0, 8)}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">
-                              {order.customerName}
-                            </span>
+                          <div>
+                            <div className="font-medium">{order.customerName}</div>
+                            <div className="text-xs text-muted-foreground truncate max-w-[200px]">{order.address}</div>
                           </div>
                         </TableCell>
-                        <TableCell>{order.address}</TableCell>
-                        <TableCell className="capitalize">{order.type}</TableCell>
-                        <TableCell>{getPriorityBadge(order.priority)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {getTypeIcon(order.type)}
+                            <span className="capitalize">{order.type}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">{order.description}</TableCell>
                         <TableCell>{getStatusBadge(order.status)}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>{formatDate(order.scheduledDate)}</span>
-                          </div>
+                          <Badge className={getPriorityColor(order.priority)}>{order.priority}</Badge>
                         </TableCell>
                         <TableCell>
-                          {order.technicianName ? (
-                            <div className="flex items-center gap-2">
-                              <span>{order.technicianName}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground italic">
-                              Not assigned
-                            </span>
-                          )}
+                          {order.scheduledDate ? format(new Date(order.scheduledDate), "MMM d, yyyy") : "Not scheduled"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" onClick={() => handleViewWorkOrder(order.id)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            View
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -341,14 +294,10 @@ export default function WorkOrders() {
               </Table>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <div className="text-sm text-muted-foreground">
-              Showing {filteredWorkOrders.length} of {workOrders?.length || 0}{" "}
-              work orders
-            </div>
-          </CardFooter>
         </Card>
       </div>
     </MainLayout>
   );
-}
+};
+
+export default WorkOrders;

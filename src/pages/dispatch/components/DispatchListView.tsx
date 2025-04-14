@@ -35,7 +35,7 @@ const DispatchListView = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {unassignedWorkOrders.length > 0 ? (
+              {unassignedWorkOrders && unassignedWorkOrders.length > 0 ? (
                 unassignedWorkOrders.map(order => (
                   <DraggableWorkOrder 
                     key={order.id} 
@@ -84,7 +84,7 @@ const DispatchListView = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {technicianWorkOrders.length > 0 ? (
+              {technicianWorkOrders && technicianWorkOrders.length > 0 ? (
                 technicianWorkOrders.map(order => (
                   <div key={order.id} className="relative">
                     <Button

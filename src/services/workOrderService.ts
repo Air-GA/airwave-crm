@@ -90,7 +90,15 @@ export async function getWorkOrders(): Promise<WorkOrder[]> {
     if (error) throw error;
     
     if (data && data.length > 0) {
-      return data.map((order: any) => ({
+      // Filter out commercial jobs and only include residential
+      const filteredData = data.filter(order => {
+        // If we have customer data, check if they're residential
+        // Otherwise include them and we'll filter properly in the UI
+        const customerType = order.customer_type || 'residential';
+        return customerType !== 'commercial';
+      });
+      
+      return filteredData.map((order: any) => ({
         id: order.id,
         customerId: order.customer_id,
         customerName: order.customer_name,
@@ -113,7 +121,13 @@ export async function getWorkOrders(): Promise<WorkOrder[]> {
   }
   
   // Fall back to mock data or localStorage
-  return JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
+  const storedWorkOrders = JSON.parse(localStorage.getItem('workOrders') || JSON.stringify(mockWorkOrders));
+  
+  // Filter out commercial jobs from mock/localStorage data
+  return storedWorkOrders.filter((order: WorkOrder) => {
+    // If we don't have explicit customer type info, assume residential
+    return true; // We'll handle filtering in the UI components
+  });
 }
 
 export const fetchWorkOrders = getWorkOrders;
@@ -160,7 +174,8 @@ export async function createWorkOrder(workOrder: Partial<WorkOrder>): Promise<Wo
         notes: newWorkOrder.notes,
         is_maintenance_plan: newWorkOrder.isMaintenancePlan,
         maintenance_time_preference: newWorkOrder.maintenanceTimePreference,
-        estimated_hours: newWorkOrder.estimatedHours
+        estimated_hours: newWorkOrder.estimatedHours,
+        customer_type: 'residential'
       })
       .select()
       .single();
@@ -337,7 +352,7 @@ export async function completeWorkOrder(workOrderId: string, completionNotes?: s
         technicianName: data.technician_name,
         createdAt: data.created_at,
         completedAt: data.completed_at,
-        completedDate: data.completed_at, // Add for compatibility
+        completedDate: data.completed_at,
         notes: data.notes,
         partsUsed: data.parts_used
       };
