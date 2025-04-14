@@ -67,7 +67,8 @@ import {
   saveUserSettings,
   CompanySettings,
   IntegrationSettings,
-  UserSettings
+  UserSettings,
+  defaultIntegrationSettings
 } from "@/utils/settingsStorage";
 import { companyFormSchema, userFormSchema, integrationSchema } from "@/utils/settingsSchema";
 
@@ -109,6 +110,9 @@ const Settings = () => {
     },
   });
 
+  // Ensure we have default values for profitRhino
+  const profitRhinoDefaults = integrationSettings.profitRhino || defaultIntegrationSettings.profitRhino;
+
   const integrationForm = useForm<z.infer<typeof integrationSchema>>({
     resolver: zodResolver(integrationSchema),
     defaultValues: {
@@ -120,18 +124,22 @@ const Settings = () => {
         connected: integrationSettings.smsProvider.connected,
         apiKey: integrationSettings.smsProvider.apiKey || "",
       },
-      profitRhino: integrationSettings.profitRhino 
-        ? {
-            connected: integrationSettings.profitRhino.connected || false,
-            apiKey: integrationSettings.profitRhino.apiKey || "",
-            apiSecret: integrationSettings.profitRhino.apiSecret || "",
-            environment: integrationSettings.profitRhino.environment || "sandbox",
-            autoSync: integrationSettings.profitRhino.autoSync || false,
-            syncInterval: integrationSettings.profitRhino.syncInterval || 3600000,
-            syncInventory: integrationSettings.profitRhino.syncInventory || false,
-            syncPricing: integrationSettings.profitRhino.syncPricing || false,
-          }
-        : undefined,
+      profitRhino: {
+        connected: profitRhinoDefaults.connected,
+        apiKey: profitRhinoDefaults.apiKey || "",
+        apiSecret: profitRhinoDefaults.apiSecret || "",
+        environment: profitRhinoDefaults.environment,
+        baseUrl: profitRhinoDefaults.baseUrl || "",
+        autoSync: profitRhinoDefaults.autoSync,
+        syncInterval: profitRhinoDefaults.syncInterval,
+        syncInventory: profitRhinoDefaults.syncInventory,
+        syncPricing: profitRhinoDefaults.syncPricing,
+        markupPercentage: profitRhinoDefaults.markupPercentage,
+        useCompanyMarkups: profitRhinoDefaults.useCompanyMarkups,
+        useDefaultMaterialsCost: profitRhinoDefaults.useDefaultMaterialsCost,
+        useCustomPricebook: profitRhinoDefaults.useCustomPricebook,
+        pricebookId: profitRhinoDefaults.pricebookId || "",
+      },
     },
   });
 
@@ -175,8 +183,7 @@ const Settings = () => {
   };
 
   const saveIntegrationForm = (data: z.infer<typeof integrationSchema>) => {
-    const updatedSettings = {
-      ...integrationSettings,
+    const updatedSettings: IntegrationSettings = {
       googleMaps: {
         connected: data.googleMaps.connected,
         apiKey: data.googleMaps.apiKey,
@@ -185,7 +192,7 @@ const Settings = () => {
         connected: data.smsProvider.connected,
         apiKey: data.smsProvider.apiKey,
       },
-      profitRhino: data.profitRhino || integrationSettings.profitRhino,
+      profitRhino: data.profitRhino
     };
     
     saveIntegrationSettings(updatedSettings);

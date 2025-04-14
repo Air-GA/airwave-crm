@@ -89,6 +89,22 @@ export const defaultIntegrationSettings: IntegrationSettings = {
   smsProvider: {
     connected: false,
     apiKey: "",
+  },
+  profitRhino: {
+    connected: false,
+    apiKey: "",
+    apiSecret: "",
+    environment: "sandbox",
+    baseUrl: "",
+    autoSync: true,
+    syncInterval: 3600000, // 1 hour in milliseconds
+    syncInventory: true,
+    syncPricing: true,
+    markupPercentage: 30, // Default markup percentage
+    useCompanyMarkups: true,
+    useDefaultMaterialsCost: false,
+    useCustomPricebook: false,
+    pricebookId: "",
   }
 };
 

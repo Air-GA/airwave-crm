@@ -30,7 +30,7 @@ export const integrationSchema = z.object({
   }),
   // Adding Profit Rhino API integration
   profitRhino: z.object({
-    connected: z.boolean().default(false),
+    connected: z.boolean(),
     apiKey: z.string().optional(),
     apiSecret: z.string().optional(),
     environment: z.enum(["sandbox", "production"]).default("sandbox"),
@@ -44,7 +44,7 @@ export const integrationSchema = z.object({
     useDefaultMaterialsCost: z.boolean().default(false),
     useCustomPricebook: z.boolean().default(false),
     pricebookId: z.string().optional(),
-  }),
+  }).optional(),
 });
 
 // Define the UserRole type to include all roles in one place
