@@ -324,45 +324,42 @@ const Dispatch = () => {
           </CardHeader>
           <CardContent>
             <DndContext>
-              {/* The Tabs component needs to wrap all TabsContent components */}
-              <Tabs value={viewMode} onValueChange={setViewMode}>
-                <TabsContent value="list" className="mt-0">
-                  <DispatchListView 
-                    unassignedWorkOrders={unassignedWorkOrders}
-                    technicians={technicians}
-                    selectedTechnicianId={selectedTechnicianId}
-                    technicianWorkOrders={technicianWorkOrders}
-                    activeOrderId={activeWorkOrderId}
-                    onSelectTechnician={handleSelectTechnician}
-                    onUnassignWorkOrder={handleUnassignWorkOrder}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="map" className="mt-0">
-                  <Card>
-                    <CardContent className="p-0">
-                      <DispatchMap 
-                        technicians={technicians}
-                        onSelectTechnician={handleSelectTechnician}
-                        selectedTechnicianId={selectedTechnicianId}
-                        highlightedLocation={highlightedLocation}
-                      />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="calendar" className="mt-0">
-                  <DispatchCalendarView
-                    workOrders={workOrders}
-                    technicians={technicians}
-                    selectedTechnicianId={selectedTechnicianId}
-                    activeOrderId={activeWorkOrderId}
-                    onDateSelect={handleDateSelect}
-                    onWorkOrderClick={handleWorkOrderSelect}
-                    unassignedWorkOrders={unassignedWorkOrders}
-                  />
-                </TabsContent>
-              </Tabs>
+              <TabsContent value="list" className="mt-0">
+                <DispatchListView 
+                  unassignedWorkOrders={unassignedWorkOrders}
+                  technicians={technicians}
+                  selectedTechnicianId={selectedTechnicianId}
+                  technicianWorkOrders={technicianWorkOrders}
+                  activeOrderId={activeWorkOrderId}
+                  onSelectTechnician={handleSelectTechnician}
+                  onUnassignWorkOrder={handleUnassignWorkOrder}
+                />
+              </TabsContent>
+              
+              <TabsContent value="map" className="mt-0">
+                <Card>
+                  <CardContent className="p-0">
+                    <DispatchMap 
+                      technicians={technicians}
+                      onSelectTechnician={handleSelectTechnician}
+                      selectedTechnicianId={selectedTechnicianId}
+                      highlightedLocation={highlightedLocation}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="calendar" className="mt-0">
+                <DispatchCalendarView
+                  workOrders={workOrders}
+                  technicians={technicians}
+                  selectedTechnicianId={selectedTechnicianId}
+                  activeOrderId={activeWorkOrderId}
+                  onDateSelect={handleDateSelect}
+                  onWorkOrderClick={handleWorkOrderSelect}
+                  unassignedWorkOrders={unassignedWorkOrders}
+                />
+              </TabsContent>
             </DndContext>
           </CardContent>
         </Card>
