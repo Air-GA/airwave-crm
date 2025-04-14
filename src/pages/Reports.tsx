@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Download, Filter, BarChart, FileText, Calendar, Users, Plus } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddReportDialog } from "@/components/reports/AddReportDialog";
 import { generateReportData, exportReportToCsv } from "@/services/reportService";
-import { ReportViewer } from "@/components/reports/ReportViewer";
+import ReportViewer from "@/components/reports/ReportViewer";
 import { toast } from "sonner";
 
 // Mock reports data
@@ -23,7 +22,7 @@ const mockReports = [
 export default function Reports() {
   const [selectedReportCategory, setSelectedReportCategory] = useState<string>("all");
   const [isAddReportOpen, setIsAddReportOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<{ id: number; name: string; category: string } | null>(null);
+  const [selectedReport, setSelectedReport] = useState<{ id: number; name: string; category: string; date: string } | null>(null);
   const [isReportViewerOpen, setIsReportViewerOpen] = useState(false);
   
   const filteredReports = selectedReportCategory === "all" 
