@@ -67,7 +67,7 @@ const DispatchListView = ({
                   technician={technician}
                   isSelected={selectedTechnicianId === technician.id}
                   onClick={() => onSelectTechnician(technician.id)}
-                  assignedCount={workOrders.filter(order => order.technicianId === technician.id).length}
+                  assignedCount={technicianWorkOrders.filter(order => order.technicianId === technician.id).length}
                 />
               ))}
             </div>

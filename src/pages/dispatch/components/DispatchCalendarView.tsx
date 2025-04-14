@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
+import { Calendar, Views, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import moment from 'moment';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkOrder, Technician } from '@/types';
+import { Badge } from '@/components/ui/badge';
 import { useDroppable } from '@dnd-kit/core';
-import { DraggableWorkOrder } from './DraggableWorkOrder';
+import DraggableWorkOrder from './DraggableWorkOrder';
 
 // Set up the localizer
 const localizer = momentLocalizer(moment);
@@ -30,6 +31,7 @@ interface CalendarEvent {
   technicianId: string | null;
   technicianName: string | null;
   statusClass: string;
+  priorityClass: string;
 }
 
 const DispatchCalendarView = ({
@@ -41,6 +43,7 @@ const DispatchCalendarView = ({
   onWorkOrderClick,
   unassignedWorkOrders
 }: DispatchCalendarViewProps) => {
+  const [viewMode, setViewMode] = useState('week');
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Filter work orders based on selected technician
@@ -56,7 +59,7 @@ const DispatchCalendarView = ({
     const duration = order.estimatedHours ? order.estimatedHours : 2;
     const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
     
-    // Determine status classes for styling
+    // Determine status and priority classes for styling
     let statusClass = '';
     switch (order.status) {
       case 'scheduled': statusClass = 'bg-amber-100 border-amber-400'; break;
@@ -64,6 +67,15 @@ const DispatchCalendarView = ({
       case 'completed': statusClass = 'bg-green-100 border-green-400'; break;
       case 'pending': statusClass = 'bg-gray-100 border-gray-400'; break;
       default: statusClass = 'bg-gray-100 border-gray-400';
+    }
+    
+    let priorityClass = '';
+    switch (order.priority) {
+      case 'low': priorityClass = 'text-gray-700'; break;
+      case 'medium': priorityClass = 'text-blue-700'; break;
+      case 'high': priorityClass = 'text-amber-700'; break;
+      case 'emergency': priorityClass = 'text-red-700'; break;
+      default: priorityClass = 'text-gray-700';
     }
     
     return {
@@ -74,7 +86,8 @@ const DispatchCalendarView = ({
       workOrder: order,
       technicianId: order.technicianId || null,
       technicianName: order.technicianName || null,
-      statusClass
+      statusClass,
+      priorityClass,
     };
   });
 
@@ -88,7 +101,7 @@ const DispatchCalendarView = ({
       className={`${event.statusClass} p-1 border-l-4 rounded overflow-hidden text-xs cursor-pointer`}
       onClick={() => onWorkOrderClick(event.id)}
     >
-      <div className="font-medium">{event.title}</div>
+      <div className={`font-medium ${event.priorityClass}`}>{event.title}</div>
       <div className="text-xs mt-0.5 truncate">
         {event.technicianName && `Tech: ${event.technicianName}`}
       </div>
@@ -99,8 +112,12 @@ const DispatchCalendarView = ({
     setCurrentDate(newDate);
   };
 
+  const handleViewChange = (view: string) => {
+    setViewMode(view);
+  };
+
   return (
-    <Card>
+    <Card className="mt-4">
       <CardContent className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-medium">
@@ -108,6 +125,20 @@ const DispatchCalendarView = ({
               ? `Schedule for ${technicians.find(t => t.id === selectedTechnicianId)?.name || 'Technician'}`
               : 'All Scheduled Work Orders'}
           </h3>
+          <div className="flex space-x-2">
+            <Badge 
+              variant="outline" 
+              className="bg-amber-100 text-amber-700 hover:bg-amber-100"
+            >
+              Scheduled
+            </Badge>
+            <Badge 
+              variant="outline" 
+              className="bg-blue-100 text-blue-700 hover:bg-blue-100"
+            >
+              In Progress
+            </Badge>
+          </div>
         </div>
         
         <div ref={setNodeRef} className="h-[600px]">
@@ -116,9 +147,11 @@ const DispatchCalendarView = ({
             events={calendarEvents}
             startAccessor="start"
             endAccessor="end"
-            defaultView="week"
+            views={['day', 'week', 'month']}
+            defaultView={Views.WEEK}
             date={currentDate}
             onNavigate={handleNavigate}
+            onView={(view) => handleViewChange(view)}
             step={30}
             timeslots={2}
             selectable
