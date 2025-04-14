@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +12,7 @@ import DispatchListView from "./components/DispatchListView";
 import DispatchCalendarView from "./components/DispatchCalendarView";
 import { getWorkOrders, useWorkOrderStore } from "@/services/workOrderService";
 import { Technician, WorkOrder } from "@/types";
-import { getTechnicians } from "@/services/technicianService";
+import { fetchTechnicians } from "@/services/technicianService";
 import { useToast } from "@/hooks/use-toast";
 import { useDndMonitor, DndContext } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
