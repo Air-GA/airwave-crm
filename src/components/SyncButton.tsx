@@ -54,20 +54,20 @@ export function SyncButton({
     setIsSyncing(true);
     toast({
       title: "Syncing...",
-      description: `Syncing ${label} from CRM...`,
+      description: `Syncing ${label} from external service...`,
     });
 
     try {
       await onSync();
       toast({
         title: "Sync Complete",
-        description: `Successfully synced ${label} with QuickBooks`,
+        description: `Successfully synced ${label}`,
       });
     } catch (error) {
       console.error(`Error syncing ${label}:`, error);
       toast({
         title: "Sync Failed",
-        description: `Failed to sync ${label} from CRM`,
+        description: `Failed to sync ${label} from external service`,
         variant: "destructive",
       });
     } finally {

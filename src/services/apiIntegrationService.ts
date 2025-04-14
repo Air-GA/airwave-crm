@@ -14,28 +14,7 @@ interface ProfitRhinoInventoryItem {
   description?: string;
 }
 
-interface TimesheetEntry {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  date: string;
-  clockIn: string;
-  clockOut: string;
-  hours: number;
-  jobId?: string;
-  customerName?: string;
-  notes?: string;
-}
-
-export interface QuickBooksEmployee {
-  id: string;
-  displayName: string;
-  givenName: string;
-  familyName: string;
-  active: boolean;
-}
-
-export interface ProfitRhinoPricebook {
+interface ProfitRhinoPricebook {
   id: string;
   name: string;
   description?: string;
@@ -44,76 +23,9 @@ export interface ProfitRhinoPricebook {
 }
 
 /**
- * Service for handling API integrations with QuickBooks and Profit Rhino
+ * Service for handling API integrations with Profit Rhino
  */
 export const apiIntegrationService = {
-  // QuickBooks Integration
-  quickbooks: {
-    async syncTimesheets(fromDate: string, toDate: string): Promise<boolean> {
-      try {
-        // Get timesheets from local storage
-        const clockEvents = localStorage.getItem('clockEvents');
-        const timesheetEntries = clockEvents ? JSON.parse(clockEvents) : [];
-        
-        // Format timesheet entries for QuickBooks
-        const qbTimesheetEntries = formatTimesheetsForQuickBooks(timesheetEntries);
-        
-        // This would be an actual API call to QuickBooks in a real implementation
-        console.log('Syncing timesheets with QuickBooks:', qbTimesheetEntries);
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        toast.success("Timesheets synchronized with QuickBooks");
-        return true;
-      } catch (error) {
-        console.error('Error syncing timesheets with QuickBooks:', error);
-        toast.error("Failed to sync timesheets with QuickBooks");
-        return false;
-      }
-    },
-    
-    async syncInvoices(): Promise<boolean> {
-      try {
-        // This would be an actual API call to QuickBooks in a real implementation
-        console.log('Syncing invoices with QuickBooks');
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        toast.success("Invoices synchronized with QuickBooks");
-        return true;
-      } catch (error) {
-        console.error('Error syncing invoices with QuickBooks:', error);
-        toast.error("Failed to sync invoices with QuickBooks");
-        return false;
-      }
-    },
-    
-    async getEmployees(): Promise<QuickBooksEmployee[]> {
-      try {
-        // This would be an actual API call to QuickBooks in a real implementation
-        console.log('Fetching employees from QuickBooks');
-        
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Return mock data
-        return [
-          { id: "1", displayName: "Mike Johnson", givenName: "Mike", familyName: "Johnson", active: true },
-          { id: "2", displayName: "Sarah Williams", givenName: "Sarah", familyName: "Williams", active: true },
-          { id: "3", displayName: "David Chen", givenName: "David", familyName: "Chen", active: true },
-          { id: "4", displayName: "Emily Davis", givenName: "Emily", familyName: "Davis", active: true },
-          { id: "5", displayName: "Robert Brown", givenName: "Robert", familyName: "Brown", active: false }
-        ];
-      } catch (error) {
-        console.error('Error fetching employees from QuickBooks:', error);
-        toast.error("Failed to fetch employees from QuickBooks");
-        return [];
-      }
-    }
-  },
-  
   // Profit Rhino Integration
   profitRhino: {
     async syncInventory(): Promise<boolean> {
@@ -249,37 +161,5 @@ export const apiIntegrationService = {
     }
   }
 };
-
-// Helper function to format timesheet entries for QuickBooks
-function formatTimesheetsForQuickBooks(entries: any[]): TimesheetEntry[] {
-  return entries.reduce((acc: TimesheetEntry[], event: any, index: number, arr: any[]) => {
-    // Only process 'in' events that have matching 'out' events
-    if (event.type === 'in') {
-      const outEvent = arr.find(e => 
-        e.type === 'out' && 
-        e.userId === event.userId && 
-        new Date(e.timestamp).getTime() > new Date(event.timestamp).getTime()
-      );
-      
-      if (outEvent) {
-        const clockIn = new Date(event.timestamp);
-        const clockOut = new Date(outEvent.timestamp);
-        const hours = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
-        
-        acc.push({
-          id: `${event.id}-${outEvent.id}`,
-          employeeId: event.userId,
-          employeeName: event.userName,
-          date: clockIn.toISOString().split('T')[0],
-          clockIn: clockIn.toISOString(),
-          clockOut: clockOut.toISOString(),
-          hours: parseFloat(hours.toFixed(2))
-        });
-      }
-    }
-    
-    return acc;
-  }, []);
-}
 
 export default apiIntegrationService;
