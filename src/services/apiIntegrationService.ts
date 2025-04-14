@@ -1,71 +1,61 @@
 
-// Mock API integration service
-export const apiIntegrationService = {
-  quickbooks: {
-    syncCustomers: async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, this would be an API call to sync QuickBooks customers
-      console.log("Syncing customers from QuickBooks");
-      
-      return { success: true, message: "Customers synced successfully" };
-    },
-    
-    syncServiceAddresses: async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, this would be an API call to sync QuickBooks addresses
-      console.log("Syncing service addresses from QuickBooks");
-      
-      return { success: true, message: "Service addresses synced successfully" };
-    },
+// Api Integration Service for external services like QuickBooks, CRM, etc.
 
-    // Adding the missing methods
-    syncWorkOrders: async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log("Syncing work orders from QuickBooks");
-      
-      return { success: true, message: "Work orders synced successfully" };
-    },
-    
+// Mock implementation for now
+class ApiIntegrationService {
+  quickbooks = {
+    // Sync invoices with QuickBooks
     syncInvoices: async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log("Syncing invoices from QuickBooks");
-      
+      console.log("Syncing invoices with QuickBooks...");
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       return { success: true, message: "Invoices synced successfully" };
     },
-    
-    syncReports: async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log("Syncing reports from QuickBooks");
-      
-      return { success: true, message: "Reports synced successfully" };
-    },
-    
-    syncTimesheets: async (fromDate?: string, toDate?: string) => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log(`Syncing timesheets from QuickBooks (${fromDate} to ${toDate})`);
-      
+
+    // Sync timesheets with QuickBooks
+    syncTimesheets: async (startDate: string, endDate: string) => {
+      console.log(`Syncing timesheets from ${startDate} to ${endDate} with QuickBooks...`);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       return { success: true, message: "Timesheets synced successfully" };
     },
-    
-    syncPurchaseOrders: async () => {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log("Syncing purchase orders from QuickBooks");
-      
-      return { success: true, message: "Purchase orders synced successfully" };
+
+    // Sync customers with QuickBooks
+    syncCustomers: async () => {
+      console.log("Syncing customers with QuickBooks...");
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return { success: true, message: "Customers synced successfully" };
     },
-  },
-};
+
+    // Sync work orders with QuickBooks
+    syncWorkOrders: async () => {
+      console.log("Syncing work orders with QuickBooks...");
+      // First sync customers to ensure all customer data is up to date
+      await this.quickbooks.syncCustomers();
+      // Then sync work orders
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return { success: true, message: "Work orders synced successfully" };
+    },
+
+    // Sync reports with QuickBooks
+    syncReports: async () => {
+      console.log("Syncing reports with QuickBooks...");
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1800));
+      return { success: true, message: "Reports synced successfully" };
+    },
+
+    // Sync purchase orders with QuickBooks
+    syncPurchaseOrders: async () => {
+      console.log("Syncing purchase orders with QuickBooks...");
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1700));
+      return { success: true, message: "Purchase orders synced successfully" };
+    }
+  };
+
+  // More integrations can be added here
+}
+
+export const apiIntegrationService = new ApiIntegrationService();

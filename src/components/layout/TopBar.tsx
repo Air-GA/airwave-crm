@@ -15,19 +15,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
 import { ReactNode } from "react";
-import { toast } from "sonner";
 
 interface TopBarProps {
   setSidebarOpen: (open: boolean) => void;
   children?: ReactNode;
-}
-
-interface Notification {
-  id: number;
-  title: string;
-  description: string;
-  time: string;
-  link: string;
 }
 
 const TopBar = ({ setSidebarOpen, children }: TopBarProps) => {
@@ -35,37 +26,6 @@ const TopBar = ({ setSidebarOpen, children }: TopBarProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { setTheme, theme } = useTheme();
-  
-  // Sample notifications data
-  const notifications: Notification[] = [
-    {
-      id: 1,
-      title: "New work order assigned",
-      description: "Work order #wo7 has been assigned to you",
-      time: "5 minutes ago",
-      link: "/work-orders"
-    },
-    {
-      id: 2,
-      title: "Inventory alert: Low stock on R-410A",
-      description: "Current stock level is below the minimum threshold",
-      time: "1 hour ago",
-      link: "/inventory"
-    },
-    {
-      id: 3,
-      title: "Customer feedback received",
-      description: "New feedback from Peachtree Office Center",
-      time: "Yesterday",
-      link: "/customers"
-    }
-  ];
-  
-  const handleNotificationClick = (notification: Notification) => {
-    setShowNotifications(false);
-    toast.success(`Navigating to ${notification.title}`);
-    navigate(notification.link);
-  };
   
   const getInitials = () => {
     if (user?.name) {
@@ -123,7 +83,7 @@ const TopBar = ({ setSidebarOpen, children }: TopBarProps) => {
                   className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full p-0 text-xs"
                   variant="destructive"
                 >
-                  {notifications.length}
+                  3
                 </Badge>
                 <span className="sr-only">Notifications</span>
               </Button>
@@ -132,17 +92,18 @@ const TopBar = ({ setSidebarOpen, children }: TopBarProps) => {
               <div className="p-2 font-medium">Notifications</div>
               <DropdownMenuSeparator />
               <div className="p-2 text-sm">
-                {notifications.map((notification) => (
-                  <div 
-                    key={notification.id}
-                    className="mb-2 rounded-md p-2 hover:bg-muted cursor-pointer"
-                    onClick={() => handleNotificationClick(notification)}
-                  >
-                    <p className="font-medium">{notification.title}</p>
-                    <p className="text-xs text-muted-foreground">{notification.description}</p>
-                    <p className="text-xs text-muted-foreground">{notification.time}</p>
-                  </div>
-                ))}
+                <div className="mb-2 rounded-md p-2 hover:bg-muted">
+                  <p className="font-medium">New work order assigned</p>
+                  <p className="text-xs text-muted-foreground">5 minutes ago</p>
+                </div>
+                <div className="mb-2 rounded-md p-2 hover:bg-muted">
+                  <p className="font-medium">Inventory alert: Low stock on R-410A</p>
+                  <p className="text-xs text-muted-foreground">1 hour ago</p>
+                </div>
+                <div className="rounded-md p-2 hover:bg-muted">
+                  <p className="font-medium">Customer feedback received</p>
+                  <p className="text-xs text-muted-foreground">Yesterday</p>
+                </div>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>

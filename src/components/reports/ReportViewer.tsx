@@ -10,9 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, LineChart, PieChart, CalendarRange } from "lucide-react";
+import { BarChart, LineChart, PieChart } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 
 // Types for report data
 export interface ReportData {
@@ -40,7 +39,6 @@ interface ReportViewerProps {
   reportType: string;
   reportData: ReportData | null;
   onDownload: () => void;
-  timeFrame: string;
 }
 
 const ReportViewer = ({
@@ -49,22 +47,9 @@ const ReportViewer = ({
   reportName,
   reportType,
   reportData,
-  onDownload,
-  timeFrame
+  onDownload
 }: ReportViewerProps) => {
   if (!reportData) return null;
-  
-  // Map time frame value to display text
-  const getTimeFrameText = (timeFrame: string) => {
-    const timeFrameMap = {
-      "last30days": "Last 30 Days",
-      "last90days": "Last 90 Days",
-      "lastYear": "Last Year",
-      "ytd": "Year to Date",
-      "custom": "Custom Range"
-    };
-    return timeFrameMap[timeFrame] || "Last 30 Days";
-  };
   
   // Helper to get a pastel color based on index
   const getColor = (index: number) => {
@@ -184,18 +169,10 @@ const ReportViewer = ({
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[80vw] md:max-w-[800px] h-[80vh] flex flex-col">
         <DialogHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <div>
-              <DialogTitle>{reportName}</DialogTitle>
-              <DialogDescription>
-                {reportType.charAt(0).toUpperCase() + reportType.slice(1)} report data
-              </DialogDescription>
-            </div>
-            <Badge variant="outline" className="flex items-center gap-1">
-              <CalendarRange className="h-3 w-3" />
-              {getTimeFrameText(timeFrame)}
-            </Badge>
-          </div>
+          <DialogTitle>{reportName}</DialogTitle>
+          <DialogDescription>
+            Generated report for {reportType} data
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">

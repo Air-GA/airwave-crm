@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
+import { SyncButton } from "@/components/SyncButton";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,8 +47,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Customer, ServiceAddress } from "@/types";
-import { apiIntegrationService } from "@/services/apiIntegrationService";
 
+// Mock customer data to use when no data is found in the database
 const mockCustomers: Customer[] = [
   {
     id: "1",
@@ -92,6 +92,7 @@ const CustomersList = () => {
   const isMobile = useIsMobile();
   const { permissions, user, userRole } = useAuth();
 
+  // Fetch all residential customers
   const { data: customers, isLoading, error, refetch } = useQuery({
     queryKey: ["customers-list"],
     queryFn: async () => {
@@ -105,12 +106,15 @@ const CustomersList = () => {
         throw new Error(error.message);
       }
       
+      // If no data is found in the database, use mock data
+      // but filter out commercial customers
       if (!data || data.length === 0) {
         console.log("No residential customers found in database, using mock data");
         return mockCustomers.filter(customer => customer.type === "residential");
       }
       
       const formattedData = data.map(customer => {
+        // Ensure each customer has serviceAddresses property and billAddress
         if (!customer.serviceAddresses) {
           const serviceAddresses: ServiceAddress[] = [];
           if (customer.service_address) {
@@ -140,12 +144,14 @@ const CustomersList = () => {
     },
   });
 
+  // Handle search
   const filteredCustomers = customers?.filter((customer) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (customer.phone && customer.phone.includes(searchTerm))
   );
 
+  // Sort customers based on name and current sort order
   const sortedCustomers = filteredCustomers?.sort((a, b) => {
     if (sortOrder === "asc") {
       return a.name.localeCompare(b.name);
@@ -158,34 +164,20 @@ const CustomersList = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
 
+  // Sync customers from external system
   const syncCustomers = async () => {
     try {
-      toast({
-        title: "Syncing Customers",
-        description: "Syncing customers from QuickBooks...",
-      });
-      
-      await apiIntegrationService.quickbooks.syncCustomers();
-      
+      // In a real app, this would connect to QuickBooks, CRM, etc.
+      // For now, we'll just refetch from our database
       await refetch();
-      
-      toast({
-        title: "Sync Complete",
-        description: "Successfully synced customers from QuickBooks.",
-      });
-      
       return Promise.resolve();
     } catch (error) {
       console.error("Error syncing customers:", error);
-      toast({
-        title: "Sync Failed",
-        description: "Failed to sync customers from QuickBooks.",
-        variant: "destructive",
-      });
       return Promise.reject(error);
     }
   };
   
+  // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
     refetch();
     toast({
@@ -194,7 +186,9 @@ const CustomersList = () => {
     });
   };
   
+  // Handle creating a new work order for a customer
   const handleCreateWorkOrder = (customer: Customer, serviceAddress?: string) => {
+    // Use the provided service address or get the primary one
     const addressToUse = serviceAddress || 
       (customer.serviceAddresses?.find(a => a.isPrimary)?.address || 
       customer.serviceAddresses?.[0]?.address || 
@@ -203,11 +197,13 @@ const CustomersList = () => {
     navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone || '')}&customerEmail=${encodeURIComponent(customer.email || '')}&customerAddress=${encodeURIComponent(addressToUse)}`);
   };
   
+  // Handle viewing customer details
   const handleViewCustomerDetails = (customer: Customer) => {
     setSelectedCustomer(customer);
     setShowCustomerDetails(true);
   };
 
+  // Display error if query fails
   useEffect(() => {
     if (error) {
       toast({
@@ -235,7 +231,7 @@ const CustomersList = () => {
                   <Plus className="mr-2 h-4 w-4" /> Add Customer
                 </Button>
               )}
-              <SyncWithQuickBooks entityType="customers" onSyncComplete={refetch} />
+              <SyncButton onSync={syncCustomers} label="Customers" />
               <AddCustomerDialog 
                 open={showAddCustomerDialog} 
                 onOpenChange={setShowAddCustomerDialog} 
@@ -286,6 +282,7 @@ const CustomersList = () => {
               </div>
             </div>
             
+            {/* Loading State */}
             {isLoading && (
               viewMode === "list" ? (
                 <div className="rounded-md border">
@@ -330,6 +327,7 @@ const CustomersList = () => {
               )
             )}
             
+            {/* List View */}
             {!isLoading && viewMode === "list" && (
               <div className="rounded-md border">
                 <Table>
@@ -430,6 +428,7 @@ const CustomersList = () => {
               </div>
             )}
             
+            {/* Grid View */}
             {!isLoading && viewMode === "grid" && (
               <>
                 {sortedCustomers?.length ? (
@@ -466,6 +465,7 @@ const CustomersList = () => {
               </>
             )}
 
+            {/* Customer details dialog */}
             {selectedCustomer && (
               <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
                 <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -500,6 +500,7 @@ const CustomersList = () => {
                                   <p>{addr.address}</p>
                                   {addr.notes && <p className="text-sm text-muted-foreground mt-1">{addr.notes}</p>}
                                 </div>
+                                {/* Only show work order button if appropriate for the role */}
                                 {(!permissions.canViewOnlyAssociatedCustomers || 
                                   (user?.associatedIds?.includes(selectedCustomer.id))) && (
                                   <Button 
@@ -528,6 +529,7 @@ const CustomersList = () => {
                       <p>{selectedCustomer.billAddress || selectedCustomer.address || 'No billing address'}</p>
                     </div>
                     
+                    {/* Show financial information based on permissions */}
                     {permissions.canViewCustomerPaymentHistory && (
                       <div>
                         <h4 className="text-sm font-medium text-muted-foreground">Payment History</h4>

@@ -7,18 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Clock, AlertCircle, Bell, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface Notification {
-  id: number;
-  title: string;
-  description: string;
-  time: string;
-  type: "update" | "alert" | "reminder";
-  read: boolean;
-  link: string;
-}
-
 const Notifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
+  const [notifications, setNotifications] = useState([
     {
       id: 1,
       title: "Work Order #wo7 Updated",
@@ -72,7 +62,7 @@ const Notifications = () => {
       notification.id === id ? { ...notification, read: true } : notification
     ));
     
-    // Show success toast and navigate to the link
+    // Show success toast and open in new window
     toast.success("Navigating to notification source");
     window.open(link, '_blank');
   };
