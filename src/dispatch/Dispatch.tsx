@@ -1,3 +1,4 @@
+
 // First, let's create a separate file to avoid having everything in one huge file
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -16,12 +17,7 @@ import { toast } from "sonner";
 import { WorkOrder, Technician } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { fetchTechnicians } from "@/services/technicianService";
-import { 
-  getWorkOrders as fetchWorkOrders, 
-  assignWorkOrder, 
-  unassignWorkOrder, 
-  useWorkOrderStore 
-} from "@/services/workOrderService";
+import { fetchWorkOrders, assignWorkOrder, unassignWorkOrder, useWorkOrderStore } from "@/services/workOrderService";
 
 // Import components
 import TechnicianDropTarget from "./components/TechnicianDropTarget";
@@ -203,6 +199,7 @@ const Dispatch = () => {
   };
 
   const handleCalendarDateSelect = (start: Date, end: Date) => {
+    // Only open scheduling dialog if we have unassigned work orders
     if (unassignedWorkOrders.length === 0) {
       toast.info("No unassigned work orders available");
       return;
