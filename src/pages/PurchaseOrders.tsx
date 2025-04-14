@@ -1,13 +1,51 @@
 
 import { useState } from "react";
-import { Download, Filter, FileText, Plus } from "lucide-react";
+import { Download, Filter, FileText, Plus, FileSpreadsheet, Printer } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PurchaseOrderDialog } from "@/components/purchases/PurchaseOrderDialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PurchaseOrders() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showNewPurchaseOrderDialog, setShowNewPurchaseOrderDialog] = useState(false);
+  const { toast } = useToast();
+
+  const handleExport = () => {
+    toast({
+      title: "Export Started",
+      description: "Your purchase orders are being exported to Excel."
+    });
+    // Simulate export process
+    setTimeout(() => {
+      toast({
+        title: "Export Complete",
+        description: "Your purchase orders have been exported successfully."
+      });
+    }, 1500);
+  };
+
+  const handlePrint = () => {
+    toast({
+      title: "Print Preview",
+      description: "Preparing purchase orders for printing."
+    });
+    // In a real application, this would trigger the browser print dialog
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
+
+  const handlePurchaseOrderCreated = () => {
+    // Refresh the list of purchase orders
+    // In a real application, you would fetch the updated list from the server
+    toast({
+      title: "Purchase Order Created",
+      description: "The purchase order has been created successfully."
+    });
+  };
 
   return (
     <MainLayout pageName="Purchase Orders">
@@ -21,14 +59,14 @@ export default function PurchaseOrders() {
               </CardDescription>
             </div>
             <div>
-              <Button>
+              <Button onClick={() => setShowNewPurchaseOrderDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Purchase Order
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 flex justify-between">
+            <div className="mb-6 flex flex-wrap gap-2 justify-between">
               <div className="relative w-full max-w-sm">
                 <Input
                   type="search"
@@ -39,10 +77,16 @@ export default function PurchaseOrders() {
                 />
                 <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleExport}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export to Excel
+                </Button>
+                <Button variant="outline" size="sm" onClick={handlePrint}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </Button>
+              </div>
             </div>
             
             {/* Placeholder for purchase orders list */}
@@ -52,7 +96,7 @@ export default function PurchaseOrders() {
               <p className="mt-2 text-sm text-muted-foreground">
                 Create your first purchase order to get started.
               </p>
-              <Button className="mt-4">
+              <Button className="mt-4" onClick={() => setShowNewPurchaseOrderDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Purchase Order
               </Button>
@@ -65,6 +109,12 @@ export default function PurchaseOrders() {
           </CardFooter>
         </Card>
       </div>
+      
+      <PurchaseOrderDialog 
+        open={showNewPurchaseOrderDialog} 
+        onOpenChange={setShowNewPurchaseOrderDialog}
+        onPurchaseOrderCreated={handlePurchaseOrderCreated}
+      />
     </MainLayout>
   );
 }
