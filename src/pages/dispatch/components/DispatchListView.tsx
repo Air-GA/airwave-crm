@@ -35,10 +35,6 @@ const DispatchListView = ({
     syncWithCustomers();
   }, [syncWithCustomers]);
   
-  // Filter out any potentially commercial orders that might have slipped through
-  const filteredUnassignedOrders = unassignedWorkOrders || [];
-  const filteredTechnicianOrders = technicianWorkOrders || [];
-  
   return (
     <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
       <div className="space-y-6">
@@ -48,8 +44,8 @@ const DispatchListView = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {filteredUnassignedOrders && filteredUnassignedOrders.length > 0 ? (
-                filteredUnassignedOrders.map(order => (
+              {unassignedWorkOrders && unassignedWorkOrders.length > 0 ? (
+                unassignedWorkOrders.map(order => (
                   <DraggableWorkOrder 
                     key={order.id} 
                     order={order} 
@@ -80,7 +76,7 @@ const DispatchListView = ({
                   technician={technician}
                   isSelected={selectedTechnicianId === technician.id}
                   onClick={() => onSelectTechnician(technician.id)}
-                  assignedCount={filteredTechnicianOrders.filter(order => order.technicianId === technician.id).length}
+                  assignedCount={technicianWorkOrders.filter(order => order.technicianId === technician.id).length}
                 />
               ))}
             </div>
@@ -97,8 +93,8 @@ const DispatchListView = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {filteredTechnicianOrders && filteredTechnicianOrders.length > 0 ? (
-                filteredTechnicianOrders.map(order => (
+              {technicianWorkOrders && technicianWorkOrders.length > 0 ? (
+                technicianWorkOrders.map(order => (
                   <div key={order.id} className="relative">
                     <Button
                       variant="outline"
