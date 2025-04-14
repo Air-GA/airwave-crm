@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { Download, Filter, BarChart, FileText, Calendar, Users, Plus } from "lucide-react";
+import { Download, Filter, BarChart, FileText, Calendar, Users, Plus, Edit } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,8 +11,17 @@ import { generateReportData, exportReportToCsv } from "@/services/reportService"
 import ReportViewer from "@/components/reports/ReportViewer";
 import { toast } from "sonner";
 
+// Report interface
+interface Report {
+  id: number;
+  name: string;
+  category: string;
+  date: string;
+  isEditable?: boolean;
+}
+
 // Mock reports data
-const mockReports = [
+const initialReports: Report[] = [
   { id: 1, name: "Monthly Revenue", category: "financial", date: "2025-04-01" },
   { id: 2, name: "Technician Performance", category: "performance", date: "2025-04-05" },
   { id: 3, name: "Customer Satisfaction", category: "customer", date: "2025-04-07" },
@@ -20,21 +30,30 @@ const mockReports = [
 ];
 
 export default function Reports() {
+  const [reports, setReports] = useState<Report[]>(initialReports);
   const [selectedReportCategory, setSelectedReportCategory] = useState<string>("all");
   const [isAddReportOpen, setIsAddReportOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<{ id: number; name: string; category: string; date: string } | null>(null);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isReportViewerOpen, setIsReportViewerOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   const filteredReports = selectedReportCategory === "all" 
-    ? mockReports 
-    : mockReports.filter(report => report.category === selectedReportCategory);
+    ? reports 
+    : reports.filter(report => report.category === selectedReportCategory);
 
-  const handleViewReport = (report: typeof mockReports[0]) => {
+  const handleViewReport = (report: Report) => {
     setSelectedReport(report);
     setIsReportViewerOpen(true);
+    setIsEditMode(false);
   };
 
-  const handleDownloadReport = (report: typeof mockReports[0]) => {
+  const handleEditReport = (report: Report) => {
+    setSelectedReport(report);
+    setIsAddReportOpen(true);
+    setIsEditMode(true);
+  };
+
+  const handleDownloadReport = (report: Report) => {
     const reportData = generateReportData(report.category, report.name);
     exportReportToCsv(reportData, report.name);
     toast.success(`Report "${report.name}" downloaded successfully`);
@@ -42,6 +61,31 @@ export default function Reports() {
 
   const handleAddReport = () => {
     setIsAddReportOpen(true);
+    setIsEditMode(false);
+    setSelectedReport(null);
+  };
+
+  const handleReportCreated = (newReport: Omit<Report, 'id'>) => {
+    const newId = Math.max(...reports.map(r => r.id), 0) + 1;
+    const reportToAdd: Report = {
+      ...newReport,
+      id: newId,
+      isEditable: true,
+    };
+    
+    setReports(prev => [...prev, reportToAdd]);
+    toast.success(`Report "${newReport.name}" created successfully`);
+    setIsAddReportOpen(false);
+  };
+
+  const handleReportUpdated = (updatedReport: Report) => {
+    setReports(prev => 
+      prev.map(report => 
+        report.id === updatedReport.id ? updatedReport : report
+      )
+    );
+    toast.success(`Report "${updatedReport.name}" updated successfully`);
+    setIsAddReportOpen(false);
   };
 
   return (
@@ -123,6 +167,12 @@ export default function Reports() {
                               <FileText className="h-4 w-4 mr-1" />
                               View
                             </Button>
+                            {report.isEditable && (
+                              <Button variant="ghost" size="sm" onClick={() => handleEditReport(report)}>
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -162,6 +212,12 @@ export default function Reports() {
                             <Download className="h-4 w-4 mr-1" />
                             Download
                           </Button>
+                          {report.isEditable && (
+                            <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditReport(report)}>
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          )}
                         </div>
                       </CardFooter>
                     </Card>
@@ -173,7 +229,7 @@ export default function Reports() {
           
           <CardFooter className="flex justify-between">
             <div className="text-sm text-muted-foreground">
-              Showing {filteredReports.length} of {mockReports.length} reports
+              Showing {filteredReports.length} of {reports.length} reports
             </div>
           </CardFooter>
         </Card>
@@ -183,6 +239,10 @@ export default function Reports() {
       <AddReportDialog 
         open={isAddReportOpen}
         onOpenChange={setIsAddReportOpen}
+        onReportCreated={handleReportCreated}
+        onReportUpdated={handleReportUpdated}
+        editMode={isEditMode}
+        reportToEdit={selectedReport}
       />
 
       {/* Report Viewer */}

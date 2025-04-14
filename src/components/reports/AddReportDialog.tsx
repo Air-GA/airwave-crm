@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Dialog, 
   DialogContent, 
@@ -48,6 +48,15 @@ interface ReportTemplate {
   description: string;
   category: string;
   icon: React.ReactNode;
+}
+
+// Report interface
+interface Report {
+  id: number;
+  name: string;
+  category: string;
+  date: string;
+  isEditable?: boolean;
 }
 
 // Mock report templates
@@ -113,15 +122,48 @@ const reportTemplates: ReportTemplate[] = [
 interface AddReportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onReportCreated?: (report: Omit<Report, 'id'>) => void;
+  onReportUpdated?: (report: Report) => void;
+  editMode?: boolean;
+  reportToEdit?: Report | null;
 }
 
-export function AddReportDialog({ open, onOpenChange }: AddReportDialogProps) {
-  const [activeTab, setActiveTab] = useState("templates");
+export function AddReportDialog({ 
+  open, 
+  onOpenChange, 
+  onReportCreated, 
+  onReportUpdated,
+  editMode = false,
+  reportToEdit = null
+}: AddReportDialogProps) {
+  const [activeTab, setActiveTab] = useState(editMode ? "custom" : "templates");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [customReportName, setCustomReportName] = useState("");
   const [customReportType, setCustomReportType] = useState("financial");
   const [customReportPeriod, setCustomReportPeriod] = useState("monthly");
   
+  useEffect(() => {
+    if (editMode && reportToEdit) {
+      setCustomReportName(reportToEdit.name);
+      setCustomReportType(reportToEdit.category);
+      setActiveTab("custom");
+    }
+  }, [editMode, reportToEdit, open]);
+  
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setTimeout(() => {
+        if (!editMode) {
+          setSelectedTemplate(null);
+          setCustomReportName("");
+          setCustomReportType("financial");
+          setCustomReportPeriod("monthly");
+        }
+      }, 200);
+    }
+  }, [open, editMode]);
+
   const handleCreateFromTemplate = () => {
     if (!selectedTemplate) {
       toast.error("Please select a template");
@@ -129,11 +171,14 @@ export function AddReportDialog({ open, onOpenChange }: AddReportDialogProps) {
     }
 
     const template = reportTemplates.find(t => t.id === selectedTemplate);
-    if (template) {
-      toast.success(`Report "${template.name}" created successfully`);
-      onOpenChange(false);
-      // Reset form
-      setSelectedTemplate(null);
+    if (template && onReportCreated) {
+      const today = new Date().toISOString().split('T')[0];
+      onReportCreated({
+        name: template.name,
+        category: template.category,
+        date: today,
+        isEditable: true
+      });
     }
   };
 
@@ -143,12 +188,24 @@ export function AddReportDialog({ open, onOpenChange }: AddReportDialogProps) {
       return;
     }
 
-    toast.success(`Custom report "${customReportName}" created successfully`);
-    onOpenChange(false);
-    // Reset form
-    setCustomReportName("");
-    setCustomReportType("financial");
-    setCustomReportPeriod("monthly");
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (editMode && reportToEdit && onReportUpdated) {
+      onReportUpdated({
+        ...reportToEdit,
+        name: customReportName,
+        category: customReportType,
+        date: today,
+        isEditable: true
+      });
+    } else if (onReportCreated) {
+      onReportCreated({
+        name: customReportName,
+        category: customReportType, 
+        date: today,
+        isEditable: true
+      });
+    }
   };
 
   const renderTemplates = () => {
@@ -234,45 +291,55 @@ export function AddReportDialog({ open, onOpenChange }: AddReportDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Create New Report</DialogTitle>
+          <DialogTitle>{editMode ? 'Edit Report' : 'Create New Report'}</DialogTitle>
           <DialogDescription>
-            Select a template or create a custom report to analyze your business data
+            {editMode ? 'Modify the report properties below' : 'Select a template or create a custom report to analyze your business data'}
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue="templates" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="templates">
-              <FileText className="mr-2 h-4 w-4" />
-              Templates
-            </TabsTrigger>
-            <TabsTrigger value="custom">
-              <PieChart className="mr-2 h-4 w-4" />
-              Custom Report
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="templates">
-            {renderTemplates()}
-          </TabsContent>
-          
-          <TabsContent value="custom">
-            {renderCustomForm()}
-          </TabsContent>
-        </Tabs>
+        {!editMode && (
+          <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="templates">
+                <FileText className="mr-2 h-4 w-4" />
+                Templates
+              </TabsTrigger>
+              <TabsTrigger value="custom">
+                <PieChart className="mr-2 h-4 w-4" />
+                Custom Report
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="templates">
+              {renderTemplates()}
+            </TabsContent>
+            
+            <TabsContent value="custom">
+              {renderCustomForm()}
+            </TabsContent>
+          </Tabs>
+        )}
+        
+        {editMode && renderCustomForm()}
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          {activeTab === "templates" ? (
-            <Button onClick={handleCreateFromTemplate}>
-              Create from Template
+          {editMode ? (
+            <Button onClick={handleCreateCustomReport}>
+              Update Report
             </Button>
           ) : (
-            <Button onClick={handleCreateCustomReport}>
-              Create Custom Report
-            </Button>
+            activeTab === "templates" ? (
+              <Button onClick={handleCreateFromTemplate}>
+                Create from Template
+              </Button>
+            ) : (
+              <Button onClick={handleCreateCustomReport}>
+                Create Custom Report
+              </Button>
+            )
           )}
         </DialogFooter>
       </DialogContent>
