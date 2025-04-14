@@ -18,29 +18,29 @@ export const SyncThreeCustomersButton = ({
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      console.log("Starting customer sync...");
+      console.log("Starting residential customer sync...");
       await syncThreeCustomers();
       toast({
         title: "Sync Complete",
-        description: "Successfully synced three sample customers.",
+        description: "Successfully synced residential sample customers.",
       });
       onSyncComplete();
     } catch (error) {
-      console.error("Error syncing customers:", error);
+      console.error("Error syncing residential customers:", error);
       
       // Show a detailed error message
       toast({
         title: "Sync Failed",
         description: error instanceof Error 
           ? error.message 
-          : "Failed to sync customers. Using static data instead.",
+          : "Failed to sync residential customers. Using static data instead.",
         variant: "destructive",
       });
       
       // Fall back to static data notification
       toast({
         title: "Using Static Data",
-        description: "Displaying static customer data as a fallback.",
+        description: "Displaying static residential customer data as a fallback.",
       });
       
       // Still call onSyncComplete to refresh the UI with static data

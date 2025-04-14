@@ -17,12 +17,17 @@ export const syncThreeCustomers = async (): Promise<Customer[]> => {
       throw new Error("Invalid response from sync function");
     }
     
-    // Convert the database customers to our Customer type
-    const customers = data.data.customers.map(dbCustomer => 
-      supabase.formatDbToCustomer(dbCustomer)
-    );
+    // Convert the database customers to our Customer type and filter for residential only
+    const customers = data.data.customers
+      .map(dbCustomer => supabase.formatDbToCustomer(dbCustomer))
+      .filter(customer => customer.type === 'residential');
     
-    console.log("Successfully synced customers:", customers);
+    if (customers.length === 0) {
+      console.log("No residential customers found, falling back to static data");
+      return getStaticCustomers();
+    }
+    
+    console.log("Successfully synced residential customers:", customers);
     return customers;
   } catch (error) {
     console.error("Error in syncThreeCustomers:", error);
@@ -33,6 +38,7 @@ export const syncThreeCustomers = async (): Promise<Customer[]> => {
 
 // Fallback function to get static customers if sync fails
 export const getStaticCustomers = (): Customer[] => {
+  // Only return residential customers
   return [
     {
       id: "c1",
@@ -49,21 +55,6 @@ export const getStaticCustomers = (): Customer[] => {
       lastService: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     },
     {
-      id: "c2",
-      name: "Atlanta Technical College",
-      email: "maintenance@atcollege.edu",
-      phone: "678-555-2345",
-      address: "225 North Ave NW, Atlanta, GA 30332",
-      billAddress: "PO Box 34578, Atlanta, GA 30332",
-      serviceAddresses: [
-        { id: "addr-2", address: "225 North Ave NW, Atlanta, GA 30332", isPrimary: true, notes: "Main campus" },
-        { id: "addr-3", address: "266 Ferst Drive, Atlanta, GA 30332", isPrimary: false, notes: "Satellite office" }
-      ],
-      type: "commercial",
-      createdAt: new Date().toISOString(),
-      lastService: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
       id: "c3",
       name: "Sarah Wilson",
       email: "swilson@gmail.com",
@@ -76,6 +67,20 @@ export const getStaticCustomers = (): Customer[] => {
       type: "residential",
       createdAt: new Date().toISOString(),
       lastService: null
+    },
+    {
+      id: "c5",
+      name: "Thomas Family",
+      email: "thomasfamily@outlook.com",
+      phone: "770-555-7890",
+      address: "789 Pine Road, Alpharetta, GA",
+      billAddress: "789 Pine Road, Alpharetta, GA",
+      serviceAddresses: [
+        { id: "addr-5", address: "789 Pine Road, Alpharetta, GA", isPrimary: true, notes: "Beware of dog" }
+      ],
+      type: "residential",
+      createdAt: new Date().toISOString(),
+      lastService: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
     }
   ];
 };
