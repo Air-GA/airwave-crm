@@ -6,7 +6,7 @@ import moment from 'moment';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkOrder, Technician } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { useDrop } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/core';
 import { formatDate } from '@/lib/date-utils';
 
 // Set up the localizer
@@ -87,11 +87,8 @@ const DispatchCalendarView = ({
     };
   });
 
-  const { setNodeRef } = useDrop({
-    accept: 'work-order',
-    drop: (item, monitor) => {
-      // Logic to handle drop will be integrated with the main Dispatch.tsx
-    },
+  const { setNodeRef } = useDroppable({
+    id: 'calendar-drop-area',
   });
 
   // Custom event component
@@ -158,10 +155,10 @@ const DispatchCalendarView = ({
               onDateSelect(slotInfo.start, slotInfo.end);
             }}
             components={{
-              event: EventComponent,
+              event: EventComponent as any,
             }}
             eventPropGetter={(event) => ({
-              className: `${event.statusClass}`,
+              className: `${(event as CalendarEvent).statusClass}`,
             })}
             formats={{
               timeGutterFormat: (date, culture, localizer) => 
