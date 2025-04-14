@@ -15,9 +15,7 @@ interface DispatchCalendarViewProps {
   workOrders: WorkOrder[];
   technicians: Technician[];
   selectedTechnicianId: string | null;
-  activeOrderId?: string | null;
-  unassignedWorkOrders?: WorkOrder[];
-  onDateSelect: (start: Date, end: Date, technicianId?: string) => void;
+  onDateSelect: (start: Date, end: Date) => void;
   onWorkOrderClick: (workOrderId: string) => void;
 }
 
@@ -37,8 +35,6 @@ const DispatchCalendarView = ({
   workOrders,
   technicians,
   selectedTechnicianId,
-  activeOrderId,
-  unassignedWorkOrders,
   onDateSelect,
   onWorkOrderClick,
 }: DispatchCalendarViewProps) => {
@@ -97,7 +93,7 @@ const DispatchCalendarView = ({
   // Custom event component
   const EventComponent = ({ event }: { event: CalendarEvent }) => (
     <div
-      className={`${event.statusClass} p-1 border-l-4 rounded overflow-hidden text-xs cursor-pointer ${activeOrderId === event.id ? 'ring-2 ring-primary' : ''}`}
+      className={`${event.statusClass} p-1 border-l-4 rounded overflow-hidden text-xs cursor-pointer`}
       onClick={() => onWorkOrderClick(event.id)}
     >
       <div className={`font-medium ${event.priorityClass}`}>{event.title}</div>
@@ -155,7 +151,7 @@ const DispatchCalendarView = ({
             timeslots={2}
             selectable
             onSelectSlot={(slotInfo) => {
-              onDateSelect(slotInfo.start, slotInfo.end, selectedTechnicianId || undefined);
+              onDateSelect(slotInfo.start, slotInfo.end);
             }}
             components={{
               event: EventComponent as any,
