@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -52,8 +51,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Customer, ServiceAddress } from "@/types";
 import { apiIntegrationService } from "@/services/apiIntegrationService";
 import { customers } from "@/data/mockData";
+import { getStaticCustomers } from "@/services/customerSyncService";
 
-// Create a reliable set of static customers to always display
 const staticCustomers: Customer[] = [
   {
     id: "c1",
@@ -163,12 +162,30 @@ const CustomersList = () => {
         return staticCustomers;
       }
     },
-    // Always return static data if there's an error
-    onError: (error) => {
-      console.error("Query error:", error);
-      return staticCustomers;
+    meta: {
+      onError: (error: Error) => {
+        console.error("Query error:", error);
+        return staticCustomers;
+      }
     }
   });
+
+  const sortedCustomers = customers ? 
+    [...customers]
+      .filter(customer => 
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (customer.phone && customer.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (customer.address && customer.address.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+      .sort((a, b) => {
+        if (sortOrder === "asc") {
+          return a.name.localeCompare(b.name);
+        } else {
+          return b.name.localeCompare(a.name);
+        }
+      }) 
+    : [];
 
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");

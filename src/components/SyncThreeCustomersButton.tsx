@@ -28,7 +28,7 @@ export const SyncThreeCustomersButton = ({
     } catch (error) {
       console.error("Error syncing customers:", error);
       
-      // Show a more detailed error message
+      // Show a detailed error message
       toast({
         title: "Sync Failed",
         description: error instanceof Error 
@@ -37,7 +37,7 @@ export const SyncThreeCustomersButton = ({
         variant: "destructive",
       });
       
-      // Fall back to static data
+      // Fall back to static data notification
       toast({
         title: "Using Static Data",
         description: "Displaying static customer data as a fallback.",
