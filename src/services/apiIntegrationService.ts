@@ -17,5 +17,16 @@ export const apiIntegrationService = {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     return { success: true, message: `Successfully connected to ${service}` };
+  },
+  
+  generateReport: async (reportType: string, parameters: any) => {
+    console.log(`Generating report of type ${reportType}`, parameters);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return { 
+      success: true, 
+      message: `Successfully generated ${reportType} report`,
+      reportId: `report-${Date.now()}`
+    };
   }
 };

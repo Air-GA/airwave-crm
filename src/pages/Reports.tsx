@@ -1,11 +1,15 @@
 
 import { useState } from "react";
-import { Download, Filter, BarChart, FileText, Calendar, Users } from "lucide-react";
+import { Download, Filter, BarChart, FileText, Calendar, Users, Plus } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AddReportDialog } from "@/components/reports/AddReportDialog";
+import { generateReportData, exportReportToCsv } from "@/services/reportService";
+import { ReportViewer } from "@/components/reports/ReportViewer";
+import { toast } from "sonner";
 
 // Mock reports data
 const mockReports = [
@@ -18,10 +22,28 @@ const mockReports = [
 
 export default function Reports() {
   const [selectedReportCategory, setSelectedReportCategory] = useState<string>("all");
+  const [isAddReportOpen, setIsAddReportOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<{ id: number; name: string; category: string } | null>(null);
+  const [isReportViewerOpen, setIsReportViewerOpen] = useState(false);
   
   const filteredReports = selectedReportCategory === "all" 
     ? mockReports 
     : mockReports.filter(report => report.category === selectedReportCategory);
+
+  const handleViewReport = (report: typeof mockReports[0]) => {
+    setSelectedReport(report);
+    setIsReportViewerOpen(true);
+  };
+
+  const handleDownloadReport = (report: typeof mockReports[0]) => {
+    const reportData = generateReportData(report.category, report.name);
+    exportReportToCsv(reportData, report.name);
+    toast.success(`Report "${report.name}" downloaded successfully`);
+  };
+
+  const handleAddReport = () => {
+    setIsAddReportOpen(true);
+  };
 
   return (
     <MainLayout pageName="Reports">
@@ -35,6 +57,10 @@ export default function Reports() {
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleAddReport}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Report
+              </Button>
               <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Export
@@ -90,11 +116,11 @@ export default function Reports() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{report.category}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.date}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleDownloadReport(report)}>
                               <Download className="h-4 w-4 mr-1" />
                               Download
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewReport(report)}>
                               <FileText className="h-4 w-4 mr-1" />
                               View
                             </Button>
@@ -129,11 +155,11 @@ export default function Reports() {
                       </CardContent>
                       <CardFooter>
                         <div className="flex space-x-2 w-full">
-                          <Button variant="outline" size="sm" className="flex-1">
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewReport(report)}>
                             <FileText className="h-4 w-4 mr-1" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => handleDownloadReport(report)}>
                             <Download className="h-4 w-4 mr-1" />
                             Download
                           </Button>
@@ -153,6 +179,24 @@ export default function Reports() {
           </CardFooter>
         </Card>
       </div>
+
+      {/* Add Report Dialog */}
+      <AddReportDialog 
+        open={isAddReportOpen}
+        onOpenChange={setIsAddReportOpen}
+      />
+
+      {/* Report Viewer */}
+      {selectedReport && (
+        <ReportViewer
+          isOpen={isReportViewerOpen}
+          onClose={() => setIsReportViewerOpen(false)}
+          reportName={selectedReport.name}
+          reportType={selectedReport.category}
+          reportData={generateReportData(selectedReport.category, selectedReport.name)}
+          onDownload={() => handleDownloadReport(selectedReport)}
+        />
+      )}
     </MainLayout>
   );
 }
