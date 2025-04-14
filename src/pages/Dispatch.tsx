@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, User, Briefcase, X } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Briefcase, X, MapIcon } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { 
   DndContext, 
@@ -32,9 +33,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { useToast } from "@/hooks/use-toast";
-import TechLocationMap from "@/components/maps/TechLocationMap";
+import DispatchMap from "@/components/maps/DispatchMap";
 import { fetchTechnicians } from "@/services/technicianService";
 import { fetchWorkOrders, assignWorkOrder, unassignWorkOrder, useWorkOrderStore } from "@/services/workOrderService";
+import DispatchCalendarView from "@/components/schedule/DispatchCalendarView";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dispatch = () => {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
@@ -46,6 +49,7 @@ const Dispatch = () => {
   const [scheduledTime, setScheduledTime] = useState("");
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("list");
   const { toast: uiToast } = useToast();
 
   const workOrders = useWorkOrderStore(state => state.workOrders);
@@ -188,6 +192,37 @@ const Dispatch = () => {
     }
   };
 
+  const handleCalendarDateSelect = (start: Date, end: Date) => {
+    // Only open scheduling dialog if we have unassigned work orders
+    if (unassignedWorkOrders.length === 0) {
+      toast.info("No unassigned work orders available");
+      return;
+    }
+    
+    if (!currentTechnicianId && selectedTechnicianId) {
+      setCurrentTechnicianId(selectedTechnicianId);
+    }
+    
+    setScheduledDate(start.toISOString().split('T')[0]);
+    setScheduledTime(start.toTimeString().substring(0, 5));
+    
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleWorkOrderClick = (workOrderId: string) => {
+    const workOrder = workOrders.find(order => order.id === workOrderId);
+    if (workOrder) {
+      setCurrentWorkOrderId(workOrderId);
+      setCurrentTechnicianId(workOrder.technicianId || null);
+      
+      const date = new Date(workOrder.scheduledDate);
+      setScheduledDate(date.toISOString().split('T')[0]);
+      setScheduledTime(date.toTimeString().substring(0, 5));
+      
+      setIsScheduleModalOpen(true);
+    }
+  };
+
   const currentTechnician = technicians.find(tech => tech.id === currentTechnicianId);
   const currentWorkOrder = workOrders.find(order => order.id === currentWorkOrderId);
   
@@ -265,10 +300,11 @@ const Dispatch = () => {
           onDragStart={handleDragStart}
         >
           <div className="grid gap-6">
-            <Tabs defaultValue="list">
+            <Tabs defaultValue="list" value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
                 <TabsTrigger value="list">List View</TabsTrigger>
-                <TabsTrigger value="map" disabled={true}>Map View (Disabled)</TabsTrigger>
+                <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+                <TabsTrigger value="map">Map View</TabsTrigger>
               </TabsList>
 
               <TabsContent value="list" className="pt-4">
@@ -405,17 +441,172 @@ const Dispatch = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="map" className="pt-4">
-                <Card className="p-6">
-                  <div className="flex flex-col items-center justify-center text-center gap-4 py-8">
-                    <MapPin className="h-12 w-12 text-muted-foreground" />
-                    <h3 className="text-lg font-medium">Map Integration Disabled</h3>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      The technician location map integration is currently disabled.
-                      Contact your administrator to enable this feature.
-                    </p>
+              <TabsContent value="calendar" className="pt-4">
+                <div className="grid gap-4 md:grid-cols-[250px_1fr]">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Calendar className="h-5 w-5" />
+                        Calendar Controls
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="techSelect">View Technician:</Label>
+                          <Select 
+                            value={selectedTechnicianId || "all"} 
+                            onValueChange={(value) => setSelectedTechnicianId(value === "all" ? null : value)}
+                          >
+                            <SelectTrigger id="techSelect" className="mt-1.5">
+                              <SelectValue placeholder="All Technicians" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Technicians</SelectItem>
+                              {technicians.map((tech) => (
+                                <SelectItem key={tech.id} value={tech.id}>
+                                  {tech.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="pt-2">
+                          <Label>Unassigned Work Orders:</Label>
+                          {unassignedWorkOrders.length > 0 ? (
+                            <div className="space-y-2 mt-1.5 max-h-[400px] overflow-y-auto">
+                              {unassignedWorkOrders.map((order) => (
+                                <DraggableWorkOrder 
+                                  key={order.id} 
+                                  order={order} 
+                                  isActive={activeOrderId === order.id}
+                                  compact
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground mt-2">
+                              No unassigned work orders
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="border-t pt-4 mt-4">
+                          <p className="text-sm font-medium">Instructions:</p>
+                          <ul className="text-xs space-y-1.5 mt-1.5 text-muted-foreground">
+                            <li>• Drag work orders to the calendar</li>
+                            <li>• Click on time slots to schedule</li>
+                            <li>• Click on events to edit details</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                
+                  <div>
+                    <DispatchCalendarView 
+                      workOrders={workOrders}
+                      technicians={technicians}
+                      selectedTechnicianId={selectedTechnicianId}
+                      onDateSelect={handleCalendarDateSelect}
+                      onWorkOrderClick={handleWorkOrderClick}
+                    />
                   </div>
-                </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="map" className="pt-4">
+                <div className="grid gap-4 md:grid-cols-[300px_1fr]">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2">
+                        <MapIcon className="h-5 w-5" />
+                        Technician Locations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        <div className="text-sm text-muted-foreground">
+                          Click on a technician's marker on the map to select them.
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {technicians.map((tech) => (
+                            <div 
+                              key={tech.id}
+                              className={`flex items-center p-2 rounded-md cursor-pointer
+                                ${selectedTechnicianId === tech.id ? 'bg-primary/10' : 'hover:bg-muted'}
+                              `}
+                              onClick={() => setSelectedTechnicianId(tech.id)}
+                            >
+                              <div 
+                                className={`h-3 w-3 rounded-full mr-2
+                                  ${tech.status === 'available' ? 'bg-green-500' : ''}
+                                  ${tech.status === 'busy' ? 'bg-amber-500' : ''}
+                                  ${tech.status === 'off-duty' ? 'bg-gray-500' : ''}
+                                `}
+                              />
+                              <span className="font-medium">{tech.name}</span>
+                              <Badge
+                                variant="outline"
+                                className={`ml-auto text-xs
+                                  ${tech.status === 'available' ? 'bg-green-50 text-green-700' : ''}
+                                  ${tech.status === 'busy' ? 'bg-amber-50 text-amber-700' : ''}
+                                  ${tech.status === 'off-duty' ? 'bg-gray-50 text-gray-700' : ''}
+                                `}
+                              >
+                                {tech.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {selectedTechnicianId && (
+                          <div className="mt-4 pt-4 border-t">
+                            <h3 className="text-sm font-medium mb-2">
+                              {technicians.find(t => t.id === selectedTechnicianId)?.name}'s Unassigned Work
+                            </h3>
+                            {unassignedWorkOrders.length > 0 ? (
+                              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                                {unassignedWorkOrders.map((order) => (
+                                  <div
+                                    key={order.id}
+                                    className="text-xs p-2 border rounded-md cursor-pointer hover:bg-muted"
+                                    onClick={() => {
+                                      setCurrentWorkOrderId(order.id);
+                                      setCurrentTechnicianId(selectedTechnicianId);
+                                      
+                                      const now = new Date();
+                                      setScheduledDate(now.toISOString().split('T')[0]);
+                                      setScheduledTime(now.toTimeString().substring(0, 5));
+                                      
+                                      setIsScheduleModalOpen(true);
+                                    }}
+                                  >
+                                    <div className="font-medium">#{order.id} - {order.type}</div>
+                                    <div className="text-muted-foreground mt-1">
+                                      {order.address}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-muted-foreground">
+                                No unassigned work orders available
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <DispatchMap 
+                    technicians={technicians}
+                    onSelectTechnician={setSelectedTechnicianId}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           </div>
@@ -456,15 +647,21 @@ const Dispatch = () => {
         <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
           <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Schedule Work Order</DialogTitle>
+              <DialogTitle>
+                {currentWorkOrderId && currentWorkOrder 
+                  ? `Edit Work Order #${currentWorkOrderId}`
+                  : "Schedule New Work Order"}
+              </DialogTitle>
               <DialogDescription>
-                Set the date and time for this work order assignment
+                {currentWorkOrderId && currentWorkOrder
+                  ? "Update the details and assignment for this work order"
+                  : "Select a work order and assign it to a technician"}
               </DialogDescription>
             </DialogHeader>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                {currentWorkOrder && (
+                {currentWorkOrderId && currentWorkOrder ? (
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg">Work Order Details</CardTitle>
@@ -495,66 +692,104 @@ const Dispatch = () => {
                         </div>
                         <p className="mt-2 text-muted-foreground">{currentWorkOrder.description}</p>
                       </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Select Work Order</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Label htmlFor="workOrderSelect">Work Order</Label>
+                      <Select 
+                        onValueChange={(value) => setCurrentWorkOrderId(value)}
+                        value={currentWorkOrderId || ""}
+                      >
+                        <SelectTrigger id="workOrderSelect" className="mt-1.5">
+                          <SelectValue placeholder="Select a work order" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unassignedWorkOrders.map((order) => (
+                            <SelectItem key={order.id} value={order.id}>
+                              #{order.id} - {order.type} - {order.customerName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       
-                      <div className="space-y-4 pt-2">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="date">Date</Label>
-                            <Input
-                              id="date"
-                              type="date"
-                              value={scheduledDate}
-                              onChange={(e) => setScheduledDate(e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="time">Time</Label>
-                            <Input
-                              id="time"
-                              type="time"
-                              value={scheduledTime}
-                              onChange={(e) => setScheduledTime(e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
+                      {currentWorkOrderId && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium">Selected Work Order:</p>
+                          {(() => {
+                            const order = workOrders.find(o => o.id === currentWorkOrderId);
+                            if (!order) return null;
+                            return (
+                              <div className="mt-2 p-3 border rounded-md text-sm">
+                                <div className="font-medium">#{order.id} - {order.type}</div>
+                                <div className="mt-1 space-y-1 text-muted-foreground">
+                                  <div>{order.customerName}</div>
+                                  <div>{order.address}</div>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
-                        
-                        {currentTechnician && (
-                          <div>
-                            <Label>Assigned To</Label>
-                            <div className="flex items-center gap-2 mt-1">
-                              <div
-                                className={`h-2.5 w-2.5 rounded-full
-                                  ${currentTechnician.status === "available" ? "bg-green-500" : ""}
-                                  ${currentTechnician.status === "busy" ? "bg-amber-500" : ""}
-                                  ${currentTechnician.status === "off-duty" ? "bg-gray-500" : ""}
-                                `}
-                              />
-                              <span>{currentTechnician.name}</span>
-                              <Badge
-                                variant="outline"
-                                className={`ml-auto
-                                  ${currentTechnician.status === 'available' ? 'bg-green-50 text-green-700' : ''}
-                                  ${currentTechnician.status === 'busy' ? 'bg-amber-50 text-amber-700' : ''}
-                                  ${currentTechnician.status === 'off-duty' ? 'bg-gray-50 text-gray-700' : ''}
-                                `}
-                              >
-                                {currentTechnician.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
+                
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <Label htmlFor="technicianSelect">Assigned Technician</Label>
+                    <Select 
+                      value={currentTechnicianId || ""} 
+                      onValueChange={setCurrentTechnicianId}
+                    >
+                      <SelectTrigger id="technicianSelect" className="mt-1.5">
+                        <SelectValue placeholder="Select a technician" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {technicians
+                          .filter(tech => tech.status !== 'off-duty')
+                          .map((tech) => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.name} ({tech.status})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="date">Date</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="time">Time</Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={scheduledTime}
+                        onChange={(e) => setScheduledTime(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div>
-                {currentTechnician && scheduledDate && (
+                {currentTechnicianId && scheduledDate && (
                   <TechnicianScheduleView
-                    technician={currentTechnician}
+                    technician={technicians.find(t => t.id === currentTechnicianId) || null}
                     workOrders={workOrders}
                     selectedDate={new Date(`${scheduledDate}T00:00:00`)}
                   />
@@ -563,11 +798,19 @@ const Dispatch = () => {
             </div>
             
             <DialogFooter className="mt-4">
-              <Button type="button" variant="secondary" onClick={() => setIsScheduleModalOpen(false)}>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => setIsScheduleModalOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="button" onClick={handleScheduleConfirm}>
-                Schedule
+              <Button 
+                type="button" 
+                onClick={handleScheduleConfirm}
+                disabled={!currentWorkOrderId || !currentTechnicianId || !scheduledDate || !scheduledTime}
+              >
+                {currentWorkOrder?.technicianId ? "Update Assignment" : "Schedule Work Order"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -580,12 +823,44 @@ const Dispatch = () => {
 interface DraggableWorkOrderProps {
   order: WorkOrder;
   isActive: boolean;
+  compact?: boolean;
 }
 
-const DraggableWorkOrder = ({ order, isActive }: DraggableWorkOrderProps) => {
+const DraggableWorkOrder = ({ order, isActive, compact }: DraggableWorkOrderProps) => {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: order.id,
   });
+  
+  if (compact) {
+    return (
+      <div 
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        className={`rounded-md border p-2 bg-card hover:border-primary ${isActive ? 'opacity-50' : ''} cursor-grab active:cursor-grabbing text-xs`}
+        style={{ touchAction: 'none' }}
+      >
+        <div className="flex items-center justify-between">
+          <p className="font-medium truncate">{order.id} - {order.type}</p>
+          <Badge
+            variant="outline"
+            size="sm"
+            className={`ml-1 text-[10px] px-1
+              ${order.priority === 'low' ? 'bg-gray-50 text-gray-700' : ''}
+              ${order.priority === 'medium' ? 'bg-blue-50 text-blue-700' : ''}
+              ${order.priority === 'high' ? 'bg-amber-50 text-amber-700' : ''}
+              ${order.priority === 'emergency' ? 'bg-red-50 text-red-700' : ''}
+            `}
+          >
+            {order.priority}
+          </Badge>
+        </div>
+        <div className="truncate mt-1 text-muted-foreground">
+          {order.customerName}
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div 
@@ -671,7 +946,7 @@ const TechnicianDropTarget = ({ technician, isSelected, onClick, assignedCount }
           </Badge>
         </div>
         <div className="text-xs text-muted-foreground">
-          {technician.specialties.join(', ')}
+          {technician.specialties?.join(', ')}
         </div>
         <div className="text-xs">
           <span className="font-medium">Assigned:</span> {assignedCount} work orders
