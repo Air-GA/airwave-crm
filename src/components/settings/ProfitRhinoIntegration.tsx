@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Card, 
@@ -36,7 +37,7 @@ import {
   Settings,
   PercentCircle
 } from "lucide-react";
-import { SyncButton } from "@/components/SyncButton";
+import { SyncButton } from "../SyncButton";
 
 const profitRhinoSchema = z.object({
   connected: z.boolean().default(false),
