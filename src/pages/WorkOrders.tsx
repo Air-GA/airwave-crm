@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { WorkOrder } from "@/types";
@@ -10,11 +9,27 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import MainLayout from "@/components/layout/MainLayout";
 import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
-import { getWorkOrders } from "@/services/workOrderService";
+import { getWorkOrders, useWorkOrderStore } from "@/services/workOrderService";
 import { FileText, Plus, Search, Activity, Truck, Calendar, Filter } from "lucide-react";
 import { Badge as BadgeIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Wrench, Home, ClipboardCheck, Settings } from "lucide-react";
+
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case "repair":
+      return <Wrench className="h-4 w-4 mr-1" />;
+    case "maintenance":
+      return <Settings className="h-4 w-4 mr-1" />;
+    case "installation":
+      return <Home className="h-4 w-4 mr-1" />;
+    case "inspection":
+      return <ClipboardCheck className="h-4 w-4 mr-1" />;
+    default:
+      return <Activity className="h-4 w-4 mr-1" />;
+  }
+};
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -25,21 +40,22 @@ const WorkOrders = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const workOrderStore = useWorkOrderStore();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await getWorkOrders();
         
-        // Filter out any commercial jobs, we only want residential
         const residentialJobs = data.filter(order => {
-          // In a real implementation, this would check the customer type
-          // For now, include all since we're enforcing residential-only in the service
           return true;
         });
         
         setWorkOrders(residentialJobs);
         setFilteredWorkOrders(residentialJobs);
+        
+        workOrderStore.setWorkOrders(residentialJobs);
+        
         setLoading(false);
       } catch (error) {
         console.error("Error fetching work orders:", error);
@@ -53,29 +69,26 @@ const WorkOrders = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, workOrderStore]);
 
   useEffect(() => {
     let result = workOrders;
 
-    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
         (order) =>
-          order.customerName.toLowerCase().includes(term) ||
-          order.address.toLowerCase().includes(term) ||
-          order.description.toLowerCase().includes(term) ||
-          order.id.toLowerCase().includes(term)
+          order.customerName?.toLowerCase().includes(term) ||
+          order.address?.toLowerCase().includes(term) ||
+          order.description?.toLowerCase().includes(term) ||
+          order.id?.toLowerCase().includes(term)
       );
     }
 
-    // Apply status filter
     if (statusFilter !== "all") {
       result = result.filter((order) => order.status === statusFilter);
     }
 
-    // Apply type filter
     if (typeFilter !== "all") {
       result = result.filter((order) => order.type === typeFilter);
     }
@@ -153,21 +166,6 @@ const WorkOrders = () => {
     navigate("/work-orders/create");
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "repair":
-        return <Activity className="h-4 w-4 text-red-500" />;
-      case "maintenance":
-        return <Calendar className="h-4 w-4 text-green-500" />;
-      case "installation":
-        return <Truck className="h-4 w-4 text-blue-500" />;
-      case "inspection":
-        return <BadgeIcon className="h-4 w-4 text-amber-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
   return (
     <MainLayout pageName="Work Orders">
       <div className="container mx-auto py-6">
@@ -181,7 +179,16 @@ const WorkOrders = () => {
               <Button onClick={handleCreateWorkOrder}>
                 <Plus className="mr-2 h-4 w-4" /> Create Work Order
               </Button>
-              <SyncWithQuickBooks entityType="workOrders" onSyncComplete={() => {}} />
+              <SyncWithQuickBooks 
+                entityType="workOrders" 
+                onSyncComplete={() => {
+                  getWorkOrders().then(data => {
+                    setWorkOrders(data);
+                    setFilteredWorkOrders(data);
+                    workOrderStore.setWorkOrders(data);
+                  });
+                }} 
+              />
             </div>
           </CardHeader>
           <CardContent>
