@@ -312,29 +312,6 @@ const Timesheets = () => {
     });
   };
   
-  const handleSyncWithQuickbooks = async () => {
-    if (!weekStart || !weekEnd) return;
-    
-    setIsSyncingWithQuickbooks(true);
-    try {
-      const fromDate = weekStart.toISOString().split('T')[0];
-      const toDate = weekEnd.toISOString().split('T')[0];
-      
-      const success = await apiIntegrationService.quickbooks.syncTimesheets(fromDate, toDate);
-      
-      if (success) {
-        toast.success("Timesheets synced with QuickBooks", {
-          description: `Pay period: ${formatDate(weekStart)} - ${formatDate(weekEnd)}`
-        });
-      }
-    } catch (error) {
-      console.error('Error syncing with QuickBooks:', error);
-      toast.error("Failed to sync timesheets with QuickBooks");
-    } finally {
-      setIsSyncingWithQuickbooks(false);
-    }
-  };
-  
   const currentPayPeriod = weekStart && weekEnd ? 
     `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : 
     "Current Pay Period";
