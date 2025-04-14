@@ -70,13 +70,10 @@ const Dispatch = () => {
           getWorkOrders(),
         ]);
         
-        // Make sure we're only dealing with residential work orders
-        const residentialWorkOrders = workOrderData.filter(order => 
-          !order.customerType || order.customerType === 'residential'
-        );
-        
+        // Using our existing work orders - no need to filter again as this is
+        // already handled in the workOrderService.ts
         setTechnicians(techData);
-        workOrderStore.setWorkOrders(residentialWorkOrders);
+        workOrderStore.setWorkOrders(workOrderData);
         
         // Sync customer data with work orders
         workOrderStore.syncWithCustomers();
