@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Download, Filter, BarChart, FileText, Calendar, Users, Plus, Edit } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -22,11 +21,11 @@ interface Report {
 
 // Mock reports data
 const initialReports: Report[] = [
-  { id: 1, name: "Monthly Revenue", category: "financial", date: "2025-04-01" },
-  { id: 2, name: "Technician Performance", category: "performance", date: "2025-04-05" },
-  { id: 3, name: "Customer Satisfaction", category: "customer", date: "2025-04-07" },
-  { id: 4, name: "Inventory Status", category: "inventory", date: "2025-04-08" },
-  { id: 5, name: "Service Call Analysis", category: "service", date: "2025-04-10" },
+  { id: 1, name: "Monthly Revenue", category: "financial", date: "2025-04-01", isEditable: true },
+  { id: 2, name: "Technician Performance", category: "performance", date: "2025-04-05", isEditable: true },
+  { id: 3, name: "Customer Satisfaction", category: "customer", date: "2025-04-07", isEditable: true },
+  { id: 4, name: "Inventory Status", category: "inventory", date: "2025-04-08", isEditable: true },
+  { id: 5, name: "Service Call Analysis", category: "service", date: "2025-04-10", isEditable: true },
 ];
 
 export default function Reports() {
@@ -167,12 +166,10 @@ export default function Reports() {
                               <FileText className="h-4 w-4 mr-1" />
                               View
                             </Button>
-                            {report.isEditable && (
-                              <Button variant="ghost" size="sm" onClick={() => handleEditReport(report)}>
-                                <Edit className="h-4 w-4 mr-1" />
-                                Edit
-                              </Button>
-                            )}
+                            <Button variant="ghost" size="sm" onClick={() => handleEditReport(report)}>
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -212,12 +209,10 @@ export default function Reports() {
                             <Download className="h-4 w-4 mr-1" />
                             Download
                           </Button>
-                          {report.isEditable && (
-                            <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditReport(report)}>
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                          )}
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditReport(report)}>
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
                         </div>
                       </CardFooter>
                     </Card>
