@@ -45,14 +45,11 @@ import {
   TimerOff,
   ClockAlert,
   DollarSign,
-  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
-import { SyncButton } from "@/components/SyncButton";
-import { apiIntegrationService } from "@/services/apiIntegrationService";
 
 interface TimesheetStats {
   hours: number;
@@ -96,7 +93,6 @@ const Timesheets = () => {
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   const [timesheetEntries, setTimesheetEntries] = useState<any[]>([]);
-  const [isSyncingWithQuickbooks, setIsSyncingWithQuickbooks] = useState(false);
   
   const canViewAllTimesheets = 
     permissions?.canViewHRInfo || 
@@ -358,21 +354,6 @@ const Timesheets = () => {
             <Button variant="outline">
               <Upload className="mr-2 h-4 w-4" /> Export
             </Button>
-            
-            {canViewAllTimesheets && (
-              <Button 
-                variant="outline"
-                onClick={handleSyncWithQuickbooks}
-                disabled={isSyncingWithQuickbooks}
-              >
-                {isSyncingWithQuickbooks ? (
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <DollarSign className="mr-2 h-4 w-4" />
-                )}
-                Sync to QuickBooks
-              </Button>
-            )}
           </div>
         </div>
         
@@ -626,20 +607,6 @@ const Timesheets = () => {
               <Clock className="mr-2 h-4 w-4" /> View Time Details
             </Button>
             <div className="flex gap-2">
-              {canViewAllTimesheets && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleSyncWithQuickbooks}
-                  disabled={isSyncingWithQuickbooks}
-                >
-                  {isSyncingWithQuickbooks ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <DollarSign className="mr-2 h-4 w-4" />
-                  )}
-                  Sync to QuickBooks
-                </Button>
-              )}
               <Button variant="outline">
                 <FileText className="mr-2 h-4 w-4" /> Generate Report
               </Button>
