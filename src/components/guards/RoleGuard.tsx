@@ -3,7 +3,8 @@ import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
-type AllowedRoles = Array<'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'technician' | 'customer'>;
+// Update the type to include 'user'
+type AllowedRoles = Array<'admin' | 'manager' | 'csr' | 'sales' | 'hr' | 'tech' | 'customer' | 'user'>;
 
 interface RoleGuardProps {
   children: ReactNode;

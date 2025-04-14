@@ -19,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { 
-  AlertCircle,
   ChevronDown, 
   Download, 
   Eye, 
@@ -29,24 +28,12 @@ import {
   Plus, 
   Printer, 
   Search, 
-  Send,
-  ReceiptText,
+  Send 
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
-import { useAuth } from "@/hooks/useAuth";
-import { 
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const Invoices = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const { userRole, permissions } = useAuth();
-  
-  // Only admins can see profit information
-  const canViewProfitNumbers = userRole === 'admin';
   
   // Mock data for invoices
   const invoices = [
@@ -127,7 +114,7 @@ const Invoices = () => {
             <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
             <p className="text-muted-foreground">Manage billing and payments</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Button>
               <Plus className="mr-2 h-4 w-4" /> New Invoice
             </Button>
@@ -160,29 +147,15 @@ const Invoices = () => {
                 .toFixed(2)}
             </div>
           </div>
-          
-          {/* Only show profit metrics to admin users */}
-          {canViewProfitNumbers ? (
-            <div className="rounded-lg border p-3">
-              <div className="text-sm font-medium text-muted-foreground">Profit (This Month)</div>
-              <div className="mt-2 text-2xl font-bold text-green-500">
-                ${(invoices
-                  .filter(i => i.status === 'paid')
-                  .reduce((sum, i) => sum + i.amount, 0) * 0.35) // Example profit margin of 35%
-                  .toFixed(2)}
-              </div>
+          <div className="rounded-lg border p-3">
+            <div className="text-sm font-medium text-muted-foreground">Paid (This Month)</div>
+            <div className="mt-2 text-2xl font-bold text-green-500">
+              ${invoices
+                .filter(i => i.status === 'paid')
+                .reduce((sum, i) => sum + i.amount, 0)
+                .toFixed(2)}
             </div>
-          ) : (
-            <div className="rounded-lg border p-3">
-              <div className="text-sm font-medium text-muted-foreground">Paid (This Month)</div>
-              <div className="mt-2 text-2xl font-bold text-green-500">
-                ${invoices
-                  .filter(i => i.status === 'paid')
-                  .reduce((sum, i) => sum + i.amount, 0)
-                  .toFixed(2)}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
         
         {/* Search and filters */}
@@ -217,11 +190,6 @@ const Invoices = () => {
             <Button variant="outline">
               <Filter className="mr-1 h-4 w-4" /> Date Range
             </Button>
-            
-            {/* AutoPay filter */}
-            <Button variant="outline">
-              <CreditCard className="mr-1 h-4 w-4" /> AutoPay Status
-            </Button>
           </div>
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground ml-auto">
@@ -241,15 +209,6 @@ const Invoices = () => {
                 <TableHead>Due Date</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Status</TableHead>
-                
-                {/* Only show profit column to admin users */}
-                {canViewProfitNumbers && (
-                  <TableHead className="text-right">Profit</TableHead>
-                )}
-                
-                {/* Add AutoPay column */}
-                <TableHead className="text-center">AutoPay</TableHead>
-                
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -275,21 +234,6 @@ const Invoices = () => {
                       {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                     </Badge>
                   </TableCell>
-                  
-                  {/* Only show profit column to admin users */}
-                  {canViewProfitNumbers && (
-                    <TableCell className="text-right text-green-600">
-                      ${(invoice.amount * 0.35).toFixed(2)}
-                    </TableCell>
-                  )}
-                  
-                  {/* AutoPay column */}
-                  <TableCell className="text-center">
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                      {invoice.id.includes('3') ? 'Enabled' : 'Not Set'}
-                    </Badge>
-                  </TableCell>
-                  
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -310,11 +254,6 @@ const Invoices = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Download className="mr-2 h-4 w-4" /> Download PDF
-                        </DropdownMenuItem>
-                        
-                        {/* AutoPay setup action */}
-                        <DropdownMenuItem>
-                          <CreditCard className="mr-2 h-4 w-4" /> Set Up AutoPay
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -338,24 +277,5 @@ const Invoices = () => {
     </MainLayout>
   );
 };
-
-// CreditCard icon component
-const CreditCard = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <rect width="20" height="14" x="2" y="5" rx="2" />
-    <line x1="2" x2="22" y1="10" y2="10" />
-  </svg>
-);
 
 export default Invoices;

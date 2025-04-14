@@ -20,6 +20,10 @@ export const userFormSchema = z.object({
 });
 
 export const integrationSchema = z.object({
+  quickbooks: z.object({
+    connected: z.boolean(),
+    apiKey: z.string().optional(),
+  }),
   googleMaps: z.object({
     connected: z.boolean(),
     apiKey: z.string().min(5, { message: "API Key is required" }).optional().or(z.literal("")),
@@ -28,44 +32,4 @@ export const integrationSchema = z.object({
     connected: z.boolean(),
     apiKey: z.string().optional().or(z.literal("")),
   }),
-  // Adding Profit Rhino API integration
-  profitRhino: z.object({
-    connected: z.boolean(),
-    apiKey: z.string().optional().or(z.literal("")),
-    apiSecret: z.string().optional().or(z.literal("")),
-    environment: z.enum(["sandbox", "production"]).default("sandbox"),
-    baseUrl: z.string().optional().or(z.literal("")),
-    autoSync: z.boolean().default(true),
-    syncInterval: z.number().default(3600000), // 1 hour in milliseconds
-    syncInventory: z.boolean().default(true),
-    syncPricing: z.boolean().default(true),
-    markupPercentage: z.number().default(30), // Default markup percentage
-    useCompanyMarkups: z.boolean().default(true),
-    useDefaultMaterialsCost: z.boolean().default(false),
-    useCustomPricebook: z.boolean().default(false),
-    pricebookId: z.string().optional().or(z.literal("")),
-  }),
 });
-
-// Define the UserRole type to include all roles in one place
-export const userRoles = [
-  "admin",
-  "manager",
-  "csr",
-  "tech",
-  "technician",
-  "sales",
-  "hr",
-  "customer",
-  "user"
-] as const;
-
-export type UserRole = typeof userRoles[number];
-
-export const rolePermissionSchema = z.object({
-  role: z.enum(userRoles),
-  permissions: z.array(z.string()),
-  description: z.string(),
-});
-
-export type RolePermission = z.infer<typeof rolePermissionSchema>;

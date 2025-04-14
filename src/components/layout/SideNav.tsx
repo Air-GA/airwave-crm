@@ -1,4 +1,3 @@
-
 import {
   BarChart3,
   Calendar,
@@ -31,6 +30,7 @@ interface NavItem {
   icon: any;
 }
 
+// Update the navigation items to remove the import data page
 export const navigationItems = [
   {
     title: "Dashboard",
@@ -120,8 +120,8 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
           <img 
-            src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" 
-            alt="Air Georgia Home Comfort Systems" 
+            src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
+            alt="Air Georgia Logo" 
             className="h-10 w-auto" 
           />
           <button onClick={handleClose}>
@@ -133,13 +133,13 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
       
       {/* Desktop sidebar */}
       <Sidebar 
-        className="hidden md:block md:w-64 md:flex-shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
+        className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
         collapsible="none"
       >
         <SidebarHeader className="flex h-16 items-center px-4 border-b border-sidebar-border">
           <img 
-            src="/lovable-uploads/f169bc97-451d-4387-9c63-d2955fe90926.png" 
-            alt="Air Georgia Home Comfort Systems" 
+            src="/lovable-uploads/4150f513-0a64-4f43-9f7c-aded810cf322.png" 
+            alt="Air Georgia Logo" 
             className="h-10 w-auto" 
           />
         </SidebarHeader>
@@ -151,6 +151,7 @@ const SideNav = ({ open = false, setOpen }: SideNavProps) => {
   );
 };
 
+// Extracted common menu component
 SideNav.Menu = function SideNavMenu() {
   return (
     <SidebarMenu className="flex flex-col space-y-0.5 p-2">

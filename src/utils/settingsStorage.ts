@@ -21,6 +21,10 @@ export interface CompanySettings {
 }
 
 export interface IntegrationSettings {
+  quickbooks: {
+    connected: boolean;
+    apiKey?: string;
+  };
   googleMaps: {
     connected: boolean;
     apiKey?: string;
@@ -28,22 +32,6 @@ export interface IntegrationSettings {
   smsProvider: {
     connected: boolean;
     apiKey?: string;
-  };
-  profitRhino: {
-    connected: boolean;
-    apiKey?: string;
-    apiSecret?: string;
-    environment: "sandbox" | "production";
-    baseUrl?: string;
-    autoSync: boolean;
-    syncInterval: number;
-    syncInventory: boolean;
-    syncPricing: boolean;
-    markupPercentage: number;
-    useCompanyMarkups: boolean;
-    useDefaultMaterialsCost: boolean;
-    useCustomPricebook: boolean;
-    pricebookId?: string;
   };
 }
 
@@ -82,6 +70,10 @@ export const defaultCompanySettings: CompanySettings = {
 };
 
 export const defaultIntegrationSettings: IntegrationSettings = {
+  quickbooks: {
+    connected: true,
+    apiKey: "",
+  },
   googleMaps: {
     connected: false,
     apiKey: "",
@@ -89,22 +81,6 @@ export const defaultIntegrationSettings: IntegrationSettings = {
   smsProvider: {
     connected: false,
     apiKey: "",
-  },
-  profitRhino: {
-    connected: false,
-    apiKey: "",
-    apiSecret: "",
-    environment: "sandbox",
-    baseUrl: "",
-    autoSync: true,
-    syncInterval: 3600000, // 1 hour in milliseconds
-    syncInventory: true,
-    syncPricing: true,
-    markupPercentage: 30, // Default markup percentage
-    useCompanyMarkups: true,
-    useDefaultMaterialsCost: false,
-    useCustomPricebook: false,
-    pricebookId: "",
   }
 };
 

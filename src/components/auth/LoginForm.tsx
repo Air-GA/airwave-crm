@@ -55,7 +55,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Login to Air Georgia Home Comfort Systems</CardTitle>
+        <CardTitle>Login to Air Georgia</CardTitle>
         <CardDescription>
           Enter your credentials to access your account
         </CardDescription>
@@ -95,7 +95,7 @@ export function LoginForm() {
                 <SelectItem value="csr">Customer Service Rep</SelectItem>
                 <SelectItem value="sales">Sales</SelectItem>
                 <SelectItem value="hr">HR</SelectItem>
-                <SelectItem value="technician">Technician</SelectItem>
+                <SelectItem value="tech">Technician</SelectItem>
                 <SelectItem value="customer">Customer</SelectItem>
               </SelectContent>
             </Select>
