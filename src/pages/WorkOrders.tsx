@@ -15,6 +15,23 @@ import { FileText, Plus, Search, Activity, Truck, Calendar, Filter } from "lucid
 import { Badge as BadgeIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Wrench, Home, ClipboardCheck, Tool } from "lucide-react";
+
+// Function to get icon based on work order type
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case "repair":
+      return <Wrench className="h-4 w-4 mr-1" />;
+    case "maintenance":
+      return <Tool className="h-4 w-4 mr-1" />;
+    case "installation":
+      return <Home className="h-4 w-4 mr-1" />;
+    case "inspection":
+      return <ClipboardCheck className="h-4 w-4 mr-1" />;
+    default:
+      return <Activity className="h-4 w-4 mr-1" />;
+  }
+};
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -36,7 +53,7 @@ const WorkOrders = () => {
         const residentialJobs = data.filter(order => {
           // In a real implementation, this would check the customer type directly
           // For now, we'll enforce residential-only as per the service configuration
-          return order.type !== 'commercial'; // This will filter out any explicitly marked commercial jobs
+          return order.customerType !== 'commercial'; // Check customerType instead of type
         });
         
         setWorkOrders(residentialJobs);
@@ -177,7 +194,7 @@ const WorkOrders = () => {
                   // Refresh data after sync
                   getWorkOrders().then(data => {
                     const residentialJobs = data.filter(order => 
-                      order.type !== 'commercial'
+                      order.customerType !== 'commercial'
                     );
                     setWorkOrders(residentialJobs);
                     setFilteredWorkOrders(residentialJobs);
