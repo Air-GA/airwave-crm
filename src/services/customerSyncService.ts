@@ -42,13 +42,13 @@ export const getStaticCustomers = (): Customer[] => {
   return [
     {
       id: "c1",
-      name: "Johnson Family",
-      email: "johnson@example.com",
+      name: "John Smith",
+      email: "john.smith@example.com",
       phone: "404-555-1234",
-      address: "123 Maple Street, Atlanta, GA",
-      billAddress: "123 Maple Street, Atlanta, GA",
+      address: "123 Main St, Atlanta, GA 30301",
+      billAddress: "123 Main St, Atlanta, GA 30301",
       serviceAddresses: [
-        { id: "addr-1", address: "123 Maple Street, Atlanta, GA", isPrimary: true, notes: "Main residence" }
+        { id: "addr-1", address: "123 Main St, Atlanta, GA 30301", isPrimary: true, notes: "Primary residence" }
       ],
       type: "residential",
       createdAt: new Date().toISOString(),
@@ -56,13 +56,13 @@ export const getStaticCustomers = (): Customer[] => {
     },
     {
       id: "c3",
-      name: "Sarah Wilson",
-      email: "swilson@gmail.com",
-      phone: "678-555-3456",
-      address: "456 Oak Avenue, Marietta, GA",
-      billAddress: "456 Oak Avenue, Marietta, GA",
+      name: "Sarah Johnson",
+      email: "sarah.j@example.com",
+      phone: "404-555-3456",
+      address: "456 Oak Dr, Marietta, GA 30060",
+      billAddress: "456 Oak Dr, Marietta, GA 30060",
       serviceAddresses: [
-        { id: "addr-4", address: "456 Oak Avenue, Marietta, GA", isPrimary: true, notes: "Home address" }
+        { id: "addr-4", address: "456 Oak Dr, Marietta, GA 30060", isPrimary: true, notes: "Home address" }
       ],
       type: "residential",
       createdAt: new Date().toISOString(),

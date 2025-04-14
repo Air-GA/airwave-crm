@@ -87,32 +87,8 @@ export const customers: Customer[] = [
       {
         id: 'sa1',
         address: '123 Main St, Atlanta, GA 30301',
-        isPrimary: true
-      }
-    ]
-  },
-  {
-    id: 'c2',
-    name: 'Technical College',
-    email: 'maintenance@techcollege.edu',
-    phone: '404-555-2345',
-    address: '225 North Ave NW, Atlanta, GA 30332',
-    serviceAddress: '225 North Ave NW, Atlanta, GA 30332',
-    billAddress: 'PO Box 34578, Atlanta, GA 30332',
-    type: 'residential',
-    createdAt: '2025-01-22T10:15:00Z',
-    lastService: '2025-03-05T13:45:00Z',
-    serviceAddresses: [
-      {
-        id: 'sa2',
-        address: '225 North Ave NW, Atlanta, GA 30332',
-        isPrimary: true
-      },
-      {
-        id: 'sa3',
-        address: '266 Ferst Drive, Atlanta, GA 30332',
-        isPrimary: false,
-        notes: 'Second Home'
+        isPrimary: true,
+        notes: 'Primary residence'
       }
     ]
   },
@@ -131,7 +107,28 @@ export const customers: Customer[] = [
       {
         id: 'sa4',
         address: '456 Oak Dr, Marietta, GA 30060',
-        isPrimary: true
+        isPrimary: true,
+        notes: 'Home address'
+      }
+    ]
+  },
+  {
+    id: 'c5',
+    name: 'Thomas Family',
+    email: 'thomasfamily@outlook.com',
+    phone: '770-555-7890',
+    address: '789 Pine Road, Alpharetta, GA',
+    serviceAddress: '789 Pine Road, Alpharetta, GA',
+    billAddress: '789 Pine Road, Alpharetta, GA',
+    type: 'residential',
+    createdAt: '2025-02-20T11:10:00Z',
+    lastService: '2025-04-25T10:15:00Z',
+    serviceAddresses: [
+      {
+        id: 'sa7',
+        address: '789 Pine Road, Alpharetta, GA',
+        isPrimary: true,
+        notes: 'Beware of dog'
       }
     ]
   },
@@ -161,7 +158,7 @@ export const customers: Customer[] = [
     ]
   },
   {
-    id: 'c5',
+    id: 'c2',
     name: 'Michael Williams',
     email: 'michael.w@example.com',
     phone: '404-555-5678',
@@ -173,7 +170,7 @@ export const customers: Customer[] = [
     lastService: '2025-04-25T10:15:00Z',
     serviceAddresses: [
       {
-        id: 'sa7',
+        id: 'sa2',
         address: '789 Elm Street, Roswell, GA 30075',
         isPrimary: true
       }

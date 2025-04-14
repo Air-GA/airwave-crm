@@ -56,46 +56,45 @@ import { getStaticCustomers } from "@/services/customerSyncService";
 const staticCustomers: Customer[] = [
   {
     id: "c1",
-    name: "Johnson Family",
-    email: "johnson@example.com",
+    name: "John Smith",
+    email: "john.smith@example.com",
     phone: "404-555-1234",
-    address: "123 Maple Street, Atlanta, GA",
-    billAddress: "123 Maple Street, Atlanta, GA",
+    address: "123 Main St, Atlanta, GA 30301",
+    billAddress: "123 Main St, Atlanta, GA 30301",
     serviceAddresses: [
-      { id: "addr-1", address: "123 Maple Street, Atlanta, GA", isPrimary: true, notes: "Main residence" }
+      { id: "addr-1", address: "123 Main St, Atlanta, GA 30301", isPrimary: true, notes: "Primary residence" }
     ],
     type: "residential",
     createdAt: new Date().toISOString(),
     lastService: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
   },
   {
-    id: "c2",
-    name: "Atlanta Technical College",
-    email: "maintenance@atcollege.edu",
-    phone: "678-555-2345",
-    address: "225 North Ave NW, Atlanta, GA 30332",
-    billAddress: "PO Box 34578, Atlanta, GA 30332",
+    id: "c3",
+    name: "Sarah Johnson",
+    email: "sarah.j@example.com",
+    phone: "404-555-3456",
+    address: "456 Oak Dr, Marietta, GA 30060",
+    billAddress: "456 Oak Dr, Marietta, GA 30060",
     serviceAddresses: [
-      { id: "addr-2", address: "225 North Ave NW, Atlanta, GA 30332", isPrimary: true, notes: "Main campus" },
-      { id: "addr-3", address: "266 Ferst Drive, Atlanta, GA 30332", isPrimary: false, notes: "Satellite office" }
+      { id: "addr-4", address: "456 Oak Dr, Marietta, GA 30060", isPrimary: true, notes: "Home address" }
     ],
-    type: "commercial",
+    type: "residential",
     createdAt: new Date().toISOString(),
     lastService: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() // 15 days ago
   },
   {
-    id: "c3",
-    name: "Sarah Wilson",
-    email: "swilson@gmail.com",
-    phone: "678-555-3456",
-    address: "456 Oak Avenue, Marietta, GA",
-    billAddress: "456 Oak Avenue, Marietta, GA",
+    id: "c5",
+    name: "Thomas Family",
+    email: "thomasfamily@outlook.com",
+    phone: "770-555-7890",
+    address: "789 Pine Road, Alpharetta, GA",
+    billAddress: "789 Pine Road, Alpharetta, GA",
     serviceAddresses: [
-      { id: "addr-4", address: "456 Oak Avenue, Marietta, GA", isPrimary: true, notes: "Home address" }
+      { id: "addr-5", address: "789 Pine Road, Alpharetta, GA", isPrimary: true, notes: "Beware of dog" }
     ],
     type: "residential",
     createdAt: new Date().toISOString(),
-    lastService: null
+    lastService: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() // 45 days ago
   }
 ];
 
@@ -118,6 +117,7 @@ const CustomersList = () => {
         const { data, error } = await supabase.client
           .from("customers")
           .select("*")
+          .eq("type", "residential") // Only get residential customers
           .order("name", { ascending: true });
 
         if (error) {
@@ -163,7 +163,7 @@ const CustomersList = () => {
       }
     },
     meta: {
-      onError: (error: Error) => {
+      errors: (error: Error) => {
         console.error("Query error:", error);
         return staticCustomers;
       }

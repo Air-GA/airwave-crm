@@ -21,9 +21,9 @@ serve(async (req) => {
   }
   
   try {
-    console.log("Syncing three customers function called");
+    console.log("Syncing three residential customers function called");
     
-    // Define three sample customers
+    // Define three sample residential customers
     const threeCustomers = [
       {
         id: 'c1',
@@ -42,27 +42,6 @@ serve(async (req) => {
         ]
       },
       {
-        id: 'c2',
-        name: 'Atlanta Technical College',
-        email: 'maintenance@atcollege.edu',
-        phone: '404-555-2345',
-        address: '225 North Ave NW, Atlanta, GA 30332',
-        type: 'commercial',
-        created_at: new Date().toISOString(),
-        service_addresses: [
-          {
-            address: '225 North Ave NW, Atlanta, GA 30332',
-            is_primary: true,
-            notes: 'Main campus building'
-          },
-          {
-            address: '266 Ferst Drive, Atlanta, GA 30332',
-            is_primary: false,
-            notes: 'Satellite office'
-          }
-        ]
-      },
-      {
         id: 'c3',
         name: 'Sarah Johnson',
         email: 'sarah.j@example.com',
@@ -75,6 +54,22 @@ serve(async (req) => {
             address: '456 Oak Dr, Marietta, GA 30060',
             is_primary: true,
             notes: 'Home address'
+          }
+        ]
+      },
+      {
+        id: 'c5',
+        name: 'Thomas Family',
+        email: 'thomasfamily@outlook.com',
+        phone: '770-555-7890',
+        address: '789 Pine Road, Alpharetta, GA',
+        type: 'residential',
+        created_at: new Date().toISOString(),
+        service_addresses: [
+          {
+            address: '789 Pine Road, Alpharetta, GA',
+            is_primary: true,
+            notes: 'Beware of dog'
           }
         ]
       }
@@ -113,7 +108,7 @@ serve(async (req) => {
     }
     
     // Insert the new customers
-    console.log("Inserting three sample customers...");
+    console.log("Inserting three sample residential customers...");
     const customersToInsert = threeCustomers.map(customer => {
       const { service_addresses, ...customerData } = customer;
       return customerData;
@@ -139,7 +134,7 @@ serve(async (req) => {
           customer_id: customer.id,
           address: addr.address,
           is_primary: addr.is_primary,
-          notes: addr.notes
+          notes: addr.notes || '',
         }));
         
         const { data: addressData, error: addressError } = await supabase
@@ -163,7 +158,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         status: "success",
-        message: `Synchronized 3 customers with ${insertedAddresses.length} service addresses`,
+        message: `Synchronized 3 residential customers with ${insertedAddresses.length} service addresses`,
         data: {
           customers: insertedCustomers,
           addresses: insertedAddresses
