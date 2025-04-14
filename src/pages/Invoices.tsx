@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ import {
   Printer, 
   Search, 
   Send,
-  CreditCard,
+  CreditCard as CreditCardIcon,
 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -155,14 +154,13 @@ const Invoices = () => {
             </div>
           </div>
           
-          {/* Only show profit metrics to admin users */}
           {canViewProfitNumbers ? (
             <div className="rounded-lg border p-3">
               <div className="text-sm font-medium text-muted-foreground">Profit (This Month)</div>
               <div className="mt-2 text-2xl font-bold text-green-500">
                 ${(invoices
                   .filter(i => i.status === 'paid')
-                  .reduce((sum, i) => sum + i.amount, 0) * 0.35) // Example profit margin of 35%
+                  .reduce((sum, i) => sum + i.amount, 0) * 0.35)
                   .toFixed(2)}
               </div>
             </div>
@@ -179,7 +177,6 @@ const Invoices = () => {
           )}
         </div>
         
-        {/* Search and filters */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -212,9 +209,8 @@ const Invoices = () => {
               <Filter className="mr-1 h-4 w-4" /> Date Range
             </Button>
             
-            {/* AutoPay filter */}
             <Button variant="outline">
-              <CreditCard className="mr-1 h-4 w-4" /> AutoPay Status
+              <CreditCardIcon className="mr-1 h-4 w-4" /> AutoPay Status
             </Button>
           </div>
           
@@ -223,7 +219,6 @@ const Invoices = () => {
           </div>
         </div>
         
-        {/* Invoices table */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -236,12 +231,10 @@ const Invoices = () => {
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Status</TableHead>
                 
-                {/* Only show profit column to admin users */}
                 {canViewProfitNumbers && (
                   <TableHead className="text-right">Profit</TableHead>
                 )}
                 
-                {/* Add AutoPay column */}
                 <TableHead className="text-center">AutoPay</TableHead>
                 
                 <TableHead className="text-right">Actions</TableHead>
@@ -270,14 +263,12 @@ const Invoices = () => {
                     </Badge>
                   </TableCell>
                   
-                  {/* Only show profit column to admin users */}
                   {canViewProfitNumbers && (
                     <TableCell className="text-right text-green-600">
                       ${(invoice.amount * 0.35).toFixed(2)}
                     </TableCell>
                   )}
                   
-                  {/* AutoPay column */}
                   <TableCell className="text-center">
                     <Badge variant="outline" className="bg-blue-50 text-blue-700">
                       {invoice.id.includes('3') ? 'Enabled' : 'Not Set'}
@@ -306,9 +297,8 @@ const Invoices = () => {
                           <Download className="mr-2 h-4 w-4" /> Download PDF
                         </DropdownMenuItem>
                         
-                        {/* AutoPay setup action */}
                         <DropdownMenuItem>
-                          <CreditCard className="mr-2 h-4 w-4" /> Set Up AutoPay
+                          <CreditCardIcon className="mr-2 h-4 w-4" /> Set Up AutoPay
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -332,24 +322,5 @@ const Invoices = () => {
     </MainLayout>
   );
 };
-
-// Need to add the CreditCard icon
-const CreditCard = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <rect width="20" height="14" x="2" y="5" rx="2" />
-    <line x1="2" x2="22" y1="10" y2="10" />
-  </svg>
-);
 
 export default Invoices;
