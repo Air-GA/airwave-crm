@@ -84,3 +84,93 @@ export const getStaticCustomers = (): Customer[] => {
     }
   ];
 };
+
+// Add function to update a customer both locally and in the database
+export const updateCustomer = async (updatedCustomer: Customer): Promise<Customer> => {
+  try {
+    console.log("Updating customer:", updatedCustomer);
+    
+    // Format customer for DB
+    const dbCustomer = supabase.formatCustomerForDb(updatedCustomer);
+    
+    // Update in Supabase
+    const { data, error } = await supabase.client
+      .from("customers")
+      .update(dbCustomer)
+      .eq("id", updatedCustomer.id)
+      .select();
+    
+    if (error) {
+      console.error("Error updating customer in database:", error);
+      throw new Error(`Failed to update customer: ${error.message}`);
+    }
+    
+    // If customer has service addresses, update them as well
+    if (updatedCustomer.serviceAddresses && updatedCustomer.serviceAddresses.length > 0) {
+      // First delete existing service addresses to avoid duplicates
+      const { error: deleteError } = await supabase.client
+        .from("service_addresses")
+        .delete()
+        .eq("customer_id", updatedCustomer.id);
+      
+      if (deleteError) {
+        console.error("Error deleting existing service addresses:", deleteError);
+      }
+      
+      // Insert updated service addresses
+      const serviceAddresses = updatedCustomer.serviceAddresses.map(addr => ({
+        customer_id: updatedCustomer.id,
+        address: addr.address,
+        is_primary: addr.isPrimary || false,
+        notes: addr.notes || ''
+      }));
+      
+      const { error: insertError } = await supabase.client
+        .from("service_addresses")
+        .insert(serviceAddresses);
+      
+      if (insertError) {
+        console.error("Error inserting updated service addresses:", insertError);
+      }
+    }
+    
+    console.log("Customer successfully updated:", data);
+    
+    // Return the updated customer
+    return updatedCustomer;
+  } catch (error) {
+    console.error("Error in updateCustomer:", error);
+    throw error;
+  }
+};
+
+// Function to get a specific customer by ID
+export const getCustomerById = async (customerId: string): Promise<Customer | null> => {
+  try {
+    // First try to get from database
+    const { data, error } = await supabase.client
+      .from("customers")
+      .select("*")
+      .eq("id", customerId)
+      .single();
+    
+    if (error) {
+      console.error("Error fetching customer from database:", error);
+      
+      // Try to find in static data
+      const staticCustomers = getStaticCustomers();
+      const staticCustomer = staticCustomers.find(c => c.id === customerId);
+      
+      if (staticCustomer) {
+        return staticCustomer;
+      }
+      
+      throw new Error(`Customer not found: ${error.message}`);
+    }
+    
+    return supabase.formatDbToCustomer(data);
+  } catch (error) {
+    console.error("Error in getCustomerById:", error);
+    throw error;
+  }
+};
