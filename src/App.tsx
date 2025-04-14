@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -7,14 +8,12 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import Unauthorized from "@/pages/Unauthorized";
-import CustomersList from "@/pages/CustomersList";
-import ServiceAddresses from "@/pages/ServiceAddresses";
+import Customers from "@/pages/Customers";
 import WorkOrders from "@/pages/WorkOrders";
 import CreateWorkOrder from "@/pages/CreateWorkOrder";
 import Schedule from "@/pages/Schedule";
 import Dispatch from "@/pages/Dispatch";
 import Inventory from "@/pages/Inventory";
-import PurchaseOrders from "@/pages/PurchaseOrders";
 import Invoices from "@/pages/Invoices";
 import Reports from "@/pages/Reports";
 import Messages from "@/pages/Messages";
@@ -37,18 +36,10 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
-              {/* Redirect from old customers path to the consolidated customers-list */}
-              <Route path="/customers" element={<Navigate replace to="/customers-list" />} />
-
               {/* Protected routes */}
-              <Route path="/customers-list" element={
+              <Route path="/customers" element={
                 <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "customer"]}>
-                  <CustomersList />
-                </RoleGuard>
-              } />
-              <Route path="/service-addresses" element={
-                <RoleGuard allowedRoles={["admin", "manager", "csr", "sales", "technician"]}>
-                  <ServiceAddresses />
+                  <Customers />
                 </RoleGuard>
               } />
               <Route path="/work-orders" element={
@@ -74,11 +65,6 @@ function App() {
               <Route path="/inventory" element={
                 <RoleGuard allowedRoles={["admin", "manager", "technician"]}>
                   <Inventory />
-                </RoleGuard>
-              } />
-              <Route path="/purchase-orders" element={
-                <RoleGuard allowedRoles={["admin", "manager"]}>
-                  <PurchaseOrders />
                 </RoleGuard>
               } />
               <Route path="/invoices" element={

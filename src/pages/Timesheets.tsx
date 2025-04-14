@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { SyncButton } from "@/components/SyncButton";
-import { apiIntegrationService } from "@/services/apiIntegrationService";
+import apiIntegrationService from "@/services/apiIntegrationService";
 
 interface TimesheetStats {
   hours: number;
@@ -98,6 +99,7 @@ const Timesheets = () => {
   const [timesheetEntries, setTimesheetEntries] = useState<any[]>([]);
   const [isSyncingWithQuickbooks, setIsSyncingWithQuickbooks] = useState(false);
   
+  // Check if user has permission to view all timesheets
   const canViewAllTimesheets = 
     permissions?.canViewHRInfo || 
     user?.role === 'admin' || 
@@ -116,6 +118,7 @@ const Timesheets = () => {
     const today = new Date();
     let startDay = new Date(today);
     
+    // Find the previous Thursday (day 4)
     while (startDay.getDay() !== 4) {
       startDay.setDate(startDay.getDate() - 1);
     }
@@ -135,6 +138,7 @@ const Timesheets = () => {
   }, [selectedWeek]);
   
   useEffect(() => {
+    // Load clock events for the current user
     const storedClockIn = localStorage.getItem('clockInTime_' + user?.id);
     const storedEvents = localStorage.getItem('clockEvents');
     
@@ -150,6 +154,7 @@ const Timesheets = () => {
         timestamp: new Date(event.timestamp)
       }));
       
+      // Filter events to only show current user's events unless admin/hr/manager
       const filteredEvents = canViewAllTimesheets
         ? allEvents
         : allEvents.filter((event: ClockEvent) => event.userId === user?.id);
@@ -157,6 +162,7 @@ const Timesheets = () => {
       setClockEvents(filteredEvents);
     }
     
+    // Filter timesheet entries based on user role
     const mockTimesheetEntries = [
       {
         id: "TS1001",
@@ -210,9 +216,11 @@ const Timesheets = () => {
       },
     ];
     
+    // Filter timesheet entries based on user permissions
     if (canViewAllTimesheets) {
       setTimesheetEntries(mockTimesheetEntries);
     } else {
+      // For non-admin users, only show their own entries
       const filteredEntries = mockTimesheetEntries.filter(
         entry => entry.technicianId === user?.id
       );
@@ -321,9 +329,11 @@ const Timesheets = () => {
     
     setIsSyncingWithQuickbooks(true);
     try {
+      // Format dates for API call
       const fromDate = weekStart.toISOString().split('T')[0];
       const toDate = weekEnd.toISOString().split('T')[0];
       
+      // Call the integration service
       const success = await apiIntegrationService.quickbooks.syncTimesheets(fromDate, toDate);
       
       if (success) {
@@ -359,6 +369,7 @@ const Timesheets = () => {
               <Upload className="mr-2 h-4 w-4" /> Export
             </Button>
             
+            {/* QuickBooks Sync Button - Only for Admin/HR/Manager */}
             {canViewAllTimesheets && (
               <Button 
                 variant="outline"

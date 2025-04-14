@@ -4,7 +4,6 @@ import {
   Calendar,
   ClipboardList,
   Clock,
-  FileText,
   LayoutDashboard,
   MapPin,
   MessageSquare,
@@ -40,13 +39,8 @@ export const navigationItems = [
   },
   {
     title: "Customers",
-    href: "/customers-list",
+    href: "/customers",
     icon: Users,
-  },
-  {
-    title: "Service Addresses",
-    href: "/service-addresses",
-    icon: MapPin,
   },
   {
     title: "Work Orders",
@@ -67,11 +61,6 @@ export const navigationItems = [
     title: "Inventory",
     href: "/inventory",
     icon: Package,
-  },
-  {
-    title: "Purchase Orders",
-    href: "/purchase-orders",
-    icon: FileText,
   },
   {
     title: "Invoices",
