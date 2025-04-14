@@ -28,13 +28,6 @@ const DispatchListView = ({
   onSelectTechnician,
   onUnassignWorkOrder
 }: DispatchListViewProps) => {
-  // Calculate assigned orders count for each technician
-  const assignedOrdersCount = (technicianId: string) => {
-    return technicians.length > 0
-      ? technicianWorkOrders.filter(order => order.technicianId === technicianId).length
-      : 0;
-  };
-
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
       <Card>
@@ -79,7 +72,7 @@ const DispatchListView = ({
               technician={technician}
               isSelected={selectedTechnicianId === technician.id}
               onClick={() => onSelectTechnician(technician.id)}
-              assignedCount={assignedOrdersCount(technician.id)}
+              assignedCount={technician.workOrdersCount}
             />
           ))}
         </div>
