@@ -9,12 +9,12 @@ import { format, addHours } from "date-fns";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import DispatchMap from "@/components/maps/DispatchMap";
 import DispatchListView from "./components/DispatchListView";
-import DispatchCalendarView from "@/components/schedule/DispatchCalendarView";
+import DispatchCalendarView from "./components/DispatchCalendarView";
 import { getWorkOrders, useWorkOrderStore } from "@/services/workOrderService";
 import { Technician, WorkOrder } from "@/types";
 import { fetchTechnicians } from "@/services/technicianService";
 import { useToast } from "@/hooks/use-toast";
-import { DndContext, useDndMonitor } from "@dnd-kit/core";
+import { useDndMonitor, DndContext } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -100,19 +100,21 @@ const Dispatch = () => {
     return () => clearInterval(refreshTimer);
   }, [toast, workOrderStore]);
   
-  // Handle DnD events within the DndContext component
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    
-    if (!over) return;
-    
-    const workOrderId = active.id as string;
-    const technicianId = over.id as string;
-    
-    if (workOrderId && technicianId && technicianId !== "unassigned") {
-      handleAssignWorkOrder(workOrderId, technicianId);
-    }
-  };
+  // Handle DnD events
+  useDndMonitor({
+    onDragEnd: (event) => {
+      const { active, over } = event;
+      
+      if (!over) return;
+      
+      const workOrderId = active.id as string;
+      const technicianId = over.id as string;
+      
+      if (workOrderId && technicianId && technicianId !== "unassigned") {
+        handleAssignWorkOrder(workOrderId, technicianId);
+      }
+    },
+  });
   
   // Handle technician selection
   const handleSelectTechnician = (techId: string) => {
@@ -321,46 +323,43 @@ const Dispatch = () => {
             </Tabs>
           </CardHeader>
           <CardContent>
-            <DndContext onDragEnd={handleDragEnd}>
-              {/* The Tabs component needs to wrap all TabsContent components */}
-              <Tabs value={viewMode} onValueChange={setViewMode}>
-                <TabsContent value="list" className="mt-0">
-                  <DispatchListView 
-                    unassignedWorkOrders={unassignedWorkOrders}
-                    technicians={technicians}
-                    selectedTechnicianId={selectedTechnicianId}
-                    technicianWorkOrders={technicianWorkOrders}
-                    activeOrderId={activeWorkOrderId}
-                    onSelectTechnician={handleSelectTechnician}
-                    onUnassignWorkOrder={handleUnassignWorkOrder}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="map" className="mt-0">
-                  <Card>
-                    <CardContent className="p-0">
-                      <DispatchMap 
-                        technicians={technicians}
-                        onSelectTechnician={handleSelectTechnician}
-                        selectedTechnicianId={selectedTechnicianId}
-                        highlightedLocation={highlightedLocation}
-                      />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="calendar" className="mt-0">
-                  <DispatchCalendarView
-                    workOrders={workOrders}
-                    technicians={technicians}
-                    selectedTechnicianId={selectedTechnicianId}
-                    activeOrderId={activeWorkOrderId}
-                    onDateSelect={handleDateSelect}
-                    onWorkOrderClick={handleWorkOrderSelect}
-                    unassignedWorkOrders={unassignedWorkOrders}
-                  />
-                </TabsContent>
-              </Tabs>
+            <DndContext>
+              <TabsContent value="list" className="mt-0">
+                <DispatchListView 
+                  unassignedWorkOrders={unassignedWorkOrders}
+                  technicians={technicians}
+                  selectedTechnicianId={selectedTechnicianId}
+                  technicianWorkOrders={technicianWorkOrders}
+                  activeOrderId={activeWorkOrderId}
+                  onSelectTechnician={handleSelectTechnician}
+                  onUnassignWorkOrder={handleUnassignWorkOrder}
+                />
+              </TabsContent>
+              
+              <TabsContent value="map" className="mt-0">
+                <Card>
+                  <CardContent className="p-0">
+                    <DispatchMap 
+                      technicians={technicians}
+                      onSelectTechnician={handleSelectTechnician}
+                      selectedTechnicianId={selectedTechnicianId}
+                      highlightedLocation={highlightedLocation}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="calendar" className="mt-0">
+                <DispatchCalendarView
+                  workOrders={workOrders}
+                  technicians={technicians}
+                  selectedTechnicianId={selectedTechnicianId}
+                  activeOrderId={activeWorkOrderId}
+                  onDateSelect={handleDateSelect}
+                  onWorkOrderClick={handleWorkOrderSelect}
+                  unassignedWorkOrders={unassignedWorkOrders}
+                />
+              </TabsContent>
             </DndContext>
           </CardContent>
         </Card>
