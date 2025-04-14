@@ -9,12 +9,12 @@ import { format, addHours } from "date-fns";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import DispatchMap from "@/components/maps/DispatchMap";
 import DispatchListView from "./components/DispatchListView";
-import DispatchCalendarView from "./components/DispatchCalendarView";
+import DispatchCalendarView from "@/components/schedule/DispatchCalendarView";
 import { getWorkOrders, useWorkOrderStore } from "@/services/workOrderService";
 import { Technician, WorkOrder } from "@/types";
 import { fetchTechnicians } from "@/services/technicianService";
 import { useToast } from "@/hooks/use-toast";
-import { useDndMonitor, DndContext } from "@dnd-kit/core";
+import { DndContext, useDndMonitor } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -100,21 +100,19 @@ const Dispatch = () => {
     return () => clearInterval(refreshTimer);
   }, [toast, workOrderStore]);
   
-  // Handle DnD events
-  useDndMonitor({
-    onDragEnd: (event) => {
-      const { active, over } = event;
-      
-      if (!over) return;
-      
-      const workOrderId = active.id as string;
-      const technicianId = over.id as string;
-      
-      if (workOrderId && technicianId && technicianId !== "unassigned") {
-        handleAssignWorkOrder(workOrderId, technicianId);
-      }
-    },
-  });
+  // Handle DnD events within the DndContext component
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+    
+    const workOrderId = active.id as string;
+    const technicianId = over.id as string;
+    
+    if (workOrderId && technicianId && technicianId !== "unassigned") {
+      handleAssignWorkOrder(workOrderId, technicianId);
+    }
+  };
   
   // Handle technician selection
   const handleSelectTechnician = (techId: string) => {
@@ -323,7 +321,7 @@ const Dispatch = () => {
             </Tabs>
           </CardHeader>
           <CardContent>
-            <DndContext>
+            <DndContext onDragEnd={handleDragEnd}>
               {/* The Tabs component needs to wrap all TabsContent components */}
               <Tabs value={viewMode} onValueChange={setViewMode}>
                 <TabsContent value="list" className="mt-0">
