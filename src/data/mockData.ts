@@ -426,3 +426,5 @@ export const performanceMetrics = [
   { date: '2025-04-16', completedJobs: 7, revenue: 4875.50 },
   { date: '2025-04-17', completedJobs: 5, revenue: 3245.60 }
 ];
+
+export const staticCustomers = customers;
