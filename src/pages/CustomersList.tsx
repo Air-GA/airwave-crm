@@ -51,6 +51,7 @@ import { Customer, ServiceAddress } from "@/types";
 import { apiIntegrationService } from "@/services/apiIntegrationService";
 import { customers } from "@/data/mockData";
 import { getStaticCustomers } from "@/services/customerSyncService";
+import { CustomerCSVUpload } from "@/components/customers/CustomerCSVUpload";
 
 const staticCustomers: Customer[] = [
   {
@@ -203,6 +204,7 @@ const CustomersList = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <div className="flex space-x-2">
+            <CustomerCSVUpload onUploadComplete={() => refetch()} />
             <Button variant="default" size="sm" onClick={handleAddCustomer}>
               <Plus className="h-4 w-4 mr-1" />
               Add Customer
