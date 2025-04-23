@@ -113,12 +113,14 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
         return {
           id: tech.id,
           name: fullName,
-          email: `${fullName.toLowerCase().replace(/\s+/g, '.')}@airga.com`, // Generate email
-          phone: `404-555-${Math.floor(1000 + Math.random() * 9000)}`, // Generate random phone
           status: (tech.availability_status === 'available' ? 'available' : 
                  tech.availability_status === 'busy' ? 'busy' : 'off-duty') as Technician['status'],
           specialties: tech.specialty ? [tech.specialty] : [],
-          currentLocation: undefined // No location data in DB schema
+          currentLocation: tech.current_location_lat && tech.current_location_lng ? {
+            lat: tech.current_location_lat,
+            lng: tech.current_location_lng,
+            address: tech.current_location_address || 'Unknown Location'
+          } : undefined
         };
       });
       

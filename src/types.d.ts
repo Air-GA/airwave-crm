@@ -18,7 +18,7 @@ export interface Customer {
   maintenancePlan?: 'biannual' | 'quarterly' | 'annual' | null;
   maintenanceTimePreference?: string;
   nextMaintenanceDate?: string;
-  status?: 'active' | 'inactive' | 'pending';  // Added status field
+  status: 'active' | 'inactive' | 'pending';  // Changed from optional to required
 }
 
 export interface ServiceAddress {
