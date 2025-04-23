@@ -51,6 +51,7 @@ export const getStaticCustomers = (): Customer[] => {
         { id: "addr-1", address: "123 Main St, Atlanta, GA 30301", isPrimary: true, notes: "Primary residence" }
       ],
       type: "residential",
+      status: "active",
       createdAt: new Date().toISOString(),
       lastService: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     },
@@ -65,6 +66,7 @@ export const getStaticCustomers = (): Customer[] => {
         { id: "addr-4", address: "456 Oak Dr, Marietta, GA 30060", isPrimary: true, notes: "Home address" }
       ],
       type: "residential",
+      status: "active",
       createdAt: new Date().toISOString(),
       lastService: null
     },
@@ -79,6 +81,7 @@ export const getStaticCustomers = (): Customer[] => {
         { id: "addr-5", address: "789 Pine Road, Alpharetta, GA", isPrimary: true, notes: "Beware of dog" }
       ],
       type: "residential",
+      status: "active",
       createdAt: new Date().toISOString(),
       lastService: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
     }

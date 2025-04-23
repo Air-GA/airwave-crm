@@ -32,6 +32,7 @@ serve(async (req) => {
         phone: '404-555-1234',
         address: '123 Main St, Atlanta, GA 30301',
         type: 'residential',
+        status: 'active',
         created_at: new Date().toISOString(),
         service_addresses: [
           {
@@ -48,6 +49,7 @@ serve(async (req) => {
         phone: '404-555-3456',
         address: '456 Oak Dr, Marietta, GA 30060',
         type: 'residential',
+        status: 'active',
         created_at: new Date().toISOString(),
         service_addresses: [
           {
@@ -64,6 +66,7 @@ serve(async (req) => {
         phone: '770-555-7890',
         address: '789 Pine Road, Alpharetta, GA',
         type: 'residential',
+        status: 'active',
         created_at: new Date().toISOString(),
         service_addresses: [
           {

@@ -15,6 +15,7 @@ const supabaseClient = createClient<Database>(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+      storage: localStorage,
     },
   }
 );
@@ -53,7 +54,8 @@ const supabase = {
       service_addresses: serviceAddresses,
       bill_address: customer.billAddress || null,
       type: customer.type || 'residential', // Default to residential
-      created_at: customer.createdAt || new Date().toISOString()
+      created_at: customer.createdAt || new Date().toISOString(),
+      status: 'active' // Add status field with default 'active'
     };
   },
   
@@ -75,7 +77,8 @@ const supabase = {
       })) || [],
       type: dbCustomer.type || 'residential',
       createdAt: dbCustomer.created_at,
-      lastService: dbCustomer.last_service
+      lastService: dbCustomer.last_service,
+      status: dbCustomer.status || 'active' // Map status field
     };
   }
 };
