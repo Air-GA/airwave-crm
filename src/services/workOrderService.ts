@@ -1,7 +1,7 @@
 
 import { Customer, WorkOrder } from "@/types";
 import { create } from "zustand";
-import { mockWorkOrders } from "@/data/mockData";
+import { workOrders } from "@/data/mockData"; // Fix: Change from mockWorkOrders to workOrders
 
 // Add status: 'active' to any customer object creation
 const createCustomer = (data: any): Customer => {
@@ -66,15 +66,15 @@ export const fetchWorkOrders = async (): Promise<WorkOrder[]> => {
   }
   
   // If no stored orders, return mock data
-  useWorkOrderStore.getState().setWorkOrders(mockWorkOrders);
-  return mockWorkOrders;
+  useWorkOrderStore.getState().setWorkOrders(workOrders);
+  return workOrders;
 };
 
 // Create a new work order
 export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promise<WorkOrder> => {
   const newWorkOrder: WorkOrder = {
     id: `wo-${generateId()}`,
-    customerId: workOrderData.customerId || undefined,
+    customerId: workOrderData.customerId || '',
     customerName: workOrderData.customerName || 'Unknown Customer',
     email: workOrderData.email || '',
     phoneNumber: workOrderData.phoneNumber || '',
@@ -89,7 +89,7 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
     technicianName: workOrderData.technicianName,
     completedDate: workOrderData.completedDate,
     partsUsed: workOrderData.partsUsed || [],
-    notes: workOrderData.notes || '',
+    notes: workOrderData.notes || [],  // Fix: Ensure notes is initialized as an array
     pendingReason: workOrderData.pendingReason,
     isMaintenancePlan: workOrderData.isMaintenancePlan || false
   };
@@ -115,7 +115,9 @@ export const updateWorkOrder = async (
   
   const updatedWorkOrder = {
     ...workOrders[workOrderIndex],
-    ...updates
+    ...updates,
+    // Fix: Ensure notes is always an array
+    notes: updates.notes ? (Array.isArray(updates.notes) ? updates.notes : [updates.notes]) : workOrders[workOrderIndex].notes || []
   };
   
   const newWorkOrders = [...workOrders];
@@ -135,7 +137,7 @@ export const completeWorkOrder = async (
   return updateWorkOrder(workOrderId, {
     status: 'completed',
     completedDate: new Date().toISOString(),
-    notes: notes || undefined
+    notes: notes ? [notes] : []  // Fix: Ensure notes is an array
   });
 };
 
