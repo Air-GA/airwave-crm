@@ -1,3 +1,4 @@
+
 import { Customer, WorkOrder } from "@/types";
 import { create } from "zustand";
 import { workOrders } from "@/data/mockData"; // Fix: Change from mockWorkOrders to workOrders
