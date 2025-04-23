@@ -1,17 +1,13 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { WorkOrder, Technician } from "@/types";
 import { workOrders as mockWorkOrders, technicians as mockTechnicians } from "@/data/mockData";
 
-// Shared cache for work orders and technicians
 let cachedWorkOrders: WorkOrder[] | null = null;
 let cachedTechnicians: Technician[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds cache
 
-// Function to fetch work orders from Supabase
 export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]> => {
-  // Return cached data if available and not forced to refresh
   if (!forceRefresh && cachedWorkOrders && Date.now() - lastFetchTime < CACHE_DURATION) {
     console.log("Using cached work orders");
     return cachedWorkOrders;
@@ -32,9 +28,7 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
     if (data && data.length > 0) {
       console.log(`Fetched ${data.length} work orders from Supabase`);
       
-      // Transform Supabase data to match our WorkOrder type
       const transformedData: WorkOrder[] = data.map(wo => {
-        // Generate a formatted address from joined address data
         const addressObj = wo.addresses;
         const formattedAddress = addressObj 
           ? `${addressObj.street}, ${addressObj.city}, ${addressObj.state} ${addressObj.zip_code}`
@@ -46,33 +40,30 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
           customerName: wo.customers?.name || 'Unknown Customer',
           address: formattedAddress,
           status: wo.status as WorkOrder['status'],
-          priority: 'medium', // Default priority since it's not in DB schema
-          type: 'repair', // Default type since it's not in DB schema
+          priority: 'medium',
+          type: 'repair',
           description: wo.description || '',
-          scheduledDate: new Date().toISOString(), // Use a default since scheduled_date is not in schema
+          scheduledDate: new Date().toISOString(),
           technicianId: wo.technician_id || undefined,
-          technicianName: 'Assigned Technician', // Default name since it's not in DB schema
+          technicianName: 'Assigned Technician',
           createdAt: wo.created_at,
           completedDate: wo.completed_at || undefined,
-          estimatedHours: 1, // Default estimated hours since it's not in DB schema
-          notes: [] // Default notes array since it's not in DB schema
+          estimatedHours: 1,
+          notes: []
         };
       });
       
-      // Update cache
       cachedWorkOrders = transformedData;
       lastFetchTime = Date.now();
       return transformedData;
     }
 
-    // Fallback to mock data if Supabase returns empty array
     console.log("No work orders found in Supabase, using mock data");
     cachedWorkOrders = mockWorkOrders;
     lastFetchTime = Date.now();
     return mockWorkOrders;
   } catch (error) {
     console.error("Error fetching work orders:", error);
-    // Fallback to mock data
     console.log("Using mock work orders data due to error");
     cachedWorkOrders = mockWorkOrders;
     lastFetchTime = Date.now();
@@ -80,9 +71,7 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
   }
 };
 
-// Function to fetch technicians from Supabase
 export const fetchTechnicians = async (forceRefresh = false): Promise<Technician[]> => {
-  // Return cached data if available and not forced to refresh
   if (!forceRefresh && cachedTechnicians && Date.now() - lastFetchTime < CACHE_DURATION) {
     console.log("Using cached technicians");
     return cachedTechnicians;
@@ -103,9 +92,7 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
     if (data && data.length > 0) {
       console.log(`Fetched ${data.length} technicians from Supabase`);
       
-      // Transform Supabase data to match our Technician type
       const transformedData: Technician[] = data.map(tech => {
-        // Generate name from user data if available
         const fullName = tech.users 
           ? `${tech.users.first_name || ''} ${tech.users.last_name || ''}`.trim()
           : `Technician ${tech.id.substring(0, 4)}`;
@@ -116,28 +103,23 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
           status: (tech.availability_status === 'available' ? 'available' : 
                  tech.availability_status === 'busy' ? 'busy' : 'off-duty') as Technician['status'],
           specialties: tech.specialty ? [tech.specialty] : [],
-          currentLocation: tech.current_location_lat && tech.current_location_lng ? {
-            lat: tech.current_location_lat,
-            lng: tech.current_location_lng,
-            address: tech.current_location_address || 'Unknown Location'
-          } : undefined
+          email: `${fullName.toLowerCase().replace(/\s+/g, '.')}@airga.com`,
+          phone: `404-555-${Math.floor(1000 + Math.random() * 9000)}`,
+          currentLocation: undefined
         };
       });
       
-      // Update cache
       cachedTechnicians = transformedData;
       lastFetchTime = Date.now();
       return transformedData;
     }
 
-    // Fallback to mock data if Supabase returns empty array
     console.log("No technicians found in Supabase, using mock data");
     cachedTechnicians = mockTechnicians;
     lastFetchTime = Date.now();
     return mockTechnicians;
   } catch (error) {
     console.error("Error fetching technicians:", error);
-    // Fallback to mock data
     console.log("Using mock technicians data due to error");
     cachedTechnicians = mockTechnicians;
     lastFetchTime = Date.now();
@@ -145,7 +127,6 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
   }
 };
 
-// Function to update a work order
 export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
   try {
     console.log(`Updating work order ${workOrder.id} in Supabase...`);
@@ -168,16 +149,13 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
       throw error;
     }
 
-    // Clear cache to force refresh on next fetch
     cachedWorkOrders = null;
     
-    // If update was successful but no data returned, return the original work order
     if (!data) {
       console.log("Work order updated but no data returned, using original work order");
       return workOrder;
     }
     
-    // Return the updated work order
     return {
       ...workOrder,
       status: data.status as WorkOrder['status'],
@@ -187,7 +165,6 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
   } catch (error) {
     console.error("Error updating work order:", error);
     
-    // For mock data mode, we'll update the local array and return the updated work order
     if (cachedWorkOrders) {
       cachedWorkOrders = cachedWorkOrders.map(wo => 
         wo.id === workOrder.id ? workOrder : wo
@@ -198,7 +175,6 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
   }
 };
 
-// Function to assign a technician to a work order
 export const assignTechnician = async (workOrderId: string, technicianId: string | null, technicianName?: string): Promise<boolean> => {
   try {
     console.log(`Assigning technician ${technicianId} to work order ${workOrderId} in Supabase...`);
@@ -219,14 +195,12 @@ export const assignTechnician = async (workOrderId: string, technicianId: string
       throw error;
     }
 
-    // Clear cache to force refresh on next fetch
     cachedWorkOrders = null;
     
     return true;
   } catch (error) {
     console.error("Error assigning technician:", error);
     
-    // For mock data mode, we'll update the local array
     if (cachedWorkOrders) {
       cachedWorkOrders = cachedWorkOrders.map(wo => {
         if (wo.id === workOrderId) {
@@ -245,7 +219,6 @@ export const assignTechnician = async (workOrderId: string, technicianId: string
   }
 };
 
-// Function to mark a work order as completed
 export const completeWorkOrder = async (workOrderId: string): Promise<boolean> => {
   try {
     console.log(`Marking work order ${workOrderId} as completed in Supabase...`);
@@ -263,14 +236,12 @@ export const completeWorkOrder = async (workOrderId: string): Promise<boolean> =
       throw error;
     }
 
-    // Clear cache to force refresh on next fetch
     cachedWorkOrders = null;
     
     return true;
   } catch (error) {
     console.error("Error completing work order:", error);
     
-    // For mock data mode, we'll update the local array
     if (cachedWorkOrders) {
       cachedWorkOrders = cachedWorkOrders.map(wo => {
         if (wo.id === workOrderId) {
@@ -288,7 +259,6 @@ export const completeWorkOrder = async (workOrderId: string): Promise<boolean> =
   }
 };
 
-// Function to cancel a work order
 export const cancelWorkOrder = async (workOrderId: string): Promise<boolean> => {
   try {
     console.log(`Cancelling work order ${workOrderId} in Supabase...`);
@@ -305,14 +275,12 @@ export const cancelWorkOrder = async (workOrderId: string): Promise<boolean> => 
       throw error;
     }
 
-    // Clear cache to force refresh on next fetch
     cachedWorkOrders = null;
     
     return true;
   } catch (error) {
     console.error("Error cancelling work order:", error);
     
-    // For mock data mode, we'll update the local array
     if (cachedWorkOrders) {
       cachedWorkOrders = cachedWorkOrders.map(wo => {
         if (wo.id === workOrderId) {
@@ -329,7 +297,6 @@ export const cancelWorkOrder = async (workOrderId: string): Promise<boolean> => 
   }
 };
 
-// Function to refresh all data (clear cache)
 export const refreshAllData = () => {
   cachedWorkOrders = null;
   cachedTechnicians = null;

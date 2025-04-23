@@ -7,6 +7,7 @@ export interface Customer {
   serviceAddress: string;
   billAddress: string;
   type: 'residential' | 'commercial';
+  status: 'active' | 'inactive';
   createdAt: string;
   lastService: string;
   serviceAddresses?: ServiceAddress[];
@@ -81,6 +82,7 @@ export const customers: Customer[] = [
     serviceAddress: '123 Main St, Atlanta, GA 30301',
     billAddress: '123 Main St, Atlanta, GA 30301',
     type: 'residential',
+    status: 'active',
     createdAt: '2025-02-15T14:22:00Z',
     lastService: '2025-03-10T09:30:00Z',
     serviceAddresses: [
@@ -101,6 +103,7 @@ export const customers: Customer[] = [
     serviceAddress: '456 Oak Dr, Marietta, GA 30060',
     billAddress: '456 Oak Dr, Marietta, GA 30060',
     type: 'residential',
+    status: 'active',
     createdAt: '2025-02-05T09:30:00Z',
     lastService: '2025-04-15T11:20:00Z',
     serviceAddresses: [
@@ -121,6 +124,7 @@ export const customers: Customer[] = [
     serviceAddress: '789 Pine Road, Alpharetta, GA',
     billAddress: '789 Pine Road, Alpharetta, GA',
     type: 'residential',
+    status: 'active',
     createdAt: '2025-02-20T11:10:00Z',
     lastService: '2025-04-25T10:15:00Z',
     serviceAddresses: [
@@ -141,6 +145,7 @@ export const customers: Customer[] = [
     serviceAddress: '1100 Peachtree St NE, Atlanta, GA 30309',
     billAddress: '1100 Peachtree St NE, Suite 200, Atlanta, GA 30309',
     type: 'residential',
+    status: 'active',
     createdAt: '2025-01-11T08:45:00Z',
     lastService: '2025-05-01T15:30:00Z',
     serviceAddresses: [
@@ -166,6 +171,7 @@ export const customers: Customer[] = [
     serviceAddress: '789 Elm Street, Roswell, GA 30075',
     billAddress: '789 Elm Street, Roswell, GA 30075',
     type: 'residential',
+    status: 'active',
     createdAt: '2025-02-20T11:10:00Z',
     lastService: '2025-04-25T10:15:00Z',
     serviceAddresses: [
