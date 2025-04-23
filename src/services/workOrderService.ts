@@ -1,4 +1,3 @@
-
 import { Customer, WorkOrder } from "@/types";
 import { create } from "zustand";
 import { workOrders } from "@/data/mockData"; // Fix: Change from mockWorkOrders to workOrders
@@ -156,12 +155,14 @@ export const markOrderPendingCompletion = async (
 export const assignWorkOrder = async (
   workOrderId: string,
   technicianId: string,
-  technicianName: string
+  technicianName: string,
+  scheduledDate?: string  // Add optional scheduledDate parameter
 ): Promise<WorkOrder | null> => {
   return updateWorkOrder(workOrderId, {
     technicianId,
     technicianName,
-    status: 'scheduled'
+    status: 'scheduled',
+    scheduledDate: scheduledDate || undefined  // Use scheduledDate if provided
   });
 };
 
