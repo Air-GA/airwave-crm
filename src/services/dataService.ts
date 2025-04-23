@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { WorkOrder, Technician } from "@/types";
+import { WorkOrder, Technician, Customer } from "@/types";
 import { workOrders as mockWorkOrders, technicians as mockTechnicians } from "@/data/mockData";
 
 let cachedWorkOrders: WorkOrder[] | null = null;
