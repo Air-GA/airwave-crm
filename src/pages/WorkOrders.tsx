@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { 
@@ -47,7 +46,7 @@ import { fetchWorkOrders } from "@/services/workOrderService";
 import { WorkOrder } from "@/types";
 import { syncWorkOrdersFromCRM } from "@/services/crmSyncService";
 import { useToast } from "@/components/ui/use-toast";
-import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
+import { SyncThreeCustomersButton } from "@/components/SyncThreeCustomersButton";
 
 export default function WorkOrders() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,13 +56,11 @@ export default function WorkOrders() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { toast } = useToast();
 
-  // Fetch work orders
   const { data: workOrders = [], isLoading, refetch } = useQuery({
     queryKey: ["work-orders", refreshTrigger],
     queryFn: fetchWorkOrders,
   });
 
-  // Handle CRM sync
   const handleSyncFromCRM = async () => {
     if (isSyncing) return;
 
@@ -92,33 +89,27 @@ export default function WorkOrders() {
     }
   };
 
-  // Handle data sync completion
   const handleDataSyncComplete = () => {
     setRefreshTrigger(prev => prev + 1);
     refetch();
   };
 
-  // Filter work orders based on search query and filters
   const filteredWorkOrders = workOrders
     ? workOrders.filter((order) => {
-        // Apply search filter
         const matchesSearch =
           order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           order.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
           order.description.toLowerCase().includes(searchQuery.toLowerCase());
 
-        // Apply status filter
         const matchesStatus =
           statusFilter === "all" || order.status === statusFilter;
 
-        // Apply type filter
         const matchesType = typeFilter === "all" || order.type === typeFilter;
 
         return matchesSearch && matchesStatus && matchesType;
       })
     : [];
 
-  // Map priority to badge variant
   const getPriorityBadge = (priority: WorkOrder["priority"]) => {
     switch (priority) {
       case "low":
@@ -134,7 +125,6 @@ export default function WorkOrders() {
     }
   };
 
-  // Map status to badge variant
   const getStatusBadge = (status: WorkOrder["status"]) => {
     switch (status) {
       case "pending":
@@ -152,7 +142,6 @@ export default function WorkOrders() {
     }
   };
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -193,8 +182,7 @@ export default function WorkOrders() {
                 )}
               </Button>
               
-              <SyncWithQuickBooks 
-                entityType="workOrders"
+              <SyncThreeCustomersButton 
                 onSyncComplete={handleDataSyncComplete}
               />
               
@@ -265,7 +253,6 @@ export default function WorkOrders() {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    // Loading state
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={`loading-${i}`}>
                         <TableCell>
@@ -292,7 +279,6 @@ export default function WorkOrders() {
                       </TableRow>
                     ))
                   ) : filteredWorkOrders.length === 0 ? (
-                    // No results found
                     <TableRow>
                       <TableCell
                         colSpan={7}
@@ -303,7 +289,6 @@ export default function WorkOrders() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    // Results
                     filteredWorkOrders.map((order) => (
                       <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50">
                         <TableCell>

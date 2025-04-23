@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 import { SyncThreeCustomersButton } from "@/components/SyncThreeCustomersButton";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -208,7 +207,6 @@ const CustomersList = () => {
               <Plus className="h-4 w-4 mr-1" />
               Add Customer
             </Button>
-            <SyncWithQuickBooks entityType="customers" />
             <SyncThreeCustomersButton onSyncComplete={() => refetch()} />
           </div>
         </div>

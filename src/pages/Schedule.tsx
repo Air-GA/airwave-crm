@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,8 +18,7 @@ import {
   rescheduleMaintenanceWorkOrder
 } from "@/services/workOrderService";
 import { useToast } from "@/hooks/use-toast";
-import { SyncButton } from "@/components/SyncButton";
-import { syncWorkOrdersFromCRM } from "@/services/crmSyncService";  
+import { SyncThreeCustomersButton } from "@/components/SyncThreeCustomersButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -59,7 +58,6 @@ import {
   PointerSensor,
   TouchSensor,
 } from "@dnd-kit/core";
-import { SyncWithQuickBooks } from "@/components/SyncWithQuickBooks";
 
 const maintenanceOrderSchema = z.object({
   customerName: z.string().min(2, "Customer name is required"),
@@ -441,7 +439,6 @@ const Schedule = () => {
             <p className="text-muted-foreground">Manage appointments and technician schedules</p>
           </div>
           <div className="flex gap-2">
-            <SyncWithQuickBooks entityType="workOrders" onSyncComplete={handleSyncWorkOrders} />
             <Button onClick={handleQuickCreate} variant="outline">
               <Plus className="mr-2 h-4 w-4" /> Quick Create
             </Button>
