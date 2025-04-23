@@ -1,4 +1,3 @@
-
 export interface Customer {
   id: string;
   name: string;
@@ -19,6 +18,7 @@ export interface Customer {
   maintenancePlan?: 'biannual' | 'quarterly' | 'annual' | null;
   maintenanceTimePreference?: string;
   nextMaintenanceDate?: string;
+  status?: 'active' | 'inactive' | 'pending';  // Added status field
 }
 
 export interface ServiceAddress {

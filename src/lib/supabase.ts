@@ -55,7 +55,7 @@ const supabase = {
       bill_address: customer.billAddress || null,
       type: customer.type || 'residential', // Default to residential
       created_at: customer.createdAt || new Date().toISOString(),
-      status: 'active' // Add status field with default 'active'
+      status: customer.status || 'active' // Using the new status field
     };
   },
   

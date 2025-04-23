@@ -21,7 +21,7 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
     console.log("Fetching work orders from Supabase...");
     const { data, error } = await supabase
       .from("work_orders")
-      .select("*")
+      .select("*, customers(name), addresses(street, city, state, zip_code)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -33,23 +33,31 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
       console.log(`Fetched ${data.length} work orders from Supabase`);
       
       // Transform Supabase data to match our WorkOrder type
-      const transformedData: WorkOrder[] = data.map(wo => ({
-        id: wo.id,
-        customerId: wo.customer_id,
-        customerName: wo.customer_name,
-        address: wo.address,
-        status: wo.status as WorkOrder['status'],
-        priority: wo.priority as WorkOrder['priority'],
-        type: wo.type as WorkOrder['type'],
-        description: wo.description,
-        scheduledDate: wo.scheduled_date,
-        technicianId: wo.technician_id || undefined,
-        technicianName: wo.technician_name || undefined,
-        createdAt: wo.created_at,
-        completedDate: wo.completed_date || undefined,
-        estimatedHours: wo.estimated_hours || undefined,
-        notes: wo.notes || []
-      }));
+      const transformedData: WorkOrder[] = data.map(wo => {
+        // Generate a formatted address from joined address data
+        const addressObj = wo.addresses;
+        const formattedAddress = addressObj 
+          ? `${addressObj.street}, ${addressObj.city}, ${addressObj.state} ${addressObj.zip_code}`
+          : 'No address available';
+          
+        return {
+          id: wo.id,
+          customerId: wo.customer_id,
+          customerName: wo.customers?.name || 'Unknown Customer',
+          address: formattedAddress,
+          status: wo.status as WorkOrder['status'],
+          priority: 'medium', // Default priority since it's not in DB schema
+          type: 'repair', // Default type since it's not in DB schema
+          description: wo.description || '',
+          scheduledDate: new Date().toISOString(), // Use a default since scheduled_date is not in schema
+          technicianId: wo.technician_id || undefined,
+          technicianName: 'Assigned Technician', // Default name since it's not in DB schema
+          createdAt: wo.created_at,
+          completedDate: wo.completed_at || undefined,
+          estimatedHours: 1, // Default estimated hours since it's not in DB schema
+          notes: [] // Default notes array since it's not in DB schema
+        };
+      });
       
       // Update cache
       cachedWorkOrders = transformedData;
@@ -84,8 +92,8 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
     console.log("Fetching technicians from Supabase...");
     const { data, error } = await supabase
       .from("technicians")
-      .select("*")
-      .order("name", { ascending: true });
+      .select("*, users(first_name, last_name)")
+      .order("created_at", { ascending: true });
 
     if (error) {
       console.error("Error fetching technicians from Supabase:", error);
@@ -96,20 +104,23 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
       console.log(`Fetched ${data.length} technicians from Supabase`);
       
       // Transform Supabase data to match our Technician type
-      const transformedData: Technician[] = data.map(tech => ({
-        id: tech.id,
-        name: tech.name,
-        email: `${tech.name.toLowerCase().replace(/\s+/g, '.')}@airga.com`, // Generate email since it's not in DB
-        phone: `404-555-${Math.floor(1000 + Math.random() * 9000)}`, // Generate random phone since it's not in DB
-        status: tech.status as Technician['status'],
-        specialties: tech.specialties || [],
-        currentLocation: tech.current_location_lat && tech.current_location_lng ? {
-          lat: tech.current_location_lat,
-          lng: tech.current_location_lng,
-          address: tech.current_location_address || 'Unknown location',
-          timestamp: new Date().toISOString()
-        } : undefined
-      }));
+      const transformedData: Technician[] = data.map(tech => {
+        // Generate name from user data if available
+        const fullName = tech.users 
+          ? `${tech.users.first_name || ''} ${tech.users.last_name || ''}`.trim()
+          : `Technician ${tech.id.substring(0, 4)}`;
+          
+        return {
+          id: tech.id,
+          name: fullName,
+          email: `${fullName.toLowerCase().replace(/\s+/g, '.')}@airga.com`, // Generate email
+          phone: `404-555-${Math.floor(1000 + Math.random() * 9000)}`, // Generate random phone
+          status: (tech.availability_status === 'available' ? 'available' : 
+                 tech.availability_status === 'busy' ? 'busy' : 'off-duty') as Technician['status'],
+          specialties: tech.specialty ? [tech.specialty] : [],
+          currentLocation: undefined // No location data in DB schema
+        };
+      });
       
       // Update cache
       cachedTechnicians = transformedData;
@@ -141,13 +152,10 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
       .from("work_orders")
       .update({
         status: workOrder.status,
-        priority: workOrder.priority,
         description: workOrder.description,
-        scheduled_date: workOrder.scheduledDate,
         technician_id: workOrder.technicianId,
-        technician_name: workOrder.technicianName,
-        completed_date: workOrder.completedDate,
-        notes: workOrder.notes || []
+        completed_at: workOrder.completedDate,
+        resolution: workOrder.notes?.join('\n') || null
       })
       .eq("id", workOrder.id)
       .select()
@@ -171,9 +179,8 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
     return {
       ...workOrder,
       status: data.status as WorkOrder['status'],
-      completedDate: data.completed_date || undefined,
-      technicianId: data.technician_id || undefined,
-      technicianName: data.technician_name || undefined
+      completedDate: data.completed_at || undefined,
+      technicianId: data.technician_id || undefined
     };
   } catch (error) {
     console.error("Error updating work order:", error);
