@@ -46,10 +46,16 @@ type CustomerFormValues = z.infer<typeof customerFormSchema>;
 interface AddCustomerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCustomerAdded: (customer: any) => void;
+  onSuccess?: () => void;  // Making onSuccess optional
+  onCustomerAdded?: (customer: any) => void;  // Making onCustomerAdded optional
 }
 
-export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCustomerDialogProps) {
+export function AddCustomerDialog({ 
+  open, 
+  onOpenChange, 
+  onSuccess, 
+  onCustomerAdded 
+}: AddCustomerDialogProps) {
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
@@ -118,11 +124,19 @@ export function AddCustomerDialog({ open, onOpenChange, onCustomerAdded }: AddCu
       id: uuidv4(),
       ...data,
       serviceAddress: data.serviceAddresses.find(addr => addr.isPrimary)?.address || data.serviceAddresses[0].address, // For backward compatibility
-      type: "residential", // Always set type as residential
+      type: "residential" as const, // Always set type as residential
+      status: "active" as const, // Set status as active
       createdAt: new Date().toISOString()
     };
     
-    onCustomerAdded(newCustomer);
+    if (onCustomerAdded) {
+      onCustomerAdded(newCustomer);
+    }
+    
+    if (onSuccess) {
+      onSuccess();
+    }
+    
     onOpenChange(false);
     form.reset({
       name: "",

@@ -6,7 +6,7 @@ import { syncThreeCustomers, getStaticCustomers } from "@/services/customerSyncS
 import { useToast } from "@/hooks/use-toast";
 
 interface SyncThreeCustomersButtonProps {
-  onSyncComplete: () => void;
+  onSyncComplete: () => void;  // Changed from onSuccess to onSyncComplete for consistency
 }
 
 export const SyncThreeCustomersButton = ({

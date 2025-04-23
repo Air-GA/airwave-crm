@@ -4,11 +4,11 @@ import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 interface SyncWithQuickBooksProps {
-  entityType: string;
+  entityType?: string;  // Making entityType optional
   onSyncComplete?: () => void;
 }
 
-export function SyncWithQuickBooks({ entityType, onSyncComplete }: SyncWithQuickBooksProps) {
+export function SyncWithQuickBooks({ entityType = 'data', onSyncComplete }: SyncWithQuickBooksProps) {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSync = async () => {

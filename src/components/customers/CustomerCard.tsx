@@ -17,11 +17,17 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface CustomerCardProps {
   customer: Customer;
-  onCreateWorkOrder: (serviceAddress?: string) => void;
-  onViewDetails: () => void;
+  onClick?: () => void;  // Making onClick optional
+  onCreateWorkOrder?: (serviceAddress?: string) => void;  // Making onCreateWorkOrder optional
+  onViewDetails?: () => void;  // Making onViewDetails optional
 }
 
-export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: CustomerCardProps) {
+export function CustomerCard({ 
+  customer, 
+  onClick, 
+  onCreateWorkOrder = () => {}, 
+  onViewDetails = () => {} 
+}: CustomerCardProps) {
   const isMobile = useIsMobile();
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const { permissions, user } = useAuth();
@@ -29,14 +35,14 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
   // Check if the logged-in user can view this customer
   // For sales users, they should only see customers they sold to
   const canViewCustomer = () => {
-    if (permissions.canViewOnlyAssociatedCustomers && user?.associatedIds) {
+    if (permissions?.canViewOnlyAssociatedCustomers && user?.associatedIds) {
       return user.associatedIds.includes(customer.id);
     }
     return true;
   };
   
   // If user can't view this customer, don't render the card
-  if (permissions.canViewOnlyAssociatedCustomers && !canViewCustomer()) {
+  if (permissions?.canViewOnlyAssociatedCustomers && !canViewCustomer()) {
     return null;
   }
   
@@ -51,11 +57,20 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
   
   // Handle creating work order with specific address
   const handleCreateWorkOrder = (address?: string) => {
-    onCreateWorkOrder(address || primaryAddress);
+    if (onCreateWorkOrder) {
+      onCreateWorkOrder(address || primaryAddress);
+    }
+  };
+
+  // Handle card click
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    }
   };
 
   return (
-    <Card>
+    <Card onClick={handleClick}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -72,22 +87,22 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={onViewDetails}>View Details</DropdownMenuItem>
-              {!permissions.canViewOnlyAssociatedCustomers && (
+              {!permissions?.canViewOnlyAssociatedCustomers && (
                 <DropdownMenuItem onClick={() => handleCreateWorkOrder()}>Create Work Order</DropdownMenuItem>
               )}
-              {permissions.canViewCustomerPaymentHistory && (
+              {permissions?.canViewCustomerPaymentHistory && (
                 <DropdownMenuItem>
                   <DollarSign className="h-4 w-4 mr-2" />
                   Payment History
                 </DropdownMenuItem>
               )}
-              {permissions.canViewFuturePaymentPlans && (
+              {permissions?.canViewFuturePaymentPlans && (
                 <DropdownMenuItem>
                   <CalendarClock className="h-4 w-4 mr-2" />
                   Payment Schedule
                 </DropdownMenuItem>
               )}
-              {!permissions.canViewOnlyOwnWorkOrders && (
+              {!permissions?.canViewOnlyOwnWorkOrders && (
                 <DropdownMenuItem>View Service History</DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -123,7 +138,7 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
                         </div>
                         <p className="text-sm mt-1">{addr.address}</p>
                       </div>
-                      {(!permissions.canViewOnlyAssociatedCustomers || canViewCustomer()) && (
+                      {(!permissions?.canViewOnlyAssociatedCustomers || canViewCustomer()) && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -155,7 +170,7 @@ export function CustomerCard({ customer, onCreateWorkOrder, onViewDetails }: Cus
           )}
           
           <div className="flex gap-2 pt-2">
-            {(!permissions.canViewOnlyAssociatedCustomers || canViewCustomer()) && (
+            {(!permissions?.canViewOnlyAssociatedCustomers || canViewCustomer()) && (
               <Button size="sm" variant="outline" className="flex-1" onClick={() => handleCreateWorkOrder()}>
                 <FileEdit className="mr-1.5 h-4 w-4" />
                 {isMobile ? "Work Order" : "New Work Order"}

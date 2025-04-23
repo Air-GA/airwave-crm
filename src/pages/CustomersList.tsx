@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -117,7 +116,6 @@ const staticCustomers: Customer[] = [
   }
 ];
 
-// CustomersList component
 const CustomersList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
@@ -129,13 +127,11 @@ const CustomersList = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
-  // Fetch customers data
   const { data: customersData, isLoading, refetch } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
       setLoading(true);
       try {
-        // Attempt to fetch from Supabase
         const { data, error } = await supabase
           .from("customers")
           .select("*, service_addresses(*)");
@@ -147,7 +143,6 @@ const CustomersList = () => {
 
         if (data && data.length > 0) {
           console.log("Fetched customers from Supabase:", data);
-          // Transform Supabase data to match our Customer type
           const transformedData: Customer[] = data.map(customer => ({
             id: customer.id,
             name: customer.name || "Unknown",
@@ -170,12 +165,10 @@ const CustomersList = () => {
           return transformedData;
         }
 
-        // Fallback to mock data if no Supabase data
         console.log("No customers in Supabase, using static data");
         return staticCustomers;
       } catch (error) {
         console.error("Error in fetching customers:", error);
-        // Use static data as fallback
         return staticCustomers;
       } finally {
         setLoading(false);
@@ -183,7 +176,6 @@ const CustomersList = () => {
     }
   });
 
-  // Filter customers based on search query
   const filteredCustomers = customersData?.filter(customer => {
     const query = searchQuery.toLowerCase();
     return (
@@ -194,25 +186,21 @@ const CustomersList = () => {
     );
   }) || [];
 
-  // Handle add new customer
   const handleAddCustomer = () => {
     setShowAddDialog(true);
   };
 
-  // Handle customer click for details view
   const handleCustomerClick = (customerId: string) => {
     console.log("Customer clicked:", customerId);
     toast({
       title: "Customer Selected",
       description: `Customer ID: ${customerId}`,
     });
-    // Future navigation to customer details page
   };
 
   return (
     <MainLayout pageName="Customers">
       <div className="flex flex-col space-y-6">
-        {/* Header with actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <div className="flex space-x-2">
@@ -220,12 +208,11 @@ const CustomersList = () => {
               <Plus className="h-4 w-4 mr-1" />
               Add Customer
             </Button>
-            <SyncWithQuickBooks />
-            <SyncThreeCustomersButton onSuccess={() => refetch()} />
+            <SyncWithQuickBooks entityType="customers" />
+            <SyncThreeCustomersButton onSyncComplete={() => refetch()} />
           </div>
         </div>
 
-        {/* Search and filters */}
         <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
           <div className="relative w-full sm:w-auto flex-1 max-w-md">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -277,7 +264,6 @@ const CustomersList = () => {
           </div>
         </div>
 
-        {/* Customer listing */}
         {isLoading ? (
           <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : ""}>
             {[...Array(6)].map((_, i) => (
@@ -303,6 +289,7 @@ const CustomersList = () => {
                 key={customer.id}
                 customer={customer}
                 onClick={() => handleCustomerClick(customer.id)}
+                onViewDetails={() => handleCustomerClick(customer.id)}
               />
             ))}
           </div>
@@ -377,7 +364,6 @@ const CustomersList = () => {
         )}
       </div>
 
-      {/* Add Customer Dialog */}
       <AddCustomerDialog 
         open={showAddDialog} 
         onOpenChange={setShowAddDialog} 
@@ -388,9 +374,11 @@ const CustomersList = () => {
             description: "Customer has been successfully added.",
           });
         }}
+        onCustomerAdded={(newCustomer) => {
+          console.log("New customer added:", newCustomer);
+        }}
       />
 
-      {/* Filter Dialog */}
       <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
         <DialogContent>
           <DialogHeader>
