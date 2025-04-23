@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -57,7 +58,7 @@ export default function WorkOrders() {
   const { toast } = useToast();
 
   // Fetch work orders
-  const { data: workOrders, isLoading, refetch } = useQuery({
+  const { data: workOrders = [], isLoading, refetch } = useQuery({
     queryKey: ["work-orders", refreshTrigger],
     queryFn: fetchWorkOrders,
   });
@@ -343,7 +344,7 @@ export default function WorkOrders() {
           </CardContent>
           <CardFooter className="flex justify-between">
             <div className="text-sm text-muted-foreground">
-              Showing {filteredWorkOrders.length} of {workOrders?.length || 0}{" "}
+              Showing {filteredWorkOrders.length} of {workOrders.length}{" "}
               work orders
             </div>
           </CardFooter>
