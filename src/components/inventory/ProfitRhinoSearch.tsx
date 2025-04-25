@@ -11,21 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Check } from "lucide-react";
+import { Search, Plus, Check, AlertCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-interface ProfitRhinoPart {
-  id: string;
-  part_number: string;
-  description: string | null;
-  category: string | null;
-  manufacturer: string | null;
-  model_number: string | null;
-  list_price: number | null;
-  cost: number | null;
-}
+import { profitRhinoService, ProfitRhinoPart } from "@/services/profitRhinoService";
 
 export const ProfitRhinoSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,25 +23,45 @@ export const ProfitRhinoSearch = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: parts, isLoading } = useQuery({
+  const { data: parts, isLoading, error } = useQuery({
     queryKey: ["profit-rhino-parts", searchQuery],
     queryFn: async () => {
-      let query = supabase
-        .from("profit_rhino_parts")
-        .select("*");
-
-      if (searchQuery) {
-        query = query.or(
-          `part_number.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,manufacturer.ilike.%${searchQuery}%`
-        );
+      if (!searchQuery.trim() && !localStorage.getItem('profitRhinoApiConfigured')) {
+        // If no search query and we know API isn't configured, use DB fallback
+        const { data, error } = await supabase
+          .from("profit_rhino_parts")
+          .select("*")
+          .limit(50);
+        
+        if (error) throw error;
+        return data as ProfitRhinoPart[];
       }
-
-      const { data, error } = await query.limit(50);
       
-      if (error) throw error;
-      return data as ProfitRhinoPart[];
+      // Use the service to fetch from API
+      const response = await profitRhinoService.searchParts(searchQuery);
+      
+      if (!response.success) {
+        // If API fails but we have a DB fallback, try that
+        if (response.error?.includes('credentials not configured')) {
+          // Store this to avoid repeated failed API calls
+          localStorage.setItem('profitRhinoApiConfigured', 'false');
+          
+          const { data, error } = await supabase
+            .from("profit_rhino_parts")
+            .select("*")
+            .limit(50);
+          
+          if (error) throw error;
+          return data as ProfitRhinoPart[];
+        }
+        
+        throw new Error(response.error);
+      }
+      
+      // API success - mark as configured
+      localStorage.setItem('profitRhinoApiConfigured', 'true');
+      return response.data || [];
     },
-    enabled: true,
   });
 
   const handleAddToInventory = async (part: ProfitRhinoPart) => {
@@ -109,6 +119,13 @@ export const ProfitRhinoSearch = () => {
           />
         </div>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 p-4 rounded-md flex items-center gap-2 text-destructive">
+          <AlertCircle className="h-4 w-4" />
+          <p>Error loading parts: {(error as Error)?.message || 'Unknown error'}</p>
+        </div>
+      )}
 
       <Card>
         <Table>
