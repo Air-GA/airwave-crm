@@ -40,7 +40,26 @@ serve(async (req) => {
       );
     }
 
-    const { action, payload, query, partId, businessId, businessInfo } = body;
+    const { 
+      action, 
+      payload, 
+      query, 
+      partId, 
+      businessId, 
+      businessInfo,
+      updateId,
+      searchText,
+      taskId,
+      fieldName,
+      sourceId,
+      destinationId,
+      index,
+      assignmentId,
+      destinationCategoryId,
+      revisionCompanyId,
+      startFieldEdgeSync,
+      generateSqlLiteFile
+    } = body;
 
     // Handle authentication
     if (action === 'authenticate') {
@@ -381,65 +400,506 @@ serve(async (req) => {
       }
     }
 
-  // Add new business information handlers
-  if (action === 'getBusinessInfo') {
-    try {
-      const response = await fetch(`${apiBaseUrl}/businessinformation/${businessId}`, {
-        headers: {
-          'X-HTTP-ProfitRhino-Service-Key': apiKey,
-          'Content-Type': 'application/json',
-        },
-      });
+    // Handle business information related actions
+    if (action === 'getBusinessInfo') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/businessinformation/${businessId}`, {
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`Business info request failed: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Business info request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error fetching business info:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
-
-      const data = await response.json();
-      return new Response(JSON.stringify(data), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
-    } catch (error) {
-      console.error('Error fetching business info:', error);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: error.message 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
     }
-  }
 
-  if (action === 'copyBusinessInfo') {
-    try {
-      const response = await fetch(`${apiBaseUrl}/businessinformation/${businessId}/copybusinessinformation`, {
-        method: 'POST',
-        headers: {
-          'X-HTTP-ProfitRhino-Service-Key': apiKey,
-          'Content-Type': 'application/json',
-        },
-      });
+    if (action === 'copyBusinessInfo') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/businessinformation/${businessId}/copybusinessinformation`, {
+          method: 'POST',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`Copy business info request failed: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Copy business info request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error copying business info:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
-
-      const data = await response.json();
-      return new Response(JSON.stringify(data), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
-    } catch (error) {
-      console.error('Error copying business info:', error);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: error.message 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
     }
-  }
+    
+    if (action === 'setTaskTimeToWrenchTime') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/businessinformation/${businessId}/actions/settasktimetowrenchtime`, {
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Set task time request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error setting task time:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'saveAndRecalculate') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/businesstypes/${businessId}/actions/saveandrecalculate`, {
+          method: 'POST',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(businessInfo)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Save business info request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error saving business info:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+
+    // Handle content management related actions
+    if (action === 'getContentUpdateInfo') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/contentupdate/GetUpdateInfo`, {
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Get content update info request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error fetching content update info:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'createContentUpdate') {
+      try {
+        const model = {
+          revisionCompanyId: revisionCompanyId,
+          startFieldEdgeSync: startFieldEdgeSync === undefined ? true : startFieldEdgeSync,
+          generateSqlLiteFile: generateSqlLiteFile === undefined ? true : generateSqlLiteFile
+        };
+        
+        const response = await fetch(`${apiBaseUrl}/contentupdate`, {
+          method: 'POST',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(model)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Create content update request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error creating content update:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'getContentUpdateTasks') {
+      try {
+        const searchParam = searchText ? `?SearchText=${encodeURIComponent(searchText)}` : '';
+        const response = await fetch(`${apiBaseUrl}/contentupdates/${updateId}/tasks${searchParam}`, {
+          method: 'POST', // API requires POST even for fetching data
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}) // Empty body for POST request
+        });
+
+        if (!response.ok) {
+          throw new Error(`Get content update tasks request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error fetching content update tasks:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'getContentUpdateParts') {
+      try {
+        const searchParam = searchText ? `?SearchText=${encodeURIComponent(searchText)}` : '';
+        const response = await fetch(`${apiBaseUrl}/contentupdates/${updateId}/parts${searchParam}`, {
+          method: 'POST', // API requires POST even for fetching data
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}) // Empty body for POST request
+        });
+
+        if (!response.ok) {
+          throw new Error(`Get content update parts request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error fetching content update parts:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'resetTask') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/contentupdates/tasks/${taskId}/reset`, {
+          method: 'POST',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Reset task request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error resetting task:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'copyTaskField') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/contentupdate/tasks/${taskId}/copyfield?FieldName=${fieldName}`, {
+          method: 'POST',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Copy task field request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error copying task field:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'compareTask') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/contentupdate/task/${taskId}/compare`, {
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Compare task request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error comparing task:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'comparePart') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/contentupdate/part/${partId}/compare`, {
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Compare part request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error comparing part:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'getLicenseTask') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/contentupdate/task/${taskId}/licensetask`, {
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Get license task request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error getting license task:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'getLicensePart') {
+      try {
+        const response = await fetch(`${apiBaseUrl}/contentupdate/part/${partId}/licensepart`, {
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Get license part request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error getting license part:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'moveCategory') {
+      try {
+        const categoryMoveRequest = {
+          sourceId,
+          destinationId,
+          index
+        };
+        
+        const response = await fetch(`${apiBaseUrl}/categorytree/actions/movecategory`, {
+          method: 'POST',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(categoryMoveRequest)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Move category request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error moving category:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
+    
+    if (action === 'moveTaskAssignment') {
+      try {
+        const taskAssignmentMoveRequest = {
+          assignmentId,
+          destinationCategoryId,
+          index
+        };
+        
+        const response = await fetch(`${apiBaseUrl}/categorytree/actions/movetaskassignment`, {
+          method: 'POST',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(taskAssignmentMoveRequest)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Move task assignment request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      } catch (error) {
+        console.error('Error moving task assignment:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
