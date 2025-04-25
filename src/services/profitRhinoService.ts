@@ -17,6 +17,7 @@ export interface ProfitRhinoApiResponse {
   message?: string;
   data?: ProfitRhinoPart[];
   error?: string;
+  endpoint?: string; // Added to track which endpoint worked
 }
 
 export const profitRhinoService = {
@@ -51,6 +52,10 @@ export const profitRhinoService = {
       }
       
       console.log(`Retrieved ${response.data?.length || 0} parts from API`);
+      if (response.endpoint) {
+        console.log(`Successfully used endpoint: ${response.endpoint}`);
+      }
+      
       return response;  // Return the successful response
     } catch (error) {
       console.error('Error searching Profit Rhino parts:', error);

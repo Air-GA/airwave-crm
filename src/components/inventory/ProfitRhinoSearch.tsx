@@ -104,6 +104,12 @@ export const ProfitRhinoSearch = () => {
     }
   };
 
+  // Extract error details
+  const errorMessage = isError ? (error as Error)?.message || 'Unknown error' : '';
+  const isProfitRhinoConfigIssue = errorMessage.includes('API key') || 
+                                  errorMessage.includes('credentials') ||
+                                  errorMessage.includes('404');
+
   return (
     <div className="space-y-4">
       <form onSubmit={handleSearch} className="flex gap-2">
@@ -133,9 +139,20 @@ export const ProfitRhinoSearch = () => {
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4 mr-2" />
           <AlertDescription>
-            Error loading parts: {(error as Error)?.message || 'Unknown error'}. 
+            Error loading parts: {errorMessage}
             <div className="mt-1 text-sm">
-              Possible fixes: check your API key configuration or verify if the Profit Rhino API is accessible.
+              {isProfitRhinoConfigIssue ? (
+                <>
+                  Possible fixes: 
+                  <ul className="list-disc pl-5 mt-1">
+                    <li>Check that your Profit Rhino API key is correctly configured in Supabase secrets</li>
+                    <li>Verify if the Profit Rhino API is accessible and the endpoint is correct</li>
+                    <li>Contact Profit Rhino support to confirm your API access permissions</li>
+                  </ul>
+                </>
+              ) : (
+                "There was an error processing your request. Please try again later."
+              )}
             </div>
           </AlertDescription>
         </Alert>
