@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
@@ -51,7 +52,10 @@ serve(async (req) => {
     if (partId) {
       try {
         console.log(`Fetching specific part with ID: ${partId}`);
+        // Based on the API docs, we'll use /v2/task/{Id} pattern for getting part details
         const partUrl = `${apiBaseUrl}/parts/${partId}`;
+        console.log(`Trying endpoint: ${partUrl}`);
+        
         const partResponse = await fetch(partUrl, {
           method: 'GET',
           headers: {
@@ -116,11 +120,12 @@ serve(async (req) => {
     }
 
     if (searchQuery) {
+      // Based on your API documentation, try multiple possible endpoints for part searches
       const endpoints = [
-        `${apiBaseUrl}/parts/search`,
-        `${apiBaseUrl}/pricebook/parts/search`,
-        `${apiBaseUrl}/pricebooks/parts/search`,
-        `${apiBaseUrl}/catalog/parts/search`
+        `${apiBaseUrl}/tasks`, // This might return tasks with parts
+        `${apiBaseUrl}/kendotasks`, // Another endpoint that might have parts info 
+        `${apiBaseUrl}/bulkaction/parts`,
+        `${apiBaseUrl}/parts` // Direct parts endpoint
       ];
 
       let successResponse = null;
@@ -130,6 +135,7 @@ serve(async (req) => {
         try {
           console.log(`Attempting search with endpoint: ${endpoint}`);
           
+          // Different endpoints might require different request formats
           const searchPayload = {
             search: searchQuery,
             limit: 50
@@ -138,21 +144,48 @@ serve(async (req) => {
           console.log(`Sending search request to ${endpoint} with payload: ${JSON.stringify(searchPayload)}`);
           
           const searchResponse = await fetch(endpoint, {
-            method: 'POST',
+            method: 'GET', // Changed to GET based on most API docs endpoints
             headers: {
               'X-HTTP-ProfitRhino-Service-Key': apiKey,
               'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(searchPayload),
+            }
           });
 
           console.log(`Search API response status: ${searchResponse.status} ${searchResponse.statusText}`);
           
           if (searchResponse.ok) {
             const searchData = await searchResponse.json();
-            console.log(`Search API response:`, typeof searchData, Array.isArray(searchData.responseData));
+            console.log(`Search API response:`, typeof searchData);
             
-            if (searchData.status === "success" && Array.isArray(searchData.responseData)) {
+            if (Array.isArray(searchData)) {
+              // Some endpoints might return an array directly
+              console.log(`Search successful with endpoint ${endpoint}, found ${searchData.length} results`);
+              
+              if (searchData.length > 0) {
+                const formattedData = searchData.map((part) => ({
+                  id: part.id || crypto.randomUUID(),
+                  part_number: part.partNumber || part.part_number || '',
+                  description: part.description || part.name || '',
+                  category: part.category || '',
+                  manufacturer: part.manufacturer || '',
+                  model_number: part.modelNumber || part.model_number || '',
+                  list_price: parseFloat(part.listPrice || part.list_price || 0),
+                  cost: parseFloat(part.cost || 0),
+                }));
+                
+                successResponse = new Response(
+                  JSON.stringify({
+                    success: true,
+                    data: formattedData,
+                    endpoint: endpoint
+                  }),
+                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+                
+                break;
+              }
+            } else if (searchData.responseData && Array.isArray(searchData.responseData)) {
+              // Some endpoints return data in a responseData property
               console.log(`Search successful with endpoint ${endpoint}, found ${searchData.responseData.length} results`);
               
               if (searchData.responseData.length > 0) {
@@ -207,6 +240,7 @@ serve(async (req) => {
         JSON.stringify({
           success: false,
           error: `API endpoints failed. Last error: ${JSON.stringify(lastError)}`,
+          documentation: "Please contact Profit Rhino support to confirm your API access and correct endpoints",
           data: []
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

@@ -11,12 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Check, AlertCircle, Info, Loader2 } from "lucide-react";
+import { Search, Plus, Check, AlertCircle, Info, Loader2, Settings } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { profitRhinoService, ProfitRhinoPart } from "@/services/profitRhinoService";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const ProfitRhinoSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,7 +39,8 @@ export const ProfitRhinoSearch = () => {
         console.log("API search successful, found", response.data?.length || 0, "results");
         return {
           parts: response.data || [],
-          message: response.message || ""
+          message: response.message || "",
+          documentation: response.documentation || ""
         };
       } catch (err) {
         console.error("Error in parts search:", err);
@@ -108,10 +109,36 @@ export const ProfitRhinoSearch = () => {
   const errorMessage = isError ? (error as Error)?.message || 'Unknown error' : '';
   const isProfitRhinoConfigIssue = errorMessage.includes('API key') || 
                                   errorMessage.includes('credentials') ||
-                                  errorMessage.includes('404');
+                                  errorMessage.includes('404') ||
+                                  errorMessage.includes('endpoints failed');
 
   return (
     <div className="space-y-4">
+      {isProfitRhinoConfigIssue && (
+        <Alert variant="warning" className="mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertTitle>Profit Rhino API Configuration Issue</AlertTitle>
+          <AlertDescription>
+            <p>Your Profit Rhino integration appears to have configuration issues. Based on the API documentation, you need to:</p>
+            <ol className="list-decimal pl-5 mt-2 space-y-1">
+              <li>Verify you have the correct API key</li>
+              <li>Confirm you have access to parts search endpoints</li>
+              <li>Update the API URL in Supabase secrets to match your subscription</li>
+            </ol>
+            <div className="mt-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center" 
+                onClick={() => window.location.href = '/settings'}>
+                <Settings className="mr-2 h-4 w-4" />
+                Configure Profit Rhino
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -143,12 +170,16 @@ export const ProfitRhinoSearch = () => {
             <div className="mt-1 text-sm">
               {isProfitRhinoConfigIssue ? (
                 <>
-                  Possible fixes: 
+                  <p className="font-medium mb-1">Possible fixes:</p>
                   <ul className="list-disc pl-5 mt-1">
                     <li>Check that your Profit Rhino API key is correctly configured in Supabase secrets</li>
                     <li>Verify if the Profit Rhino API is accessible and the endpoint is correct</li>
                     <li>Contact Profit Rhino support to confirm your API access permissions</li>
+                    <li>Based on the documentation provided, check which API endpoints you have access to</li>
                   </ul>
+                  {data?.documentation && (
+                    <p className="mt-2">{data.documentation}</p>
+                  )}
                 </>
               ) : (
                 "There was an error processing your request. Please try again later."
