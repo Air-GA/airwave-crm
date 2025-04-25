@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
@@ -45,6 +46,7 @@ serve(async (req) => {
     // Handle authentication
     if (action === 'authenticate') {
       try {
+        console.log('Authenticating with Profit Rhino API...');
         const authResponse = await fetch(`${apiBaseUrl}/auth`, {
           method: 'POST',
           headers: {
@@ -55,10 +57,14 @@ serve(async (req) => {
         });
 
         if (!authResponse.ok) {
+          const errorText = await authResponse.text();
+          console.error(`Auth failed: ${authResponse.status} ${authResponse.statusText}. Details: ${errorText}`);
           throw new Error(`Auth failed: ${authResponse.statusText}`);
         }
 
         const authData = await authResponse.json();
+        console.log('Authentication successful');
+        
         return new Response(
           JSON.stringify({
             success: true,
@@ -86,57 +92,75 @@ serve(async (req) => {
         if (partId) {
           try {
             console.log(`Fetching specific part with ID: ${partId}`);
-            // Based on the API docs, we'll use /v2/task/{Id} pattern for getting part details
-            const partUrl = `${apiBaseUrl}/parts/${partId}`;
-            console.log(`Trying endpoint: ${partUrl}`);
+            // Try multiple possible part detail endpoints
+            const possibleEndpoints = [
+              `${apiBaseUrl}/parts/${partId}`,
+              `${apiBaseUrl}/part/${partId}` 
+            ];
             
-            const partResponse = await fetch(partUrl, {
-              method: 'GET',
-              headers: {
-                'X-HTTP-ProfitRhino-Service-Key': apiKey,
-                'Content-Type': 'application/json',
-              },
-            });
-    
-            if (partResponse.ok) {
-              const partData = await partResponse.json();
-              console.log(`Part details fetch successful`);
-              
-              if (partData.status && partData.responseData) {
-                const formattedPart = {
-                  id: partData.responseData.id || partId,
-                  part_number: partData.responseData.partNumber || '',
-                  description: partData.responseData.description || '',
-                  category: partData.responseData.category || '',
-                  manufacturer: partData.responseData.manufacturer || '',
-                  model_number: partData.responseData.modelNumber || '',
-                  list_price: parseFloat(partData.responseData.listPrice || 0),
-                  cost: parseFloat(partData.responseData.cost || 0),
-                };
+            let partData = null;
+            let lastError = null;
+            
+            for (const endpoint of possibleEndpoints) {
+              try {
+                console.log(`Trying endpoint: ${endpoint}`);
                 
-                return new Response(
-                  JSON.stringify({
-                    success: true,
-                    data: [formattedPart]
-                  }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
-              } else {
-                console.log(`Part fetch successful but no data found`);
-                return new Response(
-                  JSON.stringify({ 
-                    success: false,
-                    error: 'Part not found in response' 
-                  }),
-                  { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-                );
+                const partResponse = await fetch(endpoint, {
+                  method: 'GET',
+                  headers: {
+                    'X-HTTP-ProfitRhino-Service-Key': apiKey,
+                    'Content-Type': 'application/json',
+                  },
+                });
+        
+                if (partResponse.ok) {
+                  partData = await partResponse.json();
+                  console.log(`Part details fetch successful from ${endpoint}`);
+                  break;
+                } else {
+                  const errorText = await partResponse.text();
+                  console.error(`Error with endpoint ${endpoint}:`, partResponse.status, errorText);
+                  lastError = {
+                    status: partResponse.status,
+                    statusText: partResponse.statusText,
+                    endpoint,
+                    details: errorText
+                  };
+                }
+              } catch (error) {
+                console.error(`Error with endpoint ${endpoint}:`, error);
+                lastError = {
+                  message: error.message,
+                  endpoint
+                };
               }
+            }
+            
+            if (partData && partData.status && partData.responseData) {
+              const formattedPart = {
+                id: partData.responseData.id || partId,
+                part_number: partData.responseData.partNumber || '',
+                description: partData.responseData.description || '',
+                category: partData.responseData.category || '',
+                manufacturer: partData.responseData.manufacturer || '',
+                model_number: partData.responseData.modelNumber || '',
+                list_price: parseFloat(partData.responseData.listPrice || 0),
+                cost: parseFloat(partData.responseData.cost || 0),
+              };
+              
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  data: [formattedPart]
+                }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
             } else {
-              console.log(`Part fetch failed with status: ${partResponse.status}`);
+              console.log(`Part fetch failed. Last error:`, lastError);
               return new Response(
                 JSON.stringify({ 
                   success: false,
-                  error: `Failed to fetch part: ${partResponse.statusText}` 
+                  error: `Failed to fetch part: ${JSON.stringify(lastError)}` 
                 }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
               );
@@ -154,12 +178,14 @@ serve(async (req) => {
         }
     
         if (query) {
-          // Based on your API documentation, try multiple possible endpoints for part searches
+          // Based on the API documentation, try multiple possible endpoints for part searches
+          // These are endpoints based on your API documentation that might contain parts information
           const endpoints = [
-            `${apiBaseUrl}/tasks`, // This might return tasks with parts
-            `${apiBaseUrl}/kendotasks`, // Another endpoint that might have parts info 
-            `${apiBaseUrl}/bulkaction/parts`,
-            `${apiBaseUrl}/parts` // Direct parts endpoint
+            `${apiBaseUrl}/parts`,
+            `${apiBaseUrl}/kendotasks`, // This might have parts nested within tasks
+            `${apiBaseUrl}/tasks/${query}`, // Direct task lookup if query is a task ID
+            `${apiBaseUrl}/task/${query}/part`, // Parts associated with a task
+            `${apiBaseUrl}/parts/updateallparts` // This is a POST endpoint but might accept GET for searching
           ];
     
           let successResponse = null;
@@ -175,10 +201,18 @@ serve(async (req) => {
                 limit: 50
               };
               
-              console.log(`Sending search request to ${endpoint} with payload: ${JSON.stringify(searchPayload)}`);
+              let method = 'GET'; // Default to GET for most endpoints
+              let url = endpoint;
               
-              const searchResponse = await fetch(endpoint, {
-                method: 'GET', // Changed to GET based on most API docs endpoints
+              // Add search parameter to URL for GET requests
+              if (method === 'GET' && !endpoint.includes(query)) {
+                url = `${endpoint}?search=${encodeURIComponent(query)}`;
+              }
+              
+              console.log(`Sending ${method} request to ${url}`);
+              
+              const searchResponse = await fetch(url, {
+                method: method,
                 headers: {
                   'X-HTTP-ProfitRhino-Service-Key': apiKey,
                   'Content-Type': 'application/json',
@@ -189,7 +223,7 @@ serve(async (req) => {
               
               if (searchResponse.ok) {
                 const searchData = await searchResponse.json();
-                console.log(`Search API response:`, typeof searchData);
+                console.log(`Search API response type:`, typeof searchData);
                 
                 if (Array.isArray(searchData)) {
                   // Some endpoints might return an array directly
@@ -234,6 +268,52 @@ serve(async (req) => {
                       cost: parseFloat(part.cost || 0),
                     }));
                     
+                    successResponse = new Response(
+                      JSON.stringify({
+                        success: true,
+                        data: formattedData,
+                        endpoint: endpoint
+                      }),
+                      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                    
+                    break;
+                  }
+                } else if (searchData.status && searchData.status === true) {
+                  // Handle other successful response formats
+                  console.log(`Search successful with endpoint ${endpoint}, processing custom format`);
+                  
+                  let formattedData = [];
+                  
+                  // Try to extract part data from various response structures
+                  if (searchData.responseData) {
+                    if (Array.isArray(searchData.responseData.parts)) {
+                      formattedData = searchData.responseData.parts.map(part => ({
+                        id: part.id || crypto.randomUUID(),
+                        part_number: part.partNumber || part.part_number || '',
+                        description: part.description || '',
+                        category: part.category || '',
+                        manufacturer: part.manufacturer || '',
+                        model_number: part.modelNumber || '',
+                        list_price: parseFloat(part.listPrice || 0),
+                        cost: parseFloat(part.cost || 0),
+                      }));
+                    } else if (typeof searchData.responseData === 'object') {
+                      // Single part object
+                      formattedData = [{
+                        id: searchData.responseData.id || crypto.randomUUID(),
+                        part_number: searchData.responseData.partNumber || searchData.responseData.part_number || '',
+                        description: searchData.responseData.description || '',
+                        category: searchData.responseData.category || '',
+                        manufacturer: searchData.responseData.manufacturer || '',
+                        model_number: searchData.responseData.modelNumber || '',
+                        list_price: parseFloat(searchData.responseData.listPrice || 0),
+                        cost: parseFloat(searchData.responseData.cost || 0),
+                      }];
+                    }
+                  }
+                  
+                  if (formattedData.length > 0) {
                     successResponse = new Response(
                       JSON.stringify({
                         success: true,

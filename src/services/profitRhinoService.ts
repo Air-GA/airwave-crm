@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ProfitRhinoAuthResponse {
@@ -34,15 +35,16 @@ export interface ProfitRhinoApiResponse {
 }
 
 export const profitRhinoService = {
-  async authenticate(): Promise<string | null> {
+  async authenticate(credentials?: { username: string, password: string }): Promise<string | null> {
     try {
       const { data, error } = await supabase.functions.invoke('profit-rhino-parts', {
-        body: { action: 'authenticate', 
-               payload: {
-                 username: 'your-username', // Will be configured in settings
-                 password: 'your-password',
-                 deviceType: 3 // Web
-               }
+        body: { 
+          action: 'authenticate', 
+          payload: credentials || {
+            username: 'your-username', // Will be configured in settings
+            password: 'your-password',
+            deviceType: 3 // Web
+          }
         }
       });
 

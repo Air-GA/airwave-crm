@@ -33,6 +33,8 @@ export interface IntegrationSettings {
     connected: boolean;
     apiKey?: string;
     apiSecret?: string;
+    username?: string;
+    password?: string;
     environment: "sandbox" | "production";
     baseUrl?: string;
     autoSync: boolean;
@@ -94,7 +96,10 @@ export const defaultIntegrationSettings: IntegrationSettings = {
     connected: false,
     apiKey: "",
     apiSecret: "",
+    username: "",
+    password: "",
     environment: "sandbox",
+    baseUrl: "https://secure.profitrhino.com/api/v2",
     autoSync: true,
     syncInterval: 3600000,
     syncInventory: true,

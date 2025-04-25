@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,8 @@ export const ProfitRhinoSearch = () => {
         return {
           parts: response.data || [],
           message: response.message || "",
-          documentation: response.documentation || ""
+          documentation: response.documentation || "",
+          endpoint: response.endpoint || ""
         };
       } catch (err) {
         console.error("Error in parts search:", err);
@@ -113,12 +115,15 @@ export const ProfitRhinoSearch = () => {
           <AlertCircle className="h-4 w-4 mr-2" />
           <AlertTitle>Profit Rhino API Configuration Issue</AlertTitle>
           <AlertDescription>
-            <p>Your Profit Rhino integration appears to have configuration issues. Based on the API documentation, you need to:</p>
+            <p>Your Profit Rhino integration appears to have configuration issues. Based on the API documentation:</p>
             <ol className="list-decimal pl-5 mt-2 space-y-1">
               <li>Verify you have the correct API key</li>
-              <li>Confirm you have access to parts search endpoints</li>
-              <li>Update the API URL in Supabase secrets to match your subscription</li>
+              <li>Make sure you're using the right endpoint URL format</li>
+              <li>Check that your account has permission to access the parts API endpoints</li>
             </ol>
+            {data?.endpoint && (
+              <p className="mt-2 text-sm">Last attempted endpoint: {data.endpoint}</p>
+            )}
             <div className="mt-3">
               <Button 
                 variant="outline" 
@@ -217,7 +222,7 @@ export const ProfitRhinoSearch = () => {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : data?.parts.length === 0 ? (
+            ) : data?.parts && data.parts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-10">
                   <div className="flex flex-col items-center justify-center">
@@ -230,7 +235,7 @@ export const ProfitRhinoSearch = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              data?.parts.map((part) => (
+              data?.parts && data.parts.map((part) => (
                 <TableRow key={part.id}>
                   <TableCell className="font-medium">{part.part_number}</TableCell>
                   <TableCell>{part.description}</TableCell>
