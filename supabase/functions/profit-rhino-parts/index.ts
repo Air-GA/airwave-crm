@@ -40,9 +40,9 @@ serve(async (req) => {
 
     // Determine which API endpoint to call
     if (partId) {
-      endpoint = `${apiUrl}/parts/${partId}`;
+      endpoint = `${apiUrl}/pricebookexport/parts/${partId}`;
     } else {
-      endpoint = `${apiUrl}/parts`;
+      endpoint = `${apiUrl}/pricebookexport/parts`;
       if (query) {
         queryParams.append('search', query);
       }
@@ -57,7 +57,7 @@ serve(async (req) => {
     const response = await fetch(finalUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'X-HTTP-ProfitRhino-Service-Key': apiKey,
         'Content-Type': 'application/json',
       },
     });
@@ -92,33 +92,63 @@ serve(async (req) => {
     // Parse and transform the API response
     const apiResponse = await response.json();
     
-    // Map the Profit Rhino response to our expected format
+    // Check if response has the expected format
     let formattedData;
     
-    if (partId) {
-      // Single part response
-      formattedData = {
-        id: apiResponse.id || partId,
-        part_number: apiResponse.part_number || apiResponse.sku || '',
-        description: apiResponse.description || apiResponse.name || '',
-        category: apiResponse.category || '',
-        manufacturer: apiResponse.manufacturer || '',
-        model_number: apiResponse.model_number || '',
-        list_price: apiResponse.list_price || apiResponse.price || 0,
-        cost: apiResponse.cost || 0,
-      };
-    } else {
-      // List of parts
-      formattedData = Array.isArray(apiResponse) ? apiResponse.map(part => ({
+    // Handle the new response structure
+    if (apiResponse.responseData && Array.isArray(apiResponse.responseData.data)) {
+      // New API format with responseData wrapper
+      formattedData = apiResponse.responseData.data.map(part => ({
         id: part.id || '',
-        part_number: part.part_number || part.sku || '',
+        part_number: part.partNumber || part.sku || '',
         description: part.description || part.name || '',
         category: part.category || '',
         manufacturer: part.manufacturer || '',
-        model_number: part.model_number || '',
-        list_price: part.list_price || part.price || 0,
+        model_number: part.modelNumber || '',
+        list_price: part.listPrice || part.price || 0,
         cost: part.cost || 0,
-      })) : [];
+      }));
+    } else if (partId && apiResponse.responseData) {
+      // Single part with responseData wrapper
+      const part = apiResponse.responseData;
+      formattedData = {
+        id: part.id || partId,
+        part_number: part.partNumber || part.sku || '',
+        description: part.description || part.name || '',
+        category: part.category || '',
+        manufacturer: part.manufacturer || '',
+        model_number: part.modelNumber || '',
+        list_price: part.listPrice || part.price || 0,
+        cost: part.cost || 0,
+      };
+    } else if (Array.isArray(apiResponse)) {
+      // Original API format - direct array
+      formattedData = apiResponse.map(part => ({
+        id: part.id || '',
+        part_number: part.part_number || part.partNumber || part.sku || '',
+        description: part.description || part.name || '',
+        category: part.category || '',
+        manufacturer: part.manufacturer || '',
+        model_number: part.model_number || part.modelNumber || '',
+        list_price: part.list_price || part.listPrice || part.price || 0,
+        cost: part.cost || 0,
+      }));
+    } else if (partId) {
+      // Single part - original format
+      formattedData = {
+        id: apiResponse.id || partId,
+        part_number: apiResponse.part_number || apiResponse.partNumber || apiResponse.sku || '',
+        description: apiResponse.description || apiResponse.name || '',
+        category: apiResponse.category || '',
+        manufacturer: apiResponse.manufacturer || '',
+        model_number: apiResponse.model_number || apiResponse.modelNumber || '',
+        list_price: apiResponse.list_price || apiResponse.listPrice || apiResponse.price || 0,
+        cost: apiResponse.cost || 0,
+      };
+    } else {
+      // Empty or unrecognized format
+      console.log('Unrecognized API response format:', JSON.stringify(apiResponse));
+      formattedData = [];
     }
 
     return new Response(
