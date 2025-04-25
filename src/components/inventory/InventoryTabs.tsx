@@ -1,8 +1,8 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Warehouse, Bell, Truck, MoveRight, Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProfitRhinoSearch } from "./ProfitRhinoSearch";
+import { InventoryList } from "./InventoryList";
 
 interface InventoryTabsProps {
   activeTab: string;
@@ -39,9 +39,7 @@ export const InventoryTabs = ({ activeTab, onTabChange }: InventoryTabsProps) =>
 
       <TabsContent value="all-inventory">
         <Card className="p-6">
-          <p className="text-center text-muted-foreground">
-            Select "Parts Catalog" to search and add items from the Profit Rhino database
-          </p>
+          <InventoryList />
         </Card>
       </TabsContent>
 
