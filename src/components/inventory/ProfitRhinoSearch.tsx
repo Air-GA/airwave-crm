@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Check, AlertCircle, Info, FileDown } from "lucide-react";
+import { Search, Plus, Check, AlertCircle, Info, FileDown, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,7 @@ export const ProfitRhinoSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
   const [isApiConfigured, setIsApiConfigured] = useState<boolean | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -36,6 +37,7 @@ export const ProfitRhinoSearch = () => {
     queryKey: ["profit-rhino-parts", searchQuery],
     queryFn: async () => {
       try {
+        console.log("Searching for parts with query:", searchQuery);
         // Use the service to fetch from API
         const response = await profitRhinoService.searchParts(searchQuery);
         
@@ -47,6 +49,7 @@ export const ProfitRhinoSearch = () => {
             localStorage.setItem('profitRhinoApiConfigured', 'false');
             setIsApiConfigured(false);
             
+            console.log("API failed, falling back to database search");
             const { data, error } = await supabase
               .from("profit_rhino_parts")
               .select("*")
@@ -63,6 +66,7 @@ export const ProfitRhinoSearch = () => {
         // API success - mark as configured
         localStorage.setItem('profitRhinoApiConfigured', 'true');
         setIsApiConfigured(true);
+        console.log("API search successful, found", response.data?.length || 0, "results");
         return response.data || [];
       } catch (err) {
         console.error("Error in parts search:", err);
@@ -113,6 +117,12 @@ export const ProfitRhinoSearch = () => {
     }
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Trigger a refetch by invalidating the query
+    queryClient.invalidateQueries({queryKey: ["profit-rhino-parts", searchQuery]});
+  };
+
   return (
     <div className="space-y-4">
       {isApiConfigured === false && (
@@ -122,7 +132,7 @@ export const ProfitRhinoSearch = () => {
         </div>
       )}
 
-      <div className="flex gap-2">
+      <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -133,7 +143,17 @@ export const ProfitRhinoSearch = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-      </div>
+        <Button type="submit" variant="default">
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Searching...
+            </>
+          ) : (
+            <>Search</>
+          )}
+        </Button>
+      </form>
 
       {isError && (
         <div className="bg-destructive/10 p-4 rounded-md flex items-center gap-2 text-destructive">
@@ -157,14 +177,23 @@ export const ProfitRhinoSearch = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  Loading...
+                <TableCell colSpan={6} className="text-center py-10">
+                  <div className="flex flex-col items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                    <p className="text-muted-foreground">Loading parts catalog...</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : parts?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  No parts found
+                <TableCell colSpan={6} className="text-center py-10">
+                  <div className="flex flex-col items-center justify-center">
+                    <Info className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="font-medium">No parts found</p>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Try adjusting your search or check the Profit Rhino API configuration
+                    </p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
