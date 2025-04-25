@@ -30,7 +30,7 @@ export const profitRhinoService = {
       });
       
       if (error) {
-        console.error('Supabase function error:', error);
+        console.error('Error calling Profit Rhino API:', error);
         throw error;
       }
       
@@ -62,7 +62,7 @@ export const profitRhinoService = {
       });
       
       if (error) {
-        console.error('Supabase function error:', error);
+        console.error('Error fetching part details:', error);
         throw error;
       }
       

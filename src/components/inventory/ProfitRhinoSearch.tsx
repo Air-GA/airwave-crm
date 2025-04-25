@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Check, AlertCircle, Info, FileDown, Loader2 } from "lucide-react";
+import { Search, Plus, Check, AlertCircle, Info, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,18 +20,8 @@ import { profitRhinoService, ProfitRhinoPart } from "@/services/profitRhinoServi
 export const ProfitRhinoSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
-  const [isApiConfigured, setIsApiConfigured] = useState<boolean | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    // Check if we have a stored state for the API configuration
-    const storedState = localStorage.getItem('profitRhinoApiConfigured');
-    if (storedState) {
-      setIsApiConfigured(storedState === 'true');
-    }
-  }, []);
 
   const { data: parts, isLoading, error, isError } = useQuery({
     queryKey: ["profit-rhino-parts", searchQuery],
@@ -42,30 +32,9 @@ export const ProfitRhinoSearch = () => {
         const response = await profitRhinoService.searchParts(searchQuery);
         
         if (!response.success) {
-          // If API fails but we have a DB fallback, try that
-          if (response.error?.includes('credentials not configured') || 
-              response.error?.includes('Edge Function returned a non-2xx status code')) {
-            // Store this to avoid repeated failed API calls
-            localStorage.setItem('profitRhinoApiConfigured', 'false');
-            setIsApiConfigured(false);
-            
-            console.log("API failed, falling back to database search");
-            const { data, error } = await supabase
-              .from("profit_rhino_parts")
-              .select("*")
-              .ilike('part_number', searchQuery ? `%${searchQuery}%` : '%')
-              .limit(50);
-            
-            if (error) throw error;
-            return data as ProfitRhinoPart[];
-          }
-          
-          throw new Error(response.error);
+          throw new Error(response.error || "Failed to retrieve parts");
         }
         
-        // API success - mark as configured
-        localStorage.setItem('profitRhinoApiConfigured', 'true');
-        setIsApiConfigured(true);
         console.log("API search successful, found", response.data?.length || 0, "results");
         return response.data || [];
       } catch (err) {
@@ -73,7 +42,7 @@ export const ProfitRhinoSearch = () => {
         throw err;
       }
     },
-    enabled: true, // Always enabled to show initial results
+    enabled: Boolean(searchQuery), // Only run query when there's a search query
   });
 
   const handleAddToInventory = async (part: ProfitRhinoPart) => {
@@ -125,13 +94,6 @@ export const ProfitRhinoSearch = () => {
 
   return (
     <div className="space-y-4">
-      {isApiConfigured === false && (
-        <div className="bg-blue-50 p-4 rounded-md flex items-center gap-2 text-blue-700 mb-4">
-          <Info className="h-4 w-4" />
-          <p>Using local database for parts. External Profit Rhino API not available or configured.</p>
-        </div>
-      )}
-
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -143,7 +105,7 @@ export const ProfitRhinoSearch = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button type="submit" variant="default">
+        <Button type="submit" variant="default" disabled={isLoading || !searchQuery}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -181,6 +143,18 @@ export const ProfitRhinoSearch = () => {
                   <div className="flex flex-col items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
                     <p className="text-muted-foreground">Loading parts catalog...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : !searchQuery ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10">
+                  <div className="flex flex-col items-center justify-center">
+                    <Info className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="font-medium">Enter a search term to find parts</p>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Search by part number, description, or manufacturer
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>

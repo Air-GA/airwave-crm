@@ -14,15 +14,11 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     const apiKey = Deno.env.get('PROFIT_RHINO_API_KEY');
     const apiUrl = Deno.env.get('PROFIT_RHINO_API_URL') || 'https://secure.profitrhino.com/api/v2';
     
     if (!apiKey) {
+      console.error('Profit Rhino API key not configured');
       return new Response(
         JSON.stringify({ error: 'Profit Rhino API credentials not configured' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -78,16 +74,30 @@ serve(async (req) => {
               JSON.stringify(formattedPart),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
+          } else {
+            console.log(`Part fetch successful but no data found`);
+            return new Response(
+              JSON.stringify({ error: 'Part not found in response' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+            );
           }
         } else {
           console.log(`Part fetch failed with status: ${partResponse.status}`);
+          return new Response(
+            JSON.stringify({ error: `Failed to fetch part: ${partResponse.statusText}` }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: partResponse.status }
+          );
         }
       } catch (error) {
         console.error('Error fetching part details:', error);
+        return new Response(
+          JSON.stringify({ error: `Error fetching part: ${error.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
     }
 
-    // If search query is provided, try direct search first
+    // For search functionality, try direct API first
     if (searchQuery) {
       try {
         console.log(`Attempting direct parts search with query: "${searchQuery}"`);
@@ -104,11 +114,12 @@ serve(async (req) => {
           }),
         });
 
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
+        const searchData = await searchResponse.json();
+        
+        if (searchResponse.ok && searchData.status) {
           console.log(`Direct search successful, found ${searchData.responseData?.length || 0} results`);
           
-          if (searchData.status && searchData.responseData?.length > 0) {
+          if (searchData.responseData?.length > 0) {
             // Transform the data to match our expected format
             const formattedData = searchData.responseData.map((part) => ({
               id: part.id || crypto.randomUUID(),
@@ -125,9 +136,11 @@ serve(async (req) => {
               JSON.stringify(formattedData),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
+          } else {
+            console.log('Direct search returned no results');
           }
         } else {
-          console.log(`Direct search failed with status: ${searchResponse.status}`);
+          console.log(`Direct search failed with status: ${searchResponse.status} - ${searchData.message || 'Unknown error'}`);
         }
       } catch (error) {
         console.error('Error in direct search:', error);
@@ -146,14 +159,20 @@ serve(async (req) => {
 
     if (!exportResponse.ok) {
       console.error(`Pricebook export failed: ${exportResponse.status} ${exportResponse.statusText}`);
-      throw new Error(`Failed to get pricebook export: ${exportResponse.statusText}`);
+      return new Response(
+        JSON.stringify({ error: `Failed to get pricebook: ${exportResponse.statusText}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: exportResponse.status }
+      );
     }
 
     const exportData = await exportResponse.json();
     
     if (!exportData.responseData?.fileUrl) {
       console.error('No file URL in response:', exportData);
-      throw new Error('No file URL in response');
+      return new Response(
+        JSON.stringify({ error: 'No file URL in response' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     // Download the Excel file
@@ -161,7 +180,10 @@ serve(async (req) => {
     const fileResponse = await fetch(exportData.responseData.fileUrl);
     if (!fileResponse.ok) {
       console.error(`Failed to download Excel file: ${fileResponse.status} ${fileResponse.statusText}`);
-      throw new Error('Failed to download Excel file');
+      return new Response(
+        JSON.stringify({ error: 'Failed to download Excel file' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: fileResponse.status }
+      );
     }
 
     // Convert the response to an ArrayBuffer
@@ -220,7 +242,10 @@ serve(async (req) => {
       );
     } catch (parseError) {
       console.error('Error parsing Excel file:', parseError);
-      throw parseError;
+      return new Response(
+        JSON.stringify({ error: `Error parsing Excel file: ${parseError.message}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
   } catch (error) {
     console.error('Error processing request:', error);
