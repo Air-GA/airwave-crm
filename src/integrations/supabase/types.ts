@@ -422,6 +422,48 @@ export type Database = {
           },
         ]
       }
+      profit_rhino_parts: {
+        Row: {
+          category: string | null
+          cost: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          list_price: number | null
+          manufacturer: string | null
+          metadata: Json | null
+          model_number: string | null
+          part_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          list_price?: number | null
+          manufacturer?: string | null
+          metadata?: Json | null
+          model_number?: string | null
+          part_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          cost?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          list_price?: number | null
+          manufacturer?: string | null
+          metadata?: Json | null
+          model_number?: string | null
+          part_number?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       technicians: {
         Row: {
           availability_status: string | null
