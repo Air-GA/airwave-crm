@@ -66,6 +66,23 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error('Profit Rhino API error:', response.status, errorText);
       
+      // If API fails, fall back to database search
+      if (response.status === 404 || response.status === 401) {
+        console.log('Falling back to database search');
+        const { data: dbParts, error: dbError } = await supabaseClient
+          .from('profit_rhino_parts')
+          .select('*')
+          .ilike('part_number', query ? `%${query}%` : '%')
+          .limit(50);
+
+        if (dbError) throw dbError;
+        
+        return new Response(
+          JSON.stringify(dbParts || []),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: `API Error: ${response.status} ${errorText}` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: response.status }

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Check, AlertCircle } from "lucide-react";
+import { Search, Plus, Check, AlertCircle, Info } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,48 +20,56 @@ import { profitRhinoService, ProfitRhinoPart } from "@/services/profitRhinoServi
 export const ProfitRhinoSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
+  const [isApiConfigured, setIsApiConfigured] = useState<boolean | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: parts, isLoading, error } = useQuery({
+  useEffect(() => {
+    // Check if we have a stored state for the API configuration
+    const storedState = localStorage.getItem('profitRhinoApiConfigured');
+    if (storedState) {
+      setIsApiConfigured(storedState === 'true');
+    }
+  }, []);
+
+  const { data: parts, isLoading, error, isError } = useQuery({
     queryKey: ["profit-rhino-parts", searchQuery],
     queryFn: async () => {
-      if (!searchQuery.trim() && !localStorage.getItem('profitRhinoApiConfigured')) {
-        // If no search query and we know API isn't configured, use DB fallback
-        const { data, error } = await supabase
-          .from("profit_rhino_parts")
-          .select("*")
-          .limit(50);
+      try {
+        // Use the service to fetch from API
+        const response = await profitRhinoService.searchParts(searchQuery);
         
-        if (error) throw error;
-        return data as ProfitRhinoPart[];
-      }
-      
-      // Use the service to fetch from API
-      const response = await profitRhinoService.searchParts(searchQuery);
-      
-      if (!response.success) {
-        // If API fails but we have a DB fallback, try that
-        if (response.error?.includes('credentials not configured')) {
-          // Store this to avoid repeated failed API calls
-          localStorage.setItem('profitRhinoApiConfigured', 'false');
+        if (!response.success) {
+          // If API fails but we have a DB fallback, try that
+          if (response.error?.includes('credentials not configured') || 
+              response.error?.includes('Edge Function returned a non-2xx status code')) {
+            // Store this to avoid repeated failed API calls
+            localStorage.setItem('profitRhinoApiConfigured', 'false');
+            setIsApiConfigured(false);
+            
+            const { data, error } = await supabase
+              .from("profit_rhino_parts")
+              .select("*")
+              .ilike('part_number', searchQuery ? `%${searchQuery}%` : '%')
+              .limit(50);
+            
+            if (error) throw error;
+            return data as ProfitRhinoPart[];
+          }
           
-          const { data, error } = await supabase
-            .from("profit_rhino_parts")
-            .select("*")
-            .limit(50);
-          
-          if (error) throw error;
-          return data as ProfitRhinoPart[];
+          throw new Error(response.error);
         }
         
-        throw new Error(response.error);
+        // API success - mark as configured
+        localStorage.setItem('profitRhinoApiConfigured', 'true');
+        setIsApiConfigured(true);
+        return response.data || [];
+      } catch (err) {
+        console.error("Error in parts search:", err);
+        throw err;
       }
-      
-      // API success - mark as configured
-      localStorage.setItem('profitRhinoApiConfigured', 'true');
-      return response.data || [];
     },
+    enabled: true, // Always enabled to show initial results
   });
 
   const handleAddToInventory = async (part: ProfitRhinoPart) => {
@@ -107,6 +115,13 @@ export const ProfitRhinoSearch = () => {
 
   return (
     <div className="space-y-4">
+      {isApiConfigured === false && (
+        <div className="bg-blue-50 p-4 rounded-md flex items-center gap-2 text-blue-700 mb-4">
+          <Info className="h-4 w-4" />
+          <p>Using local database for parts. External Profit Rhino API not available or configured.</p>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -120,7 +135,7 @@ export const ProfitRhinoSearch = () => {
         </div>
       </div>
 
-      {error && (
+      {isError && (
         <div className="bg-destructive/10 p-4 rounded-md flex items-center gap-2 text-destructive">
           <AlertCircle className="h-4 w-4" />
           <p>Error loading parts: {(error as Error)?.message || 'Unknown error'}</p>
