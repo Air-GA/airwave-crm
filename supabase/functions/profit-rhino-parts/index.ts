@@ -119,7 +119,7 @@ serve(async (req) => {
       }
     }
 
-    // For search functionality - Corrected API endpoint to just /parts/search instead of /pricebookexport/parts/search
+    // For search functionality - FIXED: Using the correct parts search endpoint
     if (searchQuery) {
       try {
         console.log(`Attempting direct parts search with query: "${searchQuery}"`);

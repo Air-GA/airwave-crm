@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { profitRhinoService, ProfitRhinoPart } from "@/services/profitRhinoService";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const ProfitRhinoSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,10 +130,15 @@ export const ProfitRhinoSearch = () => {
       </form>
 
       {isError && (
-        <div className="bg-destructive/10 p-4 rounded-md flex items-center gap-2 text-destructive">
-          <AlertCircle className="h-4 w-4" />
-          <p>Error loading parts: {(error as Error)?.message || 'Unknown error'}</p>
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            Error loading parts: {(error as Error)?.message || 'Unknown error'}. 
+            <div className="mt-1 text-sm">
+              Possible fixes: check your API key configuration or verify if the Profit Rhino API is accessible.
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       <Card>
