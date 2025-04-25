@@ -23,7 +23,7 @@ export const ProfitRhinoSearch = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: parts, isLoading, error, isError } = useQuery({
+  const { data, isLoading, error, isError } = useQuery({
     queryKey: ["profit-rhino-parts", searchQuery],
     queryFn: async () => {
       try {
@@ -36,13 +36,16 @@ export const ProfitRhinoSearch = () => {
         }
         
         console.log("API search successful, found", response.data?.length || 0, "results");
-        return response.data || [];
+        return {
+          parts: response.data || [],
+          message: response.message || ""
+        };
       } catch (err) {
         console.error("Error in parts search:", err);
         throw err;
       }
     },
-    enabled: Boolean(searchQuery), // Only run query when there's a search query
+    enabled: Boolean(searchQuery.trim()), // Only run query when there's a non-empty search query
   });
 
   const handleAddToInventory = async (part: ProfitRhinoPart) => {
@@ -88,8 +91,16 @@ export const ProfitRhinoSearch = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Trigger a refetch by invalidating the query
-    queryClient.invalidateQueries({queryKey: ["profit-rhino-parts", searchQuery]});
+    if (searchQuery.trim()) {
+      // Trigger a refetch by invalidating the query
+      queryClient.invalidateQueries({queryKey: ["profit-rhino-parts", searchQuery]});
+    } else {
+      toast({
+        title: "Search query required",
+        description: "Please enter a search term",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -105,7 +116,7 @@ export const ProfitRhinoSearch = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button type="submit" variant="default" disabled={isLoading || !searchQuery}>
+        <Button type="submit" variant="default" disabled={isLoading || !searchQuery.trim()}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -146,7 +157,7 @@ export const ProfitRhinoSearch = () => {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : !searchQuery ? (
+            ) : !searchQuery.trim() ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-10">
                   <div className="flex flex-col items-center justify-center">
@@ -158,20 +169,20 @@ export const ProfitRhinoSearch = () => {
                   </div>
                 </TableCell>
               </TableRow>
-            ) : parts?.length === 0 ? (
+            ) : data?.parts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-10">
                   <div className="flex flex-col items-center justify-center">
                     <Info className="h-8 w-8 text-muted-foreground mb-2" />
                     <p className="font-medium">No parts found</p>
                     <p className="text-muted-foreground text-sm mt-1">
-                      Try adjusting your search or check the Profit Rhino API configuration
+                      {data?.message || "Try adjusting your search criteria"}
                     </p>
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
-              parts?.map((part) => (
+              data?.parts.map((part) => (
                 <TableRow key={part.id}>
                   <TableCell className="font-medium">{part.part_number}</TableCell>
                   <TableCell>{part.description}</TableCell>

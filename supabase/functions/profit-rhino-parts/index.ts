@@ -20,7 +20,10 @@ serve(async (req) => {
     if (!apiKey) {
       console.error('Profit Rhino API key not configured');
       return new Response(
-        JSON.stringify({ error: 'Profit Rhino API credentials not configured' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Profit Rhino API credentials not configured' 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
@@ -36,6 +39,13 @@ serve(async (req) => {
       }
     } catch (e) {
       console.error('Error parsing request body:', e);
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Invalid request body' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     console.log(`Processing request: query="${searchQuery}" partId="${partId}"`);
@@ -71,55 +81,99 @@ serve(async (req) => {
             };
             
             return new Response(
-              JSON.stringify(formattedPart),
+              JSON.stringify({
+                success: true,
+                data: [formattedPart]
+              }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           } else {
             console.log(`Part fetch successful but no data found`);
             return new Response(
-              JSON.stringify({ error: 'Part not found in response' }),
+              JSON.stringify({ 
+                success: false,
+                error: 'Part not found in response' 
+              }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
             );
           }
         } else {
           console.log(`Part fetch failed with status: ${partResponse.status}`);
           return new Response(
-            JSON.stringify({ error: `Failed to fetch part: ${partResponse.statusText}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: partResponse.status }
+            JSON.stringify({ 
+              success: false,
+              error: `Failed to fetch part: ${partResponse.statusText}` 
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
           );
         }
       } catch (error) {
         console.error('Error fetching part details:', error);
         return new Response(
-          JSON.stringify({ error: `Error fetching part: ${error.message}` }),
+          JSON.stringify({ 
+            success: false,
+            error: `Error fetching part: ${error.message}` 
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
       }
     }
 
-    // For search functionality, try direct API first
+    // For search functionality, use direct API
     if (searchQuery) {
       try {
         console.log(`Attempting direct parts search with query: "${searchQuery}"`);
         const searchUrl = `${apiUrl}/parts/search`;
+        
+        const searchPayload = {
+          search: searchQuery,
+          limit: 50
+        };
+        
+        console.log(`Sending search request to ${searchUrl} with payload: ${JSON.stringify(searchPayload)}`);
+        
         const searchResponse = await fetch(searchUrl, {
           method: 'POST',
           headers: {
             'X-HTTP-ProfitRhino-Service-Key': apiKey,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
-            search: searchQuery,
-            limit: 50
-          }),
+          body: JSON.stringify(searchPayload),
         });
 
-        const searchData = await searchResponse.json();
+        // Log the response status
+        console.log(`Search API response status: ${searchResponse.status} ${searchResponse.statusText}`);
         
-        if (searchResponse.ok && searchData.status) {
-          console.log(`Direct search successful, found ${searchData.responseData?.length || 0} results`);
+        if (!searchResponse.ok) {
+          console.error(`Search API error: ${searchResponse.status} ${searchResponse.statusText}`);
           
-          if (searchData.responseData?.length > 0) {
+          // Try to get error details from response
+          let errorDetails = '';
+          try {
+            const errorText = await searchResponse.text();
+            errorDetails = errorText;
+            console.error(`Error response body: ${errorText}`);
+          } catch (e) {
+            console.error('Could not read error response', e);
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: false,
+              error: `API returned error ${searchResponse.status}: ${errorDetails || searchResponse.statusText}`,
+              data: []
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+        
+        const searchData = await searchResponse.json();
+        console.log(`Search API response:`, typeof searchData, Array.isArray(searchData.responseData));
+        
+        if (searchData.status === "success" && Array.isArray(searchData.responseData)) {
+          console.log(`Direct search successful, found ${searchData.responseData.length} results`);
+          
+          if (searchData.responseData.length > 0) {
             // Transform the data to match our expected format
             const formattedData = searchData.responseData.map((part) => ({
               id: part.id || crypto.randomUUID(),
@@ -133,125 +187,56 @@ serve(async (req) => {
             }));
             
             return new Response(
-              JSON.stringify(formattedData),
+              JSON.stringify({
+                success: true,
+                data: formattedData
+              }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
-          } else {
-            console.log('Direct search returned no results');
           }
-        } else {
-          console.log(`Direct search failed with status: ${searchResponse.status} - ${searchData.message || 'Unknown error'}`);
         }
+        
+        // If we get here, the search didn't return any useful results
+        console.log('Search returned no results or invalid format');
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [],
+            message: "No parts found matching your search criteria"
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       } catch (error) {
         console.error('Error in direct search:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: `Search error: ${error.message}`,
+            data: []
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
       }
-    }
-
-    // If direct search fails or returns no results, fall back to the pricebook export
-    console.log('Falling back to pricebook export...');
-    const exportResponse = await fetch(`${apiUrl}/pricebookexport`, {
-      method: 'GET',
-      headers: {
-        'X-HTTP-ProfitRhino-Service-Key': apiKey,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!exportResponse.ok) {
-      console.error(`Pricebook export failed: ${exportResponse.status} ${exportResponse.statusText}`);
+    } else {
+      // If no search query provided
       return new Response(
-        JSON.stringify({ error: `Failed to get pricebook: ${exportResponse.statusText}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: exportResponse.status }
-      );
-    }
-
-    const exportData = await exportResponse.json();
-    
-    if (!exportData.responseData?.fileUrl) {
-      console.error('No file URL in response:', exportData);
-      return new Response(
-        JSON.stringify({ error: 'No file URL in response' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    // Download the Excel file
-    console.log('Downloading Excel file from:', exportData.responseData.fileUrl);
-    const fileResponse = await fetch(exportData.responseData.fileUrl);
-    if (!fileResponse.ok) {
-      console.error(`Failed to download Excel file: ${fileResponse.status} ${fileResponse.statusText}`);
-      return new Response(
-        JSON.stringify({ error: 'Failed to download Excel file' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: fileResponse.status }
-      );
-    }
-
-    // Convert the response to an ArrayBuffer
-    const fileBuffer = await fileResponse.arrayBuffer();
-    console.log('Excel file downloaded, size:', fileBuffer.byteLength);
-
-    // Parse the Excel file using xlsx library
-    try {
-      console.log('Parsing Excel file...');
-      const workbook = XLSX.read(new Uint8Array(fileBuffer), { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      // Convert to JSON
-      let jsonData = XLSX.utils.sheet_to_json(worksheet);
-      console.log(`Excel parsed, found ${jsonData.length} records`);
-      
-      // Filter the data based on search query if provided
-      if (searchQuery && jsonData.length > 0) {
-        const lowerQuery = searchQuery.toLowerCase();
-        jsonData = jsonData.filter((row) => {
-          const partNumber = String(row.PartNumber || row['Part Number'] || row.SKU || '').toLowerCase();
-          const description = String(row.Description || row.Name || '').toLowerCase();
-          const manufacturer = String(row.Manufacturer || '').toLowerCase();
-          const modelNumber = String(row.ModelNumber || row['Model Number'] || '').toLowerCase();
-          
-          return partNumber.includes(lowerQuery) || 
-                 description.includes(lowerQuery) || 
-                 manufacturer.includes(lowerQuery) || 
-                 modelNumber.includes(lowerQuery);
-        });
-        console.log(`Filtered to ${jsonData.length} records matching query: "${searchQuery}"`);
-      }
-
-      // Limit results to reasonable number
-      if (jsonData.length > 100) {
-        jsonData = jsonData.slice(0, 100);
-        console.log('Limited to 100 results for performance');
-      }
-
-      // Transform the data to match our expected format
-      const formattedData = jsonData.map((row) => ({
-        id: row.ID || row.id || crypto.randomUUID(),
-        part_number: row.PartNumber || row['Part Number'] || row.SKU || '',
-        description: row.Description || row.Name || '',
-        category: row.Category || '',
-        manufacturer: row.Manufacturer || '',
-        model_number: row.ModelNumber || row['Model Number'] || '',
-        list_price: parseFloat(row.ListPrice || row['List Price'] || row.Price || 0),
-        cost: parseFloat(row.Cost || 0),
-      }));
-
-      return new Response(
-        JSON.stringify(formattedData),
+        JSON.stringify({ 
+          success: true,
+          data: [],
+          message: "Please enter a search query" 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (parseError) {
-      console.error('Error parsing Excel file:', parseError);
-      return new Response(
-        JSON.stringify({ error: `Error parsing Excel file: ${parseError.message}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
   } catch (error) {
     console.error('Error processing request:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ 
+        success: false,
+        error: `Server error: ${error.message}`,
+        data: []
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   }
 });

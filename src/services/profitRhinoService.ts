@@ -24,6 +24,14 @@ export const profitRhinoService = {
     try {
       console.log(`Searching for Profit Rhino parts with query: "${query}"`);
       
+      if (!query || query.trim() === '') {
+        return {
+          success: true,
+          message: "Please enter a search term",
+          data: []
+        };
+      }
+      
       // Call our edge function to fetch parts from Profit Rhino API
       const { data, error } = await supabase.functions.invoke('profit-rhino-parts', {
         body: { query }
@@ -34,14 +42,16 @@ export const profitRhinoService = {
         throw error;
       }
       
-      // Check if data is an array (search results) or a single object (part details)
-      const partsData = Array.isArray(data) ? data : (data ? [data] : []);
-      console.log(`Retrieved ${partsData.length} parts from API`);
+      // API should return a response with success, data, and potentially error fields
+      const response = data as ProfitRhinoApiResponse;
       
-      return {
-        success: true,
-        data: partsData as ProfitRhinoPart[]
-      };
+      if (!response.success) {
+        console.error('API returned error:', response.error);
+        return response;  // Return the error response directly
+      }
+      
+      console.log(`Retrieved ${response.data?.length || 0} parts from API`);
+      return response;  // Return the successful response
     } catch (error) {
       console.error('Error searching Profit Rhino parts:', error);
       return {
@@ -66,17 +76,16 @@ export const profitRhinoService = {
         throw error;
       }
       
-      // The response might already be a single part object, not an array
-      const partData = Array.isArray(data) ? data[0] : data;
+      // API should return a response with success, data, and potentially error fields
+      const response = data as ProfitRhinoApiResponse;
       
-      if (!partData) {
-        throw new Error('Part not found');
+      if (!response.success) {
+        console.error('API returned error:', response.error);
+        return response;
       }
       
-      return {
-        success: true,
-        data: [partData] as ProfitRhinoPart[]
-      };
+      console.log(`Retrieved part details successfully`);
+      return response;
     } catch (error) {
       console.error('Error getting Profit Rhino part details:', error);
       return {
