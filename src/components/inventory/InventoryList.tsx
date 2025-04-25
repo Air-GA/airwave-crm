@@ -9,9 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Package, ArrowRight } from "lucide-react";
+import { useCallback } from "react";
 
-export const InventoryList = () => {
-  const { data: items, isLoading } = useQuery({
+export const InventoryList = ({ onNavigateToPartsTab }: { onNavigateToPartsTab?: () => void }) => {
+  const { data: items, isLoading, refetch } = useQuery({
     queryKey: ["inventory-items"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -24,6 +27,12 @@ export const InventoryList = () => {
     },
   });
 
+  const handleNavigateToParts = useCallback(() => {
+    if (onNavigateToPartsTab) {
+      onNavigateToPartsTab();
+    }
+  }, [onNavigateToPartsTab]);
+
   if (isLoading) {
     return (
       <div className="text-center p-4">
@@ -34,10 +43,15 @@ export const InventoryList = () => {
 
   if (!items?.length) {
     return (
-      <div className="text-center p-4">
-        <p className="text-muted-foreground">
-          No items in inventory yet. Use the Parts Catalog tab to add items.
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <Package className="h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium mb-2">No items in inventory yet</h3>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          Your inventory is empty. Go to the Parts Catalog tab to search and add parts from the Profit Rhino database.
         </p>
+        <Button onClick={handleNavigateToParts}>
+          Go to Parts Catalog <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
       </div>
     );
   }

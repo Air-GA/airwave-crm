@@ -11,9 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Search, Plus, Check } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfitRhinoPart {
   id: string;
@@ -28,6 +29,9 @@ interface ProfitRhinoPart {
 
 export const ProfitRhinoSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: parts, isLoading } = useQuery({
     queryKey: ["profit-rhino-parts", searchQuery],
@@ -51,17 +55,43 @@ export const ProfitRhinoSearch = () => {
   });
 
   const handleAddToInventory = async (part: ProfitRhinoPart) => {
-    const { error } = await supabase.from("inventory_items").insert({
-      name: part.description || part.part_number,
-      sku: part.part_number,
-      category: part.category,
-      unit_price: part.list_price,
-      description: `Manufacturer: ${part.manufacturer || 'N/A'}\nModel: ${part.model_number || 'N/A'}`,
-    });
+    try {
+      const { error } = await supabase.from("inventory_items").insert({
+        name: part.description || part.part_number,
+        sku: part.part_number,
+        category: part.category,
+        unit_price: part.list_price,
+        quantity: 1, // Default to 1 quantity
+        description: `Manufacturer: ${part.manufacturer || 'N/A'}\nModel: ${part.model_number || 'N/A'}`,
+      });
 
-    if (error) {
-      console.error("Error adding item to inventory:", error);
-      return;
+      if (error) {
+        console.error("Error adding item to inventory:", error);
+        toast({
+          title: "Error adding part to inventory",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Mark item as added
+      setAddedItems(prev => ({...prev, [part.id]: true}));
+      
+      // Invalidate the inventory items query to refresh the inventory list
+      queryClient.invalidateQueries({queryKey: ["inventory-items"]});
+      
+      toast({
+        title: "Part added to inventory",
+        description: `${part.description || part.part_number} has been added to your inventory.`,
+      });
+    } catch (err) {
+      console.error("Error in add to inventory function:", err);
+      toast({
+        title: "Error adding part",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -117,12 +147,19 @@ export const ProfitRhinoSearch = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
-                      variant="ghost"
+                      variant={addedItems[part.id] ? "outline" : "ghost"}
                       size="icon"
                       onClick={() => handleAddToInventory(part)}
+                      disabled={addedItems[part.id]}
                     >
-                      <Plus className="h-4 w-4" />
-                      <span className="sr-only">Add to inventory</span>
+                      {addedItems[part.id] ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">
+                        {addedItems[part.id] ? "Added to inventory" : "Add to inventory"}
+                      </span>
                     </Button>
                   </TableCell>
                 </TableRow>

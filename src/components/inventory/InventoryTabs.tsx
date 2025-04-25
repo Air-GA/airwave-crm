@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Warehouse, Bell, Truck, MoveRight, Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,10 @@ interface InventoryTabsProps {
 }
 
 export const InventoryTabs = ({ activeTab, onTabChange }: InventoryTabsProps) => {
+  const handleNavigateToPartsTab = () => {
+    onTabChange("profit-rhino");
+  };
+
   return (
     <Tabs defaultValue="all-inventory" value={activeTab} onValueChange={onTabChange}>
       <TabsList className="mb-4">
@@ -39,7 +44,7 @@ export const InventoryTabs = ({ activeTab, onTabChange }: InventoryTabsProps) =>
 
       <TabsContent value="all-inventory">
         <Card className="p-6">
-          <InventoryList />
+          <InventoryList onNavigateToPartsTab={handleNavigateToPartsTab} />
         </Card>
       </TabsContent>
 
