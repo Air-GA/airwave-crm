@@ -1,7 +1,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { read, utils } from 'https://deno.land/x/excel@v1.4.3/mod.ts';
+import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,21 +29,65 @@ serve(async (req) => {
       );
     }
 
-    // Parse the request body to get the search query
+    // Parse the request body to get the search query or part ID
     let searchQuery = '';
+    let partId = '';
     try {
       if (req.body) {
         const body = await req.json();
         searchQuery = body.query || '';
+        partId = body.partId || '';
       }
     } catch (e) {
       console.error('Error parsing request body:', e);
     }
 
-    console.log(`Processing search for query: "${searchQuery}"`);
+    console.log(`Processing request: query="${searchQuery}" partId="${partId}"`);
 
-    // Try two approaches:
-    // 1. First try direct search if query is provided
+    // If a specific part ID was requested, try to fetch that part
+    if (partId) {
+      try {
+        console.log(`Fetching specific part with ID: ${partId}`);
+        const partUrl = `${apiUrl}/parts/${partId}`;
+        const partResponse = await fetch(partUrl, {
+          method: 'GET',
+          headers: {
+            'X-HTTP-ProfitRhino-Service-Key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (partResponse.ok) {
+          const partData = await partResponse.json();
+          console.log(`Part details fetch successful`);
+          
+          if (partData.status && partData.responseData) {
+            // Format the single part data
+            const formattedPart = {
+              id: partData.responseData.id || partId,
+              part_number: partData.responseData.partNumber || '',
+              description: partData.responseData.description || '',
+              category: partData.responseData.category || '',
+              manufacturer: partData.responseData.manufacturer || '',
+              model_number: partData.responseData.modelNumber || '',
+              list_price: parseFloat(partData.responseData.listPrice || 0),
+              cost: parseFloat(partData.responseData.cost || 0),
+            };
+            
+            return new Response(
+              JSON.stringify(formattedPart),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } else {
+          console.log(`Part fetch failed with status: ${partResponse.status}`);
+        }
+      } catch (error) {
+        console.error('Error fetching part details:', error);
+      }
+    }
+
+    // If search query is provided, try direct search first
     if (searchQuery) {
       try {
         console.log(`Attempting direct parts search with query: "${searchQuery}"`);
@@ -66,7 +110,7 @@ serve(async (req) => {
           
           if (searchData.status && searchData.responseData?.length > 0) {
             // Transform the data to match our expected format
-            const formattedData = searchData.responseData.map((part: any) => ({
+            const formattedData = searchData.responseData.map((part) => ({
               id: part.id || crypto.randomUUID(),
               part_number: part.partNumber || part.part_number || '',
               description: part.description || part.name || '',
@@ -90,7 +134,7 @@ serve(async (req) => {
       }
     }
 
-    // 2. If direct search fails or returns no results, fall back to the pricebook export
+    // If direct search fails or returns no results, fall back to the pricebook export
     console.log('Falling back to pricebook export...');
     const exportResponse = await fetch(`${apiUrl}/pricebookexport`, {
       method: 'GET',
@@ -124,18 +168,21 @@ serve(async (req) => {
     const fileBuffer = await fileResponse.arrayBuffer();
     console.log('Excel file downloaded, size:', fileBuffer.byteLength);
 
-    // Parse the Excel file
+    // Parse the Excel file using xlsx library
     try {
       console.log('Parsing Excel file...');
-      const workbook = read(new Uint8Array(fileBuffer));
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      let jsonData = utils.sheet_to_json(worksheet);
+      const workbook = XLSX.read(new Uint8Array(fileBuffer), { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert to JSON
+      let jsonData = XLSX.utils.sheet_to_json(worksheet);
       console.log(`Excel parsed, found ${jsonData.length} records`);
       
       // Filter the data based on search query if provided
       if (searchQuery && jsonData.length > 0) {
         const lowerQuery = searchQuery.toLowerCase();
-        jsonData = jsonData.filter((row: any) => {
+        jsonData = jsonData.filter((row) => {
           const partNumber = String(row.PartNumber || row['Part Number'] || row.SKU || '').toLowerCase();
           const description = String(row.Description || row.Name || '').toLowerCase();
           const manufacturer = String(row.Manufacturer || '').toLowerCase();
@@ -156,7 +203,7 @@ serve(async (req) => {
       }
 
       // Transform the data to match our expected format
-      const formattedData = jsonData.map((row: any) => ({
+      const formattedData = jsonData.map((row) => ({
         id: row.ID || row.id || crypto.randomUUID(),
         part_number: row.PartNumber || row['Part Number'] || row.SKU || '',
         description: row.Description || row.Name || '',
