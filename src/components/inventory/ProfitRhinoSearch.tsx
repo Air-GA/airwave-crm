@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,7 +28,6 @@ export const ProfitRhinoSearch = () => {
     queryFn: async () => {
       try {
         console.log("Searching for parts with query:", searchQuery);
-        // Use the service to fetch from API
         const response = await profitRhinoService.searchParts(searchQuery);
         
         if (!response.success) {
@@ -47,7 +45,7 @@ export const ProfitRhinoSearch = () => {
         throw err;
       }
     },
-    enabled: Boolean(searchQuery.trim()), // Only run query when there's a non-empty search query
+    enabled: Boolean(searchQuery.trim()),
   });
 
   const handleAddToInventory = async (part: ProfitRhinoPart) => {
@@ -57,7 +55,7 @@ export const ProfitRhinoSearch = () => {
         sku: part.part_number,
         category: part.category,
         unit_price: part.list_price,
-        quantity: 1, // Default to 1 quantity
+        quantity: 1,
         description: `Manufacturer: ${part.manufacturer || 'N/A'}\nModel: ${part.model_number || 'N/A'}`,
       });
 
@@ -71,10 +69,8 @@ export const ProfitRhinoSearch = () => {
         return;
       }
 
-      // Mark item as added
       setAddedItems(prev => ({...prev, [part.id]: true}));
       
-      // Invalidate the inventory items query to refresh the inventory list
       queryClient.invalidateQueries({queryKey: ["inventory-items"]});
       
       toast({
@@ -94,7 +90,6 @@ export const ProfitRhinoSearch = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Trigger a refetch by invalidating the query
       queryClient.invalidateQueries({queryKey: ["profit-rhino-parts", searchQuery]});
     } else {
       toast({
@@ -105,7 +100,6 @@ export const ProfitRhinoSearch = () => {
     }
   };
 
-  // Extract error details
   const errorMessage = isError ? (error as Error)?.message || 'Unknown error' : '';
   const isProfitRhinoConfigIssue = errorMessage.includes('API key') || 
                                   errorMessage.includes('credentials') ||
@@ -115,7 +109,7 @@ export const ProfitRhinoSearch = () => {
   return (
     <div className="space-y-4">
       {isProfitRhinoConfigIssue && (
-        <Alert variant="warning" className="mb-4">
+        <Alert>
           <AlertCircle className="h-4 w-4 mr-2" />
           <AlertTitle>Profit Rhino API Configuration Issue</AlertTitle>
           <AlertDescription>

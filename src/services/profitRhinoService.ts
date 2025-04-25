@@ -1,5 +1,17 @@
-
 import { supabase } from "@/integrations/supabase/client";
+
+export interface ProfitRhinoAuthResponse {
+  status: boolean;
+  message?: string;
+  responseData?: {
+    returnData: {
+      token: string;
+      companyName: string;
+      userTypeId: number;
+      // ... other auth fields as needed
+    }
+  }
+}
 
 export interface ProfitRhinoPart {
   id: string;
@@ -17,10 +29,35 @@ export interface ProfitRhinoApiResponse {
   message?: string;
   data?: ProfitRhinoPart[];
   error?: string;
-  endpoint?: string; // Added to track which endpoint worked
+  endpoint?: string;
+  documentation?: string;
 }
 
 export const profitRhinoService = {
+  async authenticate(): Promise<string | null> {
+    try {
+      const { data, error } = await supabase.functions.invoke('profit-rhino-parts', {
+        body: { action: 'authenticate', 
+               payload: {
+                 username: 'your-username', // Will be configured in settings
+                 password: 'your-password',
+                 deviceType: 3 // Web
+               }
+        }
+      });
+
+      if (error || !data?.success) {
+        console.error('Auth error:', error || data?.error);
+        return null;
+      }
+
+      return data.token;
+    } catch (err) {
+      console.error('Error authenticating with Profit Rhino:', err);
+      return null;
+    }
+  },
+
   async searchParts(query: string): Promise<ProfitRhinoApiResponse> {
     try {
       console.log(`Searching for Profit Rhino parts with query: "${query}"`);
