@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
@@ -41,7 +40,7 @@ serve(async (req) => {
       );
     }
 
-    const { action, payload, query, partId } = body;
+    const { action, payload, query, partId, businessId, businessInfo } = body;
 
     // Handle authentication
     if (action === 'authenticate') {
@@ -381,6 +380,66 @@ serve(async (req) => {
         );
       }
     }
+
+  // Add new business information handlers
+  if (action === 'getBusinessInfo') {
+    try {
+      const response = await fetch(`${apiBaseUrl}/businessinformation/${businessId}`, {
+        headers: {
+          'X-HTTP-ProfitRhino-Service-Key': apiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Business info request failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return new Response(JSON.stringify(data), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    } catch (error) {
+      console.error('Error fetching business info:', error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: error.message 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+  }
+
+  if (action === 'copyBusinessInfo') {
+    try {
+      const response = await fetch(`${apiBaseUrl}/businessinformation/${businessId}/copybusinessinformation`, {
+        method: 'POST',
+        headers: {
+          'X-HTTP-ProfitRhino-Service-Key': apiKey,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Copy business info request failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return new Response(JSON.stringify(data), { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    } catch (error) {
+      console.error('Error copying business info:', error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: error.message 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+  }
 
     return new Response(
       JSON.stringify({ 
