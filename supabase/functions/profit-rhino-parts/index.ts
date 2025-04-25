@@ -145,6 +145,21 @@ serve(async (req) => {
         list_price: apiResponse.list_price || apiResponse.listPrice || apiResponse.price || 0,
         cost: apiResponse.cost || 0,
       };
+    } else if (apiResponse.responseData && apiResponse.responseData.fileUrl) {
+      // This is a response with a file URL, which isn't what we need for direct parts search
+      console.log('Received file URL response instead of parts data:', apiResponse.responseData.fileUrl);
+      
+      // Fall back to database search
+      console.log('Falling back to database search');
+      const { data: dbParts, error: dbError } = await supabaseClient
+        .from('profit_rhino_parts')
+        .select('*')
+        .ilike('part_number', query ? `%${query}%` : '%')
+        .limit(50);
+
+      if (dbError) throw dbError;
+      
+      formattedData = dbParts || [];
     } else {
       // Empty or unrecognized format
       console.log('Unrecognized API response format:', JSON.stringify(apiResponse));
