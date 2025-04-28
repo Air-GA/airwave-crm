@@ -1,88 +1,17 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Download,
-  FileText,
-  PlusCircle,
-  Upload,
-  User,
-  Timer,
-  TimerOff,
-  ClockAlert,
-  DollarSign,
-} from "lucide-react";
-import { toast } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { PlusCircle, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { Badge } from "@/components/ui/badge";
-
-interface TimesheetStats {
-  hours: number;
-  entries: number;
-  approved: number;
-  pending: number;
-}
-
-interface ClockEvent {
-  id: string;
-  userId: string;
-  userName: string;
-  type: 'in' | 'out';
-  timestamp: Date;
-  notes?: string;
-}
-
-interface TimeEntry {
-  id: string;
-  date: string;
-  technician: string;
-  jobNumber?: string;
-  customer?: string;
-  clockIn: Date;
-  clockOut?: Date;
-  hours?: number;
-  status: 'pending' | 'approved' | 'rejected';
-  notes?: string;
-}
+import { TimeClock } from "@/components/timesheets/TimeClock";
+import { TimesheetStats } from "@/components/timesheets/TimesheetStats";
+import { WeeklyTimesheet } from "@/components/timesheets/WeeklyTimesheet";
+import { TimesheetStats as TimesheetStatsType } from "@/components/timesheets/types";
+import { ClockEvent, TimeEntry } from "@/components/timesheets/types";
 
 const Timesheets = () => {
-  const isMobile = useIsMobile();
-  const { user, permissions, userRole } = useAuth();
+  const { user } = useAuth();
   const [selectedWeek, setSelectedWeek] = useState("current");
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);
@@ -94,107 +23,118 @@ const Timesheets = () => {
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   const [timesheetEntries, setTimesheetEntries] = useState<TimeEntry[]>([]);
   
-  const canViewAllTimesheets = userRole === 'admin' || userRole === 'manager' || userRole === 'hr';
-  
-  const timesheetStats: TimesheetStats = {
+  // Timesheet statistics
+  const timesheetStats: TimesheetStatsType = {
     hours: 37.5,
     entries: 15,
     approved: 12,
     pending: 3
   };
   
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    });
-  };
-  
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-  
-  const calculateHours = (clockIn: Date, clockOut: Date) => {
-    const diffMs = clockOut.getTime() - clockIn.getTime();
-    const diffHrs = diffMs / (1000 * 60 * 60);
-    return Math.round(diffHrs * 100) / 100;
-  };
-  
-  const handleClockIn = () => {
-    if (!user) return;
+  // Update current time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
     
-    const now = new Date();
-    setClockInTime(now);
-    setIsClockedIn(true);
-    
-    const newEvent: ClockEvent = {
-      id: Date.now().toString(),
-      userId: user.id,
-      userName: user.name || user.email,
-      type: 'in',
-      timestamp: now
+    return () => {
+      clearInterval(timer);
     };
-    
-    const updatedEvents = [...clockEvents, newEvent];
-    const allEvents = localStorage.getItem('clockEvents')
-      ? [...JSON.parse(localStorage.getItem('clockEvents')!).map((event: any) => ({
-          ...event,
-          timestamp: new Date(event.timestamp)
-        })), newEvent]
-      : [newEvent];
-    
-    setClockEvents(canViewAllTimesheets ? allEvents : updatedEvents);
-    
-    localStorage.setItem('clockInTime_' + user.id, JSON.stringify(now));
-    localStorage.setItem('clockEvents', JSON.stringify(allEvents));
-    
-    toast.success("You have clocked in", {
-      description: `Time: ${formatTime(now)}`
-    });
-  };
+  }, []);
   
-  const handleClockOut = () => {
-    if (!user || !clockInTime) return;
-    
+  // Load clock state from localStorage on component mount
+  useEffect(() => {
+    if (user) {
+      const storedClockInTime = localStorage.getItem('clockInTime_' + user.id);
+      if (storedClockInTime) {
+        setClockInTime(new Date(JSON.parse(storedClockInTime)));
+        setIsClockedIn(true);
+      }
+      
+      const storedEvents = localStorage.getItem('clockEvents');
+      if (storedEvents) {
+        const events = JSON.parse(storedEvents)
+          .map((event: any) => ({
+            ...event,
+            timestamp: new Date(event.timestamp)
+          }));
+        setClockEvents(events);
+      }
+    }
+  }, [user]);
+  
+  // Set week start and end dates based on selected week
+  useEffect(() => {
     const now = new Date();
-    setClockOutTime(now);
-    setIsClockedIn(false);
+    const currentDay = now.getDay();
+    const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
     
-    const hours = calculateHours(clockInTime, now);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
     
-    const newEvent: ClockEvent = {
-      id: Date.now().toString(),
-      userId: user.id,
-      userName: user.name || user.email,
-      type: 'out',
-      timestamp: now
-    };
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
     
-    const allEvents = localStorage.getItem('clockEvents')
-      ? [...JSON.parse(localStorage.getItem('clockEvents')!).map((event: any) => ({
-          ...event,
-          timestamp: new Date(event.timestamp)
-        })), newEvent]
-      : [newEvent];
-    
-    const updatedEvents = [...clockEvents, newEvent];
-    setClockEvents(canViewAllTimesheets ? allEvents : updatedEvents);
-    
-    localStorage.removeItem('clockInTime_' + user.id);
-    localStorage.setItem('clockEvents', JSON.stringify(allEvents));
-    
-    toast.success("You have clocked out", {
-      description: `Duration: ${hours} hours`
-    });
-  };
+    if (selectedWeek === 'current') {
+      setWeekStart(startOfWeek);
+      setWeekEnd(endOfWeek);
+    } else if (selectedWeek === 'previous') {
+      const prevWeekStart = new Date(startOfWeek);
+      prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+      
+      const prevWeekEnd = new Date(endOfWeek);
+      prevWeekEnd.setDate(prevWeekEnd.getDate() - 7);
+      
+      setWeekStart(prevWeekStart);
+      setWeekEnd(prevWeekEnd);
+    } else if (selectedWeek === 'two-weeks-ago') {
+      const twoWeeksAgoStart = new Date(startOfWeek);
+      twoWeeksAgoStart.setDate(twoWeeksAgoStart.getDate() - 14);
+      
+      const twoWeeksAgoEnd = new Date(endOfWeek);
+      twoWeeksAgoEnd.setDate(twoWeeksAgoEnd.getDate() - 14);
+      
+      setWeekStart(twoWeeksAgoStart);
+      setWeekEnd(twoWeeksAgoEnd);
+    }
+  }, [selectedWeek]);
   
-  const currentPayPeriod = weekStart && weekEnd ? 
-    `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : 
-    "Current Pay Period";
+  // Load timesheet entries (mock data for now)
+  useEffect(() => {
+    if (weekStart && weekEnd) {
+      // In a real app, this would be a call to an API
+      // For now we'll generate some mock data based on the selected week
+      const startDate = new Date(weekStart);
+      const mockEntries: TimeEntry[] = [];
+      
+      for (let i = 0; i < 5; i++) {
+        const entryDate = new Date(startDate);
+        entryDate.setDate(startDate.getDate() + i);
+        
+        const clockIn = new Date(entryDate);
+        clockIn.setHours(9, 0, 0, 0);
+        
+        const clockOut = new Date(entryDate);
+        clockOut.setHours(17, 0, 0, 0);
+        
+        mockEntries.push({
+          id: `TS-${selectedWeek}-${i + 1}`,
+          date: entryDate.toISOString(),
+          technician: "John Doe",
+          jobNumber: `JOB-${1000 + i}`,
+          customer: `Customer ${i + 1}`,
+          clockIn,
+          clockOut,
+          hours: 8,
+          status: i < 3 ? 'approved' : 'pending'
+        });
+      }
+      
+      setTimesheetEntries(mockEntries);
+    }
+  }, [weekStart, weekEnd, selectedWeek]);
   
   return (
     <MainLayout>
@@ -214,262 +154,32 @@ const Timesheets = () => {
           </div>
         </div>
         
-        <Card className="border-2 border-blue-200">
-          <CardHeader className="bg-blue-50/50">
-            <CardTitle className="flex items-center">
-              <Clock className="mr-2 h-5 w-5" />
-              Time Clock
-            </CardTitle>
-            <CardDescription>
-              Record your work hours by clocking in and out
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-              <div className="flex items-center space-x-2">
-                <div className="text-xl font-bold">{formatTime(currentTime)}</div>
-                <div className="text-muted-foreground">{formatDate(currentTime)}</div>
-              </div>
-              <div className="flex space-x-4">
-                <Button
-                  variant={isClockedIn ? "outline" : "default"}
-                  className={!isClockedIn ? "bg-green-600 hover:bg-green-700" : ""}
-                  onClick={handleClockIn}
-                  disabled={isClockedIn}
-                >
-                  <Timer className="mr-2 h-4 w-4" />
-                  Clock In
-                </Button>
-                <Button 
-                  variant={!isClockedIn ? "outline" : "destructive"}
-                  onClick={handleClockOut}
-                  disabled={!isClockedIn}
-                >
-                  <TimerOff className="mr-2 h-4 w-4" />
-                  Clock Out
-                </Button>
-              </div>
-            </div>
-            
-            {isClockedIn && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-md flex flex-col md:flex-row justify-between items-center">
-                <div>
-                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                    <Timer className="mr-1 h-3 w-3" />
-                    Currently Clocked In
-                  </Badge>
-                  <div className="mt-2">
-                    <span className="text-sm text-muted-foreground">Clocked in at:</span>{" "}
-                    <span className="font-medium">{clockInTime && formatTime(clockInTime)}</span>
-                  </div>
-                </div>
-                <div className="mt-2 md:mt-0">
-                  <span className="text-sm text-muted-foreground">Duration:</span>{" "}
-                  <span className="font-bold">
-                    {clockInTime && calculateHours(clockInTime, currentTime).toFixed(2)} hrs
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {clockEvents.length > 0 && (
-              <div className="mt-6">
-                <h3 className="font-medium mb-2">
-                  {canViewAllTimesheets ? "All Time Entries" : "Your Time Entries"}
-                </h3>
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        {canViewAllTimesheets && <TableHead>User</TableHead>}
-                        <TableHead>Type</TableHead>
-                        <TableHead>Time</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {clockEvents
-                        .slice(-6)
-                        .reverse()
-                        .map((event) => (
-                          <TableRow key={event.id}>
-                            <TableCell>{formatDate(event.timestamp)}</TableCell>
-                            {canViewAllTimesheets && <TableCell>{event.userName}</TableCell>}
-                            <TableCell>
-                              {event.type === 'in' ? (
-                                <Badge className="bg-green-100 text-green-800">Clock In</Badge>
-                              ) : (
-                                <Badge className="bg-red-100 text-red-800">Clock Out</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>{formatTime(event.timestamp)}</TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TimeClock
+          clockInTime={clockInTime}
+          setClockInTime={setClockInTime}
+          clockOutTime={clockOutTime}
+          setClockOutTime={setClockOutTime}
+          isClockedIn={isClockedIn}
+          setIsClockedIn={setIsClockedIn}
+          clockEvents={clockEvents}
+          setClockEvents={setClockEvents}
+          currentTime={currentTime}
+        />
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{timesheetStats.hours} hrs</div>
-              <p className="text-xs text-muted-foreground">{weekStart && weekEnd ? `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : "Current Pay Period"}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Timesheet Entries</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{timesheetStats.entries}</div>
-              <p className="text-xs text-muted-foreground">{weekStart && weekEnd ? `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : "Current Pay Period"}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Approved Hours</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{timesheetStats.approved}</div>
-              <p className="text-xs text-green-500">Ready for payroll</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{timesheetStats.pending}</div>
-              <p className="text-xs text-amber-500">Awaiting review</p>
-            </CardContent>
-          </Card>
-        </div>
+        <TimesheetStats 
+          stats={timesheetStats}
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+        />
         
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-              <div>
-                <CardTitle>Weekly Timesheet</CardTitle>
-                <CardDescription>{weekStart && weekEnd ? `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : "Current Pay Period"}</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Select defaultValue={selectedWeek} onValueChange={setSelectedWeek}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select Week" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="current">Current Week</SelectItem>
-                    <SelectItem value="previous">Previous Week</SelectItem>
-                    <SelectItem value="two-weeks-ago">Two Weeks Ago</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="icon">
-                  <Calendar className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <div className="flex items-center justify-between border-b bg-muted/40 p-4">
-                <div className="font-medium">
-                  Total Hours: {timesheetStats.hours}
-                </div>
-                <div className="font-medium">
-                  Entries: {timesheetStats.entries}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Status:</span>
-                  <span className="flex items-center gap-1 text-sm">
-                    <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                    {timesheetStats.approved} Approved
-                  </span>
-                  <span className="flex items-center gap-1 text-sm">
-                    <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-                    {timesheetStats.pending} Pending
-                  </span>
-                </div>
-              </div>
-              
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    {!isMobile && <TableHead>Timesheet ID</TableHead>}
-                    {!isMobile && canViewAllTimesheets && <TableHead>Technician</TableHead>}
-                    <TableHead>Job/Customer</TableHead>
-                    <TableHead className="text-right">Hours</TableHead>
-                    <TableHead>Status</TableHead>
-                    {canViewAllTimesheets && <TableHead>QuickBooks Status</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {timesheetEntries.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        {new Date(entry.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </TableCell>
-                      {!isMobile && <TableCell>{entry.id}</TableCell>}
-                      {!isMobile && canViewAllTimesheets && <TableCell>{entry.technician}</TableCell>}
-                      <TableCell>
-                        <div className="font-medium">{entry.jobNumber}</div>
-                        <div className="text-xs text-muted-foreground">{entry.customer}</div>
-                      </TableCell>
-                      <TableCell className="text-right">{entry.hours}</TableCell>
-                      <TableCell>
-                        {entry.status === "approved" ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700">
-                            Approved
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                            Pending
-                          </Badge>
-                        )}
-                      </TableCell>
-                      {canViewAllTimesheets && (
-                        <TableCell>
-                          {entry.id.includes('3') ? (
-                            <Badge variant="outline" className="bg-red-50 text-red-700">
-                              Not Synced
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-green-50 text-green-700">
-                              Synced
-                            </Badge>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline">
-              <Clock className="mr-2 h-4 w-4" /> View Time Details
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <FileText className="mr-2 h-4 w-4" /> Generate Report
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
+        <WeeklyTimesheet
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+          selectedWeek={selectedWeek}
+          setSelectedWeek={setSelectedWeek}
+          timesheetEntries={timesheetEntries}
+          stats={timesheetStats}
+        />
       </div>
     </MainLayout>
   );
