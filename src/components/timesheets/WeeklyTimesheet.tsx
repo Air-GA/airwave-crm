@@ -1,4 +1,3 @@
-
 import { Calendar, FileText, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,20 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
-import { TimesheetStats } from "./TimesheetStats";
-
-export interface TimeEntry {
-  id: string;
-  date: string;
-  technician: string;
-  jobNumber?: string;
-  customer?: string;
-  clockIn: Date;
-  clockOut?: Date;
-  hours?: number;
-  status: 'pending' | 'approved' | 'rejected';
-  notes?: string;
-}
+import { TimeEntry, TimesheetStats as TimesheetStatsType } from "./types";
 
 interface WeeklyTimesheetProps {
   weekStart: Date | null;
@@ -48,7 +34,7 @@ interface WeeklyTimesheetProps {
   selectedWeek: string;
   setSelectedWeek: React.Dispatch<React.SetStateAction<string>>;
   timesheetEntries: TimeEntry[];
-  stats: TimesheetStats;
+  stats: TimesheetStatsType;
 }
 
 export const WeeklyTimesheet = ({
