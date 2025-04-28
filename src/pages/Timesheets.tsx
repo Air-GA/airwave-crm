@@ -94,128 +94,6 @@ const Timesheets = () => {
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   const [timesheetEntries, setTimesheetEntries] = useState<any[]>([]);
   
-  const canViewAllTimesheets = 
-    permissions?.canViewHRInfo || 
-    user?.role === 'admin' || 
-    user?.role === 'manager' || 
-    user?.role === 'hr';
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  }, []);
-  
-  useEffect(() => {
-    const today = new Date();
-    let startDay = new Date(today);
-    
-    while (startDay.getDay() !== 4) {
-      startDay.setDate(startDay.getDate() - 1);
-    }
-    
-    if (today.getDay() >= 4) {
-    } else {
-      startDay.setDate(startDay.getDate() - 7);
-    }
-    
-    startDay.setHours(0, 0, 0, 0);
-    const endDay = new Date(startDay);
-    endDay.setDate(endDay.getDate() + 6);
-    endDay.setHours(23, 59, 59, 999);
-    
-    setWeekStart(startDay);
-    setWeekEnd(endDay);
-  }, [selectedWeek]);
-  
-  useEffect(() => {
-    const storedClockIn = localStorage.getItem('clockInTime_' + user?.id);
-    const storedEvents = localStorage.getItem('clockEvents');
-    
-    if (storedClockIn) {
-      const clockInDate = new Date(JSON.parse(storedClockIn));
-      setClockInTime(clockInDate);
-      setIsClockedIn(true);
-    }
-    
-    if (storedEvents) {
-      const allEvents = JSON.parse(storedEvents).map((event: any) => ({
-        ...event,
-        timestamp: new Date(event.timestamp)
-      }));
-      
-      const filteredEvents = canViewAllTimesheets
-        ? allEvents
-        : allEvents.filter((event: ClockEvent) => event.userId === user?.id);
-      
-      setClockEvents(filteredEvents);
-    }
-    
-    const mockTimesheetEntries = [
-      {
-        id: "TS1001",
-        date: "2023-09-04",
-        technician: "Mike Johnson",
-        technicianId: "1",
-        jobNumber: "JOB4532",
-        customer: "Peachtree Office Center",
-        hours: 8,
-        status: "approved"
-      },
-      {
-        id: "TS1002",
-        date: "2023-09-05",
-        technician: "Mike Johnson",
-        technicianId: "1",
-        jobNumber: "JOB4533",
-        customer: "Downtown Residences",
-        hours: 7.5,
-        status: "approved"
-      },
-      {
-        id: "TS1003",
-        date: "2023-09-06",
-        technician: "Mike Johnson",
-        technicianId: "1",
-        jobNumber: "JOB4536",
-        customer: "Riverfront Hotel",
-        hours: 6,
-        status: "approved"
-      },
-      {
-        id: "TS1004",
-        date: "2023-09-07",
-        technician: "David Chen",
-        technicianId: "2",
-        jobNumber: "JOB4538",
-        customer: "Westside Apartments",
-        hours: 8,
-        status: "approved"
-      },
-      {
-        id: "TS1005",
-        date: "2023-09-08",
-        technician: "Sarah Williams",
-        technicianId: "3",
-        jobNumber: "JOB4541",
-        customer: "North Hills Mall",
-        hours: 8,
-        status: "approved"
-      },
-    ];
-    
-    if (canViewAllTimesheets) {
-      setTimesheetEntries(mockTimesheetEntries);
-    } else {
-      const filteredEntries = mockTimesheetEntries.filter(
-        entry => entry.technicianId === user?.id
-      );
-      setTimesheetEntries(filteredEntries);
-    }
-  }, [user, canViewAllTimesheets]);
-  
   const timesheetStats: TimesheetStats = {
     hours: 37.5,
     entries: 15,
@@ -440,7 +318,7 @@ const Timesheets = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{timesheetStats.hours} hrs</div>
-              <p className="text-xs text-muted-foreground">{currentPayPeriod}</p>
+              <p className="text-xs text-muted-foreground">{weekStart && weekEnd ? `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : "Current Pay Period"}</p>
             </CardContent>
           </Card>
           
@@ -450,7 +328,7 @@ const Timesheets = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{timesheetStats.entries}</div>
-              <p className="text-xs text-muted-foreground">{currentPayPeriod}</p>
+              <p className="text-xs text-muted-foreground">{weekStart && weekEnd ? `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : "Current Pay Period"}</p>
             </CardContent>
           </Card>
           
@@ -480,7 +358,7 @@ const Timesheets = () => {
             <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
               <div>
                 <CardTitle>Weekly Timesheet</CardTitle>
-                <CardDescription>{currentPayPeriod}</CardDescription>
+                <CardDescription>{weekStart && weekEnd ? `${formatDate(weekStart)} - ${formatDate(weekEnd)}` : "Current Pay Period"}</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Select defaultValue={selectedWeek} onValueChange={setSelectedWeek}>

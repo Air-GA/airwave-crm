@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Download, Filter, BarChart, FileText, Calendar, Users, Plus, Edit } from "lucide-react";
+import { Download, Filter, Calendar, Users, Edit } from "lucide-react";
+import { BarChart, FileText } from "lucide-react";
+// Import specific chart icons with renamed imports to avoid conflicts
+import { LineChart as LucideLineChart, PieChart as LucidePieChart } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,7 +103,7 @@ export default function Reports() {
             </div>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm" onClick={handleAddReport}>
-                <Plus className="mr-2 h-4 w-4" />
+                <FileText className="mr-2 h-4 w-4" />
                 Add Report
               </Button>
               <Button variant="outline" size="sm">

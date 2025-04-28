@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, LineChart, PieChart } from "lucide-react";
+import { BarChart as LucideBarChart, FileText, LineChart as LucideLineChart, PieChart as LucidePieChart } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Types for report data
@@ -199,13 +199,13 @@ const ReportViewer = ({
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="table">Table</TabsTrigger>
               <TabsTrigger value="barchart" className="flex items-center gap-1">
-                <BarChart className="h-4 w-4" /> Bar
+                <LucideBarChart className="h-4 w-4" /> Bar
               </TabsTrigger>
               <TabsTrigger value="linechart" className="flex items-center gap-1">
-                <LineChart className="h-4 w-4" /> Line
+                <LucideLineChart className="h-4 w-4" /> Line
               </TabsTrigger>
               <TabsTrigger value="piechart" className="flex items-center gap-1">
-                <PieChart className="h-4 w-4" /> Pie
+                <LucidePieChart className="h-4 w-4" /> Pie
               </TabsTrigger>
             </TabsList>
             
