@@ -92,7 +92,9 @@ const Timesheets = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
-  const [timesheetEntries, setTimesheetEntries] = useState<any[]>([]);
+  const [timesheetEntries, setTimesheetEntries] = useState<TimeEntry[]>([]);
+  
+  const canViewAllTimesheets = userRole === 'admin' || userRole === 'manager' || userRole === 'hr';
   
   const timesheetStats: TimesheetStats = {
     hours: 37.5,
