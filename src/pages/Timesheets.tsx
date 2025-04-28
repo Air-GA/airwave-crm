@@ -7,11 +7,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { TimeClock } from "@/components/timesheets/TimeClock";
 import { TimesheetStats } from "@/components/timesheets/TimesheetStats";
 import { WeeklyTimesheet } from "@/components/timesheets/WeeklyTimesheet";
+import { DailyHoursChart } from "@/components/timesheets/DailyHoursChart";
 import { TimesheetStats as TimesheetStatsType } from "@/components/timesheets/types";
 import { ClockEvent, TimeEntry } from "@/components/timesheets/types";
 
 const Timesheets = () => {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const [selectedWeek, setSelectedWeek] = useState("current");
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);
@@ -22,6 +23,9 @@ const Timesheets = () => {
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [weekEnd, setWeekEnd] = useState<Date | null>(null);
   const [timesheetEntries, setTimesheetEntries] = useState<TimeEntry[]>([]);
+  
+  // Permission check for viewing all timesheets
+  const canViewAllTimesheets = userRole === 'admin' || userRole === 'manager' || userRole === 'hr';
   
   // Timesheet statistics
   const timesheetStats: TimesheetStatsType = {
@@ -166,11 +170,19 @@ const Timesheets = () => {
           currentTime={currentTime}
         />
         
-        <TimesheetStats 
-          stats={timesheetStats}
-          weekStart={weekStart}
-          weekEnd={weekEnd}
-        />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <TimesheetStats 
+            stats={timesheetStats}
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+          />
+          
+          <DailyHoursChart 
+            timesheetEntries={timesheetEntries}
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+          />
+        </div>
         
         <WeeklyTimesheet
           weekStart={weekStart}
