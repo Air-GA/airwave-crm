@@ -1,9 +1,9 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Warehouse, Bell, Truck, MoveRight, Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProfitRhinoSearch } from "./ProfitRhinoSearch";
 import { InventoryList } from "./InventoryList";
+import { TransfersTab } from "./TransfersTab";
 
 interface InventoryTabsProps {
   activeTab: string;
@@ -48,6 +48,10 @@ export const InventoryTabs = ({ activeTab, onTabChange }: InventoryTabsProps) =>
         </Card>
       </TabsContent>
 
+      <TabsContent value="transfers">
+        <TransfersTab />
+      </TabsContent>
+
       <TabsContent value="warehouse">
         <Card className="p-6">
           <p className="text-center text-muted-foreground">
@@ -68,14 +72,6 @@ export const InventoryTabs = ({ activeTab, onTabChange }: InventoryTabsProps) =>
         <Card className="p-6">
           <p className="text-center text-muted-foreground">
             Inventory alerts will appear here
-          </p>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="transfers">
-        <Card className="p-6">
-          <p className="text-center text-muted-foreground">
-            Transfer history will appear here
           </p>
         </Card>
       </TabsContent>

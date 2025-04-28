@@ -278,6 +278,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          location: string | null
           name: string
           quantity: number | null
           sku: string | null
@@ -289,6 +290,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          location?: string | null
           name: string
           quantity?: number | null
           sku?: string | null
@@ -300,6 +302,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          location?: string | null
           name?: string
           quantity?: number | null
           sku?: string | null
@@ -307,6 +310,47 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      inventory_transfers: {
+        Row: {
+          created_at: string | null
+          from_location: string
+          id: string
+          item_id: string
+          notes: string | null
+          quantity: number
+          to_location: string
+          transferred_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          from_location: string
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity: number
+          to_location: string
+          transferred_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          from_location?: string
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity?: number
+          to_location?: string
+          transferred_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transfers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoice_items: {
         Row: {
