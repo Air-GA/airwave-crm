@@ -1,3 +1,4 @@
+
 import { Customer, Technician, WorkOrder } from "@/types";
 
 export const getMockTechnicians = (): Technician[] => {
@@ -12,7 +13,7 @@ export const getMockTechnicians = (): Technician[] => {
         lng: -84.388,
         address: "Atlanta, GA"
       },
-      createdAt: new Date().toISOString() // Add createdAt property
+      createdAt: new Date().toISOString()
     },
     {
       id: "t2", 
@@ -24,7 +25,7 @@ export const getMockTechnicians = (): Technician[] => {
         lng: -84.387,
         address: "Downtown Atlanta, GA"
       },
-      createdAt: new Date().toISOString() // Add createdAt property
+      createdAt: new Date().toISOString()
     },
     {
       id: "t3",
@@ -36,7 +37,7 @@ export const getMockTechnicians = (): Technician[] => {
         lng: -84.386,
         address: "Midtown Atlanta, GA"
       },
-      createdAt: new Date().toISOString() // Add createdAt property
+      createdAt: new Date().toISOString()
     },
     {
       id: "t4",
@@ -48,7 +49,7 @@ export const getMockTechnicians = (): Technician[] => {
         lng: -84.385,
         address: "Buckhead, GA"
       },
-      createdAt: new Date().toISOString() // Add createdAt property
+      createdAt: new Date().toISOString()
     },
     {
       id: "t5",
@@ -60,9 +61,22 @@ export const getMockTechnicians = (): Technician[] => {
         lng: -84.384,
         address: "Decatur, GA"
       },
-      createdAt: new Date().toISOString() // Add createdAt property
+      createdAt: new Date().toISOString()
     }
   ];
+};
+
+// Add these functions required by technicianService.ts
+export const fetchMockTechnicians = async (): Promise<Technician[]> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return getMockTechnicians();
+};
+
+export const updateMockTechnician = async (technician: Technician): Promise<Technician> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return technician;
 };
 
 export const getMockCustomers = (): Customer[] => {
@@ -254,9 +268,9 @@ export const getMockWorkOrders = (): WorkOrder[] => {
       notes: ["Customer reports several broken sprinkler heads"],
       progressSteps: [
         { id: "s17", label: "Diagnose issue", status: "completed" },
-        { id: "s18", label: "Gather parts", status: "cancelled" },
-        { id: "s19", label: "Replace heads", status: "cancelled" },
-        { id: "s20", label: "Test system", status: "cancelled" }
+        { id: "s18", label: "Gather parts", status: "skipped" },
+        { id: "s19", label: "Replace heads", status: "skipped" },
+        { id: "s20", label: "Test system", status: "skipped" }
       ],
       progressPercentage: 25,
       isMaintenancePlan: false,
