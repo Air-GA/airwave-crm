@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -178,6 +177,22 @@ export default function Schedule() {
     }
   };
 
+  // Select first technician by default or use null if no technicians
+  const [selectedTechnician, setSelectedTechnician] = useState<any>(null);
+  
+  // Update selected technician when technicians are loaded
+  useEffect(() => {
+    if (technicians.length > 0 && !selectedTechnician) {
+      setSelectedTechnician(technicians[0]);
+    }
+  }, [technicians, selectedTechnician]);
+  
+  // Handle work order click
+  const handleWorkOrderClick = (workOrder: WorkOrder) => {
+    console.log("Work order clicked:", workOrder);
+    // Implement your work order click handler logic here
+  };
+
   return (
     <MainLayout pageName="Schedule">
       <div className="container mx-auto py-6">
@@ -192,7 +207,9 @@ export default function Schedule() {
           <DndContext onDragEnd={handleDragEnd}>
             <div className="col-span-2">
               <TechnicianScheduleView 
-                selectedDate={date}
+                selectedDate={date || new Date()}
+                technician={selectedTechnician}
+                onWorkOrderClick={handleWorkOrderClick}
               />
             </div>
           </DndContext>
