@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { MapView } from "@/components/maps/MapView";
-import { TechnicianScheduleView } from "@/components/schedule/TechnicianScheduleView";
+import MapView from "@/components/maps/MapView";
+import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { 
   RefreshCw, 
   Calendar as CalendarIcon, 
@@ -28,9 +29,27 @@ import {
   Alert,
   AlertDescription
 } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { WorkOrderDetailsPanel } from "@/components/workorders/WorkOrderDetailsPanel";
+import { useToast } from "@/components/ui/use-toast";
+import { useWorkOrderStore } from "@/services/workOrderStore";
+import { fetchTechnicians, assignWorkOrder, unassignWorkOrder } from "@/services/technicianService";
+import { Technician, WorkOrder } from "@/types";
 
 interface TechFilterProps {
-  selectedTechnicianId: string; // Changed from any to string
+  selectedTechnicianId: string; 
   onTechSelect: (techId: string) => void;
   technicians: Technician[];
 }
@@ -230,7 +249,6 @@ const Dispatch = () => {
                 {selectedTechnicianId && (
                   <TechnicianScheduleView
                     technician={technicians.find(t => t.id === selectedTechnicianId) || null}
-                    workOrders={workOrders}
                     selectedDate={date}
                     onWorkOrderClick={handleWorkOrderClick}
                     isLoading={loading}
