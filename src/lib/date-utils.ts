@@ -1,45 +1,31 @@
+// Date utility functions
+import { format } from "date-fns";
 
-import { format, isToday, parseISO } from "date-fns";
-
-/**
- * Formats a date in a readable format
- * @param date Date to format, can be Date object or ISO string
- * @returns Formatted date string
- */
-export const formatDate = (date: Date | string): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  
-  if (isToday(dateObj)) {
-    return `Today, ${format(dateObj, 'h:mm a')}`;
+// Format a date for display
+export const formatDate = (date: Date | string, formatStr = 'PPP'): string => {
+  if (!date) return '';
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  try {
+    return format(dateObj, formatStr);
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '';
   }
-  
-  return format(dateObj, 'MMM d, yyyy');
 };
 
-/**
- * Formats time from a date
- * @param date Date to format, can be Date object or ISO string
- * @returns Formatted time string
- */
-export const formatTime = (date: Date | string): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return format(dateObj, 'h:mm a');
+// Format a date as YYYY-MM-DD
+export const formatDateYYYYMMDD = (date: Date): string => {
+  return format(date, 'yyyy-MM-dd');
 };
 
-/**
- * Gets a readable date range string (e.g. "Jan 1 - Jan 5, 2023")
- * @param startDate Start date
- * @param endDate End date
- * @returns Formatted date range string
- */
-export const getDateRangeString = (startDate: Date, endDate: Date): string => {
-  if (startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()) {
-    return `${format(startDate, 'MMM d')} - ${format(endDate, 'd, yyyy')}`;
-  }
-  
-  if (startDate.getFullYear() === endDate.getFullYear()) {
-    return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
-  }
-  
-  return `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`;
+// Format a time as HH:MM AM/PM
+export const formatTime = (date: Date): string => {
+  return format(date, 'h:mm a');
 };
+
+// Format a date and time as YYYY-MM-DD HH:MM AM/PM
+export const formatDateTime = (date: Date): string => {
+  return format(date, 'yyyy-MM-dd h:mm a');
+};
+
+// Add more date utility functions as needed...

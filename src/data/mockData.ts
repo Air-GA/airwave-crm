@@ -1,4 +1,3 @@
-
 import { Technician, WorkOrder } from '@/types';
 
 export const technicians: Technician[] = [
@@ -128,17 +127,17 @@ export const customers = [
 
 // Create mock data for dashboard stats and metrics
 export const dashboardStats = {
-  totalWorkOrders: 156,
-  pendingWorkOrders: 42,
-  completedThisMonth: 114,
-  activeCustomers: 89
+  activeCustomers: 245,
+  totalWorkOrders: 138,
+  pendingWorkOrders: 45,
+  completedWorkOrders: 93
 };
 
 export const performanceMetrics = {
-  technicianEfficiency: 87,
-  customerSatisfaction: 94,
-  callbackRate: 3.2,
-  averageCompletionTime: 2.4
+  averageResolutionTime: "2.4 hours",
+  customerSatisfaction: "94%",
+  firstTimeFixRate: "87%",
+  callbackRate: "3.2%"
 };
 
 export default { technicians, workOrders, customers, dashboardStats, performanceMetrics };

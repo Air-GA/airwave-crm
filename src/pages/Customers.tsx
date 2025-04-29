@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -8,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { customers as initialCustomers } from "@/data/mockData";
+import { customers as initialCustomersData } from "@/data/mockData";
 import { CustomersFilterBar } from "@/components/customers/CustomersFilterBar";
 import { CustomersGrid } from "@/components/customers/CustomersGrid";
 import { CustomerDetails } from "@/components/customers/CustomerDetails";
@@ -23,10 +22,22 @@ const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>(() => {
     // Map any existing customers to ensure they have serviceAddresses property
     // and that isPrimary is not optional
-    return initialCustomers.map(customer => {
-      if (!customer.serviceAddresses) {
+    return initialCustomersData.map(customer => {
+      // Make sure to cast the type properly
+      const customerWithProperType: Customer = {
+        ...customer,
+        // Ensure type is either 'residential' or 'commercial'
+        type: (customer.type === 'commercial' ? 'commercial' : 'residential') as Customer["type"],
+        // Ensure status is properly typed
+        status: (customer.status === 'active' || customer.status === 'inactive' || 
+                customer.status === 'pending' || customer.status === 'new') ? 
+                customer.status as Customer["status"] : 'active'
+      };
+      
+      // Add serviceAddresses array if it doesn't exist
+      if (!customerWithProperType.serviceAddresses) {
         return {
-          ...customer,
+          ...customerWithProperType,
           serviceAddresses: [
             { 
               id: `legacy-${customer.id}`, 
@@ -38,8 +49,8 @@ const Customers = () => {
       } else {
         // Ensure all service addresses have isPrimary set
         return {
-          ...customer,
-          serviceAddresses: customer.serviceAddresses.map(addr => ({
+          ...customerWithProperType,
+          serviceAddresses: customerWithProperType.serviceAddresses.map(addr => ({
             ...addr,
             isPrimary: typeof addr.isPrimary === 'boolean' ? addr.isPrimary : true
           }))

@@ -1,42 +1,33 @@
 import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
-import TechLocationMap from "@/components/maps/TechLocationMap";
+import { supabase } from "@/integrations/supabase/client";
+import { MapView } from "@/components/maps/MapView";
+import { TechnicianScheduleView } from "@/components/schedule/TechnicianScheduleView";
+import { 
+  RefreshCw, 
+  Calendar as CalendarIcon, 
+  MapPin, 
+  ChevronDown 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { formatDate } from "@/lib/date-utils";
 import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/components/ui/use-toast";
-import { 
-  fetchTechnicians, 
-  updateTechnicianLocation 
-} from "@/services/technicianService";
-import { 
-  fetchWorkOrders, 
-  assignWorkOrder, 
-  unassignWorkOrder, 
-  useWorkOrderStore 
-} from "@/services/workOrderService";
-import { WorkOrder, Technician } from "@/types";
-import { WorkOrderDetailsPanel } from "@/components/workorders/WorkOrderDetailsPanel";
+  Alert,
+  AlertDescription
+} from "@/components/ui/alert";
 
 interface TechFilterProps {
   selectedTechnicianId: string; // Changed from any to string
@@ -229,7 +220,7 @@ const Dispatch = () => {
           </div>
 
           <div className="grid gap-6">
-            <TechLocationMap selectedTechnicianId={selectedTechnicianId} />
+            <MapView selectedTechnicianId={selectedTechnicianId} />
 
             <Card>
               <CardHeader>
