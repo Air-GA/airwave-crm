@@ -10,7 +10,7 @@ interface CustomerCardProps {
   customer: Customer;
   onClick: () => void;
   onViewDetails: () => void;
-  onCreateWorkOrder?: (serviceAddress: string) => void; // Updated type for better type safety
+  onCreateWorkOrder?: (serviceAddress: string) => void;
 }
 
 export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, onViewDetails, onCreateWorkOrder }) => {
