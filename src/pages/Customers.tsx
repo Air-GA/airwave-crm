@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -7,60 +8,30 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { customers as initialCustomersData } from "@/data/mockData";
 import { CustomersFilterBar } from "@/components/customers/CustomersFilterBar";
 import { CustomersGrid } from "@/components/customers/CustomersGrid";
 import { CustomerDetails } from "@/components/customers/CustomerDetails";
 import { CustomerEmptyState } from "@/components/customers/CustomerEmptyState";
 import { Button } from "@/components/ui/button";
+import { fetchCustomers, useCustomerStore } from "@/services/customerStore";
 
 const Customers = () => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { permissions, user, userRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    // Map any existing customers to ensure they have serviceAddresses property
-    // and that isPrimary is not optional
-    return initialCustomersData.map(customer => {
-      // Make sure to cast the type properly
-      const customerWithProperType: Customer = {
-        ...customer,
-        // Ensure type is either 'residential' or 'commercial'
-        type: (customer.type === 'commercial' ? 'commercial' : 'residential') as Customer["type"],
-        // Ensure status is properly typed
-        status: (customer.status === 'active' || customer.status === 'inactive' || 
-                customer.status === 'pending' || customer.status === 'new') ? 
-                customer.status as Customer["status"] : 'active'
-      };
-      
-      // Add serviceAddresses array if it doesn't exist
-      if (!customerWithProperType.serviceAddresses) {
-        return {
-          ...customerWithProperType,
-          serviceAddresses: [
-            { 
-              id: `legacy-${customer.id}`, 
-              address: customer.serviceAddress || '', 
-              isPrimary: true 
-            }
-          ]
-        };
-      } else {
-        // Ensure all service addresses have isPrimary set
-        return {
-          ...customerWithProperType,
-          serviceAddresses: customerWithProperType.serviceAddresses.map(addr => ({
-            ...addr,
-            isPrimary: typeof addr.isPrimary === 'boolean' ? addr.isPrimary : true
-          }))
-        };
-      }
-    });
-  });
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  
+  // Use data from the customer store
+  const customers = useCustomerStore(state => state.customers);
+  const isLoading = useCustomerStore(state => state.isLoading);
+  
+  // Initialize on component mount
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
   
   // Filter customers based on user role and permissions
   const [filteredCustomersByRole, setFilteredCustomersByRole] = useState<Customer[]>([]);
@@ -70,7 +41,7 @@ const Customers = () => {
     let roleFilteredCustomers = [...customers];
     
     // For sales, only show customers they are associated with
-    if (permissions.canViewOnlyAssociatedCustomers && user?.associatedIds) {
+    if (permissions?.canViewOnlyAssociatedCustomers && user?.associatedIds) {
       roleFilteredCustomers = customers.filter(customer => 
         user.associatedIds?.includes(customer.id)
       );
@@ -87,7 +58,7 @@ const Customers = () => {
   
   // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
-    setCustomers(prevCustomers => [newCustomer, ...prevCustomers]);
+    fetchCustomers(); // Refresh from store
     toast.success("Customer added successfully!");
   };
   
@@ -97,9 +68,9 @@ const Customers = () => {
     const addressToUse = serviceAddress || 
       (customer.serviceAddresses?.find(a => a.isPrimary)?.address || 
       customer.serviceAddresses?.[0]?.address || 
-      customer.serviceAddress || '');
+      customer.address || '');
   
-    navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone)}&customerEmail=${encodeURIComponent(customer.email)}&customerAddress=${encodeURIComponent(addressToUse)}`);
+    navigate(`/work-orders/create?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&customerPhone=${encodeURIComponent(customer.phone || '')}&customerEmail=${encodeURIComponent(customer.email || '')}&customerAddress=${encodeURIComponent(addressToUse)}`);
   };
   
   // Handle viewing customer details
@@ -111,16 +82,16 @@ const Customers = () => {
   // Filter customers based on search query
   const finalFilteredCustomers = filteredCustomersByRole.filter(customer => {
     const matchesSearch = !searchQuery || 
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery) || 
+      customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phone?.includes(searchQuery) || 
       customer.serviceAddresses?.some(addr => addr.address.toLowerCase().includes(searchQuery.toLowerCase()));
     
     return matchesSearch;
   });
   
   // Check if user can add customers
-  const canAddCustomer = !permissions.canViewOnlyAssociatedCustomers && userRole !== 'customer';
+  const canAddCustomer = !permissions?.canViewOnlyAssociatedCustomers && userRole !== 'customer';
   
   return (
     <MainLayout>
@@ -160,6 +131,7 @@ const Customers = () => {
             onCustomerClick={handleViewCustomerDetails}
             onViewDetails={handleViewCustomerDetails}
             onCreateWorkOrder={handleCreateWorkOrder}
+            isLoading={isLoading}
           />
         ) : (
           <CustomerEmptyState 

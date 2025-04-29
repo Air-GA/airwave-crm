@@ -1,235 +1,226 @@
 
-import React, { useState } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, User, Phone, Mail, Clock, CheckCircle } from "lucide-react";
-import { WorkOrder, Technician } from "@/types";
-import { formatDate } from "@/lib/date-utils";
-import { WorkOrderProgressTracker } from "@/components/workorders/WorkOrderProgressTracker";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
+  Card, 
+  CardContent, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { 
+  MapPin, 
+  Calendar, 
+  Phone, 
+  Mail,
+  CheckCircle,
+  Clock,
+  User,
+  Tag,
+  MessageCircle
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { WorkOrderCompletionDialog } from "@/components/workorders/WorkOrderCompletionDialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { WorkOrder, Technician, Customer } from "@/types";
+import { format } from 'date-fns';
 
-// Updated props interface to include optional showAssignOption
-export interface WorkOrderDetailsPanelProps {
+interface WorkOrderDetailsPanelProps {
   workOrder: WorkOrder;
-  onClose?: () => void;
-  showAssignOption?: boolean; // Make this optional
-  technicians?: Technician[];
-  onAssign?: (workOrderId: string, technicianId: string) => Promise<void>;
-  onUnassign?: (workOrderId: string) => Promise<void>;
+  onUnassign: (workOrderId: string) => void;
+  onAssign: (workOrderId: string, technicianId: string, technicianName: string) => void;
+  showAssignOption: boolean;
+  technicians: Technician[];
+  customerData?: Customer;
 }
 
-export function WorkOrderDetailsPanel({
+export const WorkOrderDetailsPanel: React.FC<WorkOrderDetailsPanelProps> = ({
   workOrder,
-  onClose = () => {},
-  showAssignOption = false, // Default to false
-  technicians = [],
-  onAssign,
   onUnassign,
-}: WorkOrderDetailsPanelProps) {
-  const [open, setOpen] = useState(true);
-  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  onAssign,
+  showAssignOption,
+  technicians,
+  customerData
+}) => {
+  const [assignToTech, setAssignToTech] = React.useState<string>('');
   
-  const handleClose = () => {
-    setOpen(false);
-    setTimeout(onClose, 300); // Allow animation to complete
+  // Combine customer data with work order data
+  const customer = customerData || {
+    name: workOrder.customerName,
+    address: workOrder.address,
+    phone: workOrder.phoneNumber || '',
+    email: workOrder.email || '',
+  };
+  
+  const handleAssign = () => {
+    if (!assignToTech) return;
+    
+    const technician = technicians.find(tech => tech.id === assignToTech);
+    if (!technician) return;
+    
+    onAssign(workOrder.id, technician.id, technician.name);
   };
 
-  const handleComplete = () => {
-    setShowCompletionDialog(true);
-  };
-
-  const handleTechnicianAssign = async (technicianId: string) => {
-    if (onAssign && technicianId) {
-      await onAssign(workOrder.id, technicianId);
-    }
-  };
-
-  const handleTechnicianUnassign = async () => {
-    if (onUnassign) {
-      await onUnassign(workOrder.id);
-    }
-  };
-
-  const getPriorityBadge = (priority: WorkOrder["priority"]) => {
-    switch (priority) {
-      case "low":
-        return <Badge variant="outline">Low</Badge>;
-      case "medium":
-        return <Badge>Medium</Badge>;
-      case "high":
-        return <Badge className="bg-orange-500">High</Badge>;
-      case "emergency":
-        return <Badge variant="destructive">Emergency</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
-
-  const getStatusBadge = (status: WorkOrder["status"]) => {
-    switch (status) {
-      case "pending":
-        return <Badge className="bg-yellow-500">Pending</Badge>;
-      case "scheduled":
-        return <Badge className="bg-blue-500">Scheduled</Badge>;
-      case "in-progress":
-        return <Badge className="bg-purple-500">In Progress</Badge>;
-      case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      case "pending-completion":
-        return <Badge className="bg-amber-500">Pending Completion</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
+  const formattedDate = workOrder.scheduledDate 
+    ? format(new Date(workOrder.scheduledDate), 'MMM dd, yyyy h:mm a')
+    : 'Not scheduled';
 
   return (
-    <>
-      <Sheet open={open} onOpenChange={(newOpen) => !newOpen && handleClose()}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Work Order Details</SheetTitle>
-            <SheetDescription>
-              {workOrder.type} - {formatDate(workOrder.scheduledDate)}
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="mt-6 space-y-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-semibold">{workOrder.customerName}</h3>
-                <div className="flex items-center mt-1 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {workOrder.address}
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {getPriorityBadge(workOrder.priority)}
-                {getStatusBadge(workOrder.status)}
-              </div>
-            </div>
-            
-            <Separator />
-            
+    <div className="space-y-4 py-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
             <div>
-              <h4 className="font-medium mb-2">Description</h4>
-              <p className="text-sm">{workOrder.description}</p>
+              <CardTitle className="text-lg">{workOrder.description || 'Work Order'}</CardTitle>
+              <Badge 
+                className={`mt-1 ${
+                  workOrder.status === 'pending' ? 'bg-amber-600' : 
+                  workOrder.status === 'in-progress' ? 'bg-blue-600' : 
+                  workOrder.status === 'completed' ? 'bg-green-600' : 'bg-gray-600'
+                }`}
+              >
+                {workOrder.status}
+              </Badge>
+            </div>
+            <Badge variant="outline" className="uppercase">
+              {workOrder.type || 'repair'}
+            </Badge>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center">
+              <User className="h-4 w-4 mr-2 text-muted-foreground" />
+              <span className="font-medium">{customer.name}</span>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium mb-2">Scheduled Date</h4>
-                <div className="flex items-center text-sm">
-                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {formatDate(workOrder.scheduledDate)}
-                </div>
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+              <span>{customer.address}</span>
+            </div>
+            
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+              <span>{formattedDate}</span>
+            </div>
+            
+            {customer.phone && (
+              <div className="flex items-center">
+                <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{customer.phone}</span>
               </div>
-              <div>
-                <h4 className="font-medium mb-2">Estimated Hours</h4>
-                <div className="flex items-center text-sm">
-                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {workOrder.estimatedHours || "Not specified"}
-                </div>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <h4 className="font-medium mb-2">Technician</h4>
-              {showAssignOption ? (
-                <div className="flex items-center space-x-2">
-                  <Select 
-                    onValueChange={handleTechnicianAssign}
-                    value={workOrder.technicianId || ''}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Assign technician" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {technicians.map((tech) => (
-                        <SelectItem key={tech.id} value={tech.id}>
-                          {tech.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {workOrder.technicianId && onUnassign && (
-                    <Button variant="ghost" size="sm" onClick={handleTechnicianUnassign}>
-                      Remove
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center text-sm">
-                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {workOrder.technicianName || "Not assigned"}
-                </div>
-              )}
-            </div>
-            
-            {(workOrder.email || workOrder.phoneNumber) && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h4 className="font-medium mb-2">Contact Information</h4>
-                  {workOrder.phoneNumber && (
-                    <div className="flex items-center text-sm">
-                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                      {workOrder.phoneNumber}
-                    </div>
-                  )}
-                  {workOrder.email && (
-                    <div className="flex items-center text-sm">
-                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                      {workOrder.email}
-                    </div>
-                  )}
-                </div>
-              </>
             )}
             
-            <Separator />
+            {customer.email && (
+              <div className="flex items-center">
+                <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{customer.email}</span>
+              </div>
+            )}
             
-            <WorkOrderProgressTracker workOrder={workOrder} />
+            <div className="flex items-center">
+              <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
+              <span className="capitalize">{workOrder.priority || 'medium'} priority</span>
+            </div>
             
-            <div className="flex justify-end space-x-2 pt-4">
-              {workOrder.status !== "completed" && workOrder.status !== "cancelled" && (
-                <Button onClick={handleComplete}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete
+            {workOrder.estimatedHours && (
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Estimated: {workOrder.estimatedHours} hours</span>
+              </div>
+            )}
+          </div>
+          
+          <Separator />
+          
+          {workOrder.notes && workOrder.notes.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium flex items-center">
+                <MessageCircle className="h-4 w-4 mr-1" /> Notes
+              </h3>
+              <ul className="space-y-1 text-sm">
+                {workOrder.notes.map((note, index) => (
+                  <li key={index} className="bg-muted/50 p-2 rounded-sm">{note}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {workOrder.progressSteps && workOrder.progressSteps.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium flex items-center">
+                <CheckCircle className="h-4 w-4 mr-1" /> Progress
+              </h3>
+              <ul className="space-y-1">
+                {workOrder.progressSteps.map((step) => (
+                  <li key={step.id} className="flex items-center text-sm">
+                    <div className={`h-2 w-2 rounded-full mr-2 ${
+                      step.status === 'completed' ? 'bg-green-500' : 
+                      step.status === 'in-progress' ? 'bg-blue-500' : 'bg-gray-300'
+                    }`} />
+                    <span className={step.status === 'completed' ? 'line-through text-muted-foreground' : ''}>
+                      {step.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+        
+        <CardFooter className="pt-0">
+          {workOrder.technicianId ? (
+            <div className="space-y-2 w-full">
+              <p className="text-sm">
+                Assigned to: <span className="font-medium">{workOrder.technicianName}</span>
+              </p>
+              {showAssignOption && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => onUnassign(workOrder.id)}
+                >
+                  Unassign
                 </Button>
               )}
-              <Button variant="outline" onClick={handleClose}>
-                Close
+            </div>
+          ) : showAssignOption ? (
+            <div className="space-y-2 w-full">
+              <Select value={assignToTech} onValueChange={setAssignToTech}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Assign to technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                variant="default" 
+                size="sm"
+                disabled={!assignToTech} 
+                className="w-full"
+                onClick={handleAssign}
+              >
+                Assign
               </Button>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
-      
-      <WorkOrderCompletionDialog
-        workOrder={workOrder}
-        open={showCompletionDialog}
-        onClose={() => setShowCompletionDialog(false)}
-        onComplete={() => {
-          setShowCompletionDialog(false);
-          handleClose();
-        }}
-      />
-    </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Not assigned to any technician</p>
+          )}
+        </CardFooter>
+      </Card>
+    </div>
   );
-}
-
-export default WorkOrderDetailsPanel;
+};

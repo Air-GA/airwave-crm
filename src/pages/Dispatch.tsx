@@ -42,10 +42,11 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { WorkOrderDetailsPanel } from "@/components/workorders/WorkOrderDetailsPanel";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useWorkOrderStore } from "@/services/workOrderStore";
 import { fetchTechnicians, assignWorkOrder, unassignWorkOrder } from "@/services/technicianService";
-import { Technician, WorkOrder } from "@/types";
+import { getCustomerById } from "@/services/customerStore";
+import { Technician, WorkOrder, Customer } from "@/types";
 
 interface TechFilterProps {
   selectedTechnicianId: string; 
@@ -79,6 +80,7 @@ const Dispatch = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [isWorkOrderDetailOpen, setIsWorkOrderDetailOpen] = useState(false);
+  const [customerData, setCustomerData] = useState<Record<string, Customer>>({});
   const { toast } = useToast();
 
   const workOrders = useWorkOrderStore(state => state.workOrders);
@@ -92,6 +94,25 @@ const Dispatch = () => {
       // Load technicians
       const techData = await fetchTechnicians();
       setTechnicians(techData);
+      
+      // Load customers for any work orders
+      const workOrdersData = useWorkOrderStore.getState().workOrders;
+      const customerIds = [...new Set(workOrdersData.map(wo => wo.customerId))];
+      
+      // Fetch customer data for each work order
+      const customersMap: Record<string, Customer> = {};
+      for (const customerId of customerIds) {
+        try {
+          const customer = await getCustomerById(customerId);
+          if (customer) {
+            customersMap[customerId] = customer;
+          }
+        } catch (err) {
+          console.error(`Failed to load customer data for ID ${customerId}:`, err);
+        }
+      }
+      
+      setCustomerData(customersMap);
       
       // Check if we need a more refined view
       if (techData.length > 0 && !selectedTechnicianId) {
@@ -119,7 +140,16 @@ const Dispatch = () => {
   };
 
   const handleWorkOrderClick = (workOrder: WorkOrder) => {
-    setSelectedWorkOrder(workOrder);
+    // Enhance the work order with customer info if available
+    if (customerData[workOrder.customerId]) {
+      const enhancedWorkOrder = {
+        ...workOrder,
+        customerDetails: customerData[workOrder.customerId]
+      };
+      setSelectedWorkOrder(enhancedWorkOrder as any);
+    } else {
+      setSelectedWorkOrder(workOrder);
+    }
     setIsWorkOrderDetailOpen(true);
   };
 
@@ -252,6 +282,7 @@ const Dispatch = () => {
                     selectedDate={date}
                     onWorkOrderClick={handleWorkOrderClick}
                     isLoading={loading}
+                    customerData={customerData}
                   />
                 )}
               </CardContent>
@@ -271,6 +302,7 @@ const Dispatch = () => {
                 showAssignOption={true}
                 technicians={technicians}
                 onAssign={handleAssignWorkOrder}
+                customerData={customerData[selectedWorkOrder.customerId]}
               />
             )}
           </DialogContent>
