@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -52,11 +53,19 @@ export default function Schedule() {
   const [isRescheduling, setIsRescheduling] = useState(false);
 
   const technicians = useTechnicianStore((state) => state.technicians);
-  const fetchAllTechnicians = useTechnicianStore((state) => state.fetchTechnicians);
-
+  
   useEffect(() => {
-    fetchAllTechnicians();
-  }, [fetchAllTechnicians]);
+    // Fetch technicians
+    const loadTechnicians = async () => {
+      try {
+        await fetchTechnicians();
+      } catch (error) {
+        console.error("Failed to fetch technicians:", error);
+      }
+    };
+    
+    loadTechnicians();
+  }, []);
 
   const refetchEvents = () => {
     // Implement refetch logic here
@@ -132,19 +141,19 @@ export default function Schedule() {
     try {
       setIsSubmitting(true);
       
-      const newEvent = {
+      const newEvent: Omit<WorkOrder, "id" | "createdAt" | "updatedAt"> = {
         customerName: data.customerName,
         email: data.email,
         phoneNumber: data.phoneNumber,
         address: data.address,
-        type: data.type,
+        type: data.type as any,
         description: data.description,
-        priority: data.priority,
+        priority: data.priority as any,
         scheduledDate: data.date,
         status: data.technicianId ? "scheduled" : "pending",
         technicianId: data.technicianId,
         technicianName: data.technicianName,
-        customerId: "temp-" + Date.now(), // Add missing customerId field
+        customerId: "temp-" + Date.now(),
       };
       
       await createWorkOrder(newEvent);
@@ -182,7 +191,9 @@ export default function Schedule() {
           </div>
           <DndContext onDragEnd={handleDragEnd}>
             <div className="col-span-2">
-              <TechnicianScheduleView selectedDate={date} />
+              <TechnicianScheduleView 
+                selectedDate={date}
+              />
             </div>
           </DndContext>
         </div>

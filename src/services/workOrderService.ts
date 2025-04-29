@@ -44,11 +44,12 @@ export const completeWorkOrder = async (
       return null;
     }
     
+    const now = new Date().toISOString();
     const updatedWorkOrder: WorkOrder = {
       ...workOrder,
       status: "completed" as const,
-      completedDate: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      completedDate: now,
+      updatedAt: now,
     };
     
     // In a real app, this would be an API call

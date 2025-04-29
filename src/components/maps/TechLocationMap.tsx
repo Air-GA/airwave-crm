@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { useTechnicianStore } from "@/services/technicianService";
-import { GoogleMap, LoadScript, Marker, InfoWindow } from "@react-google-maps/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Technician } from "@/types";
+import { MapPin, User, AlertCircle } from "lucide-react";
 
 interface TechLocationMapProps {
   apiKey?: string;
@@ -13,13 +14,11 @@ interface TechLocationMapProps {
   width?: string;
   showInfoWindows?: boolean;
   onTechnicianSelect?: (technicianId: string) => void;
-  selectedTechnicianId?: string;
+  selectedTechnicianId?: string | null;
 }
 
+// Simple version that doesn't rely on Google Maps API
 const TechLocationMap: React.FC<TechLocationMapProps> = ({
-  apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-  center = { lat: 37.7749, lng: -122.4194 }, // Default to San Francisco
-  zoom = 11,
   height = "500px",
   width = "100%",
   showInfoWindows = true,
@@ -27,64 +26,7 @@ const TechLocationMap: React.FC<TechLocationMapProps> = ({
   selectedTechnicianId,
 }) => {
   const technicians = useTechnicianStore((state) => state.technicians);
-  const [selectedTech, setSelectedTech] = useState<Technician | null>(null);
-  const [mapCenter, setMapCenter] = useState(center);
-
-  // Update map center if a technician is selected
-  useEffect(() => {
-    if (selectedTechnicianId) {
-      const tech = technicians.find((t) => t.id === selectedTechnicianId);
-      if (tech && tech.currentLocationLat && tech.currentLocationLng) {
-        setMapCenter({
-          lat: tech.currentLocationLat,
-          lng: tech.currentLocationLng,
-        });
-      }
-    } else {
-      // If no technician is selected, calculate the center based on all technicians
-      if (technicians.length > 0) {
-        const techsWithLocation = technicians.filter(
-          (t) => t.currentLocationLat && t.currentLocationLng
-        );
-        
-        if (techsWithLocation.length > 0) {
-          const avgLat = techsWithLocation.reduce((sum, tech) => sum + (tech.currentLocationLat || 0), 0) / techsWithLocation.length;
-          const avgLng = techsWithLocation.reduce((sum, tech) => sum + (tech.currentLocationLng || 0), 0) / techsWithLocation.length;
-          
-          setMapCenter({ lat: avgLat, lng: avgLng });
-        }
-      }
-    }
-  }, [selectedTechnicianId, technicians]);
-
-  const handleMarkerClick = (tech: Technician) => {
-    setSelectedTech(tech);
-    if (onTechnicianSelect) {
-      onTechnicianSelect(tech.id);
-    }
-  };
-
-  const getMarkerIcon = (status: string) => {
-    switch (status) {
-      case "available":
-        return {
-          url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-        };
-      case "busy":
-        return {
-          url: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-        };
-      case "off-duty":
-        return {
-          url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-        };
-      default:
-        return {
-          url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-        };
-    }
-  };
-
+  
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "available":
@@ -98,65 +40,70 @@ const TechLocationMap: React.FC<TechLocationMapProps> = ({
     }
   };
 
+  const handleTechnicianSelect = (techId: string) => {
+    if (onTechnicianSelect) {
+      onTechnicianSelect(techId);
+    }
+  };
+
   return (
-    <LoadScript googleMapsApiKey={apiKey}>
-      <GoogleMap
-        mapContainerStyle={{ width, height }}
-        center={mapCenter}
-        zoom={zoom}
-        options={{
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
-        }}
-      >
-        {technicians.map((tech) => {
-          // Skip technicians without location data
-          if (!tech.currentLocationLat || !tech.currentLocationLng) return null;
-
-          const position = {
-            lat: tech.currentLocationLat,
-            lng: tech.currentLocationLng,
-          };
-
-          return (
-            <Marker
-              key={tech.id}
-              position={position}
-              icon={getMarkerIcon(tech.status)}
-              onClick={() => handleMarkerClick(tech)}
-              animation={
-                selectedTechnicianId === tech.id
-                  ? window.google?.maps.Animation.BOUNCE
-                  : undefined
-              }
-            />
-          );
-        })}
-
-        {showInfoWindows && selectedTech && selectedTech.currentLocationLat && selectedTech.currentLocationLng && (
-          <InfoWindow
-            position={{
-              lat: selectedTech.currentLocationLat,
-              lng: selectedTech.currentLocationLng,
-            }}
-            onCloseClick={() => setSelectedTech(null)}
-          >
-            <Card className="border-0 shadow-none">
-              <CardContent className="p-2">
-                <div className="text-sm font-medium">{selectedTech.name}</div>
-                <div className="mt-1">{getStatusBadge(selectedTech.status)}</div>
-                {selectedTech.currentLocationAddress && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {selectedTech.currentLocationAddress}
+    <Card className="border shadow-md">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold flex items-center">
+            <MapPin className="w-5 h-5 mr-2"/> Technician Locations
+          </h3>
+          <Badge variant="outline">Map Simplified View</Badge>
+        </div>
+        
+        <div className="border rounded p-4 bg-muted/30" style={{ height, width }}>
+          <div className="flex flex-col space-y-2">
+            <div className="bg-background p-3 rounded border-2 border-dashed flex items-center justify-center">
+              <AlertCircle className="h-5 w-5 mr-2 text-amber-500" />
+              <span className="text-sm text-muted-foreground">
+                Google Maps integration not available. Using simplified view.
+              </span>
+            </div>
+            
+            <div className="space-y-2 mt-4">
+              {technicians.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No technicians available
+                </div>
+              ) : (
+                technicians.map((tech) => (
+                  <div
+                    key={tech.id}
+                    className={`
+                      p-3 border rounded-md cursor-pointer transition-all
+                      ${selectedTechnicianId === tech.id ? 'bg-accent border-primary' : 'bg-card hover:bg-accent/50'}
+                    `}
+                    onClick={() => handleTechnicianSelect(tech.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted mr-3">
+                          <User className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <p className="font-medium">{tech.name}</p>
+                          {tech.currentLocationAddress && (
+                            <p className="text-xs text-muted-foreground">
+                              {tech.currentLocationAddress}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div>{getStatusBadge(tech.status)}</div>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </InfoWindow>
-        )}
-      </GoogleMap>
-    </LoadScript>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -8,11 +8,12 @@ export const createWorkOrder = async (
   workOrderData: Omit<WorkOrder, "id" | "createdAt" | "updatedAt">
 ): Promise<WorkOrder> => {
   try {
+    const now = new Date().toISOString();
     const newWorkOrder: WorkOrder = {
       id: uuidv4(),
       ...workOrderData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     // In a real app, this would be an API call
@@ -44,8 +45,8 @@ export const createMaintenanceWorkOrder = async (
       priority: "medium",
       notes: [],
       status: technicianId ? "scheduled" : "pending",
-      maintenancePlanId: maintenancePlan.id,
       isMaintenancePlan: false,
+      maintenancePlanId: maintenancePlan.id, // This field is now in the type
       scheduledDate: scheduledDate || new Date().toISOString(),
       technicianId,
       technicianName,
@@ -64,6 +65,7 @@ export const createMaintenanceWorkOrder = async (
       updateWorkOrder({
         ...plan,
         scheduledDate: scheduledDate || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
     }
 

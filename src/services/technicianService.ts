@@ -1,8 +1,7 @@
 
 import { create } from "zustand";
 import { Technician } from "@/types";
-import mockTechnicians from "@/data/mockData";
-import { useMemo } from "react";
+import { technicians as mockTechnicians } from "@/data/mockData";
 
 interface TechnicianState {
   technicians: Technician[];
@@ -47,7 +46,7 @@ export const fetchTechnicians = async (): Promise<Technician[]> => {
     console.log("Fetching technicians...");
     
     // Add createdAt field to meet the Technician type requirement
-    const techsWithCreatedAt = mockTechnicians.technicians.map(tech => ({
+    const techsWithCreatedAt = mockTechnicians.map(tech => ({
       ...tech,
       createdAt: tech.createdAt || new Date().toISOString()
     }));

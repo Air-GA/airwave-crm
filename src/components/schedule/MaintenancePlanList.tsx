@@ -1,112 +1,89 @@
 
-// Update the import to use the correct import path
-import { useWorkOrderStore } from "@/services/workOrderService";
-
-// Let's create the MaintenancePlanList component with default export
-import React, { useMemo } from "react";
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarPlus } from "lucide-react";
-import { useDraggable } from "@dnd-kit/core";
+import { CalendarCheck, GripVertical } from "lucide-react";
+import { useWorkOrderStore } from "@/services/workOrderStore";
+import { formatDate } from "@/lib/date-utils";
 
 interface MaintenancePlanListProps {
   onDragStart?: (item: any) => void;
-  onSchedule?: (item: any) => void;
+  onSchedule?: (plan: any) => void;
 }
 
-const MaintenancePlanList = ({ onDragStart, onSchedule }: MaintenancePlanListProps) => {
+export function MaintenancePlanList({ 
+  onDragStart, 
+  onSchedule 
+}: MaintenancePlanListProps) {
   const workOrders = useWorkOrderStore((state) => state.workOrders);
   
-  // Find all maintenance plans that haven't been scheduled yet
-  const maintenancePlans = useMemo(() => {
-    return workOrders.filter(order => 
-      order.isMaintenancePlan && !order.scheduledDate
-    );
-  }, [workOrders]);
+  // Filter maintenance plans (work orders with isMaintenancePlan=true)
+  const maintenancePlans = workOrders.filter(
+    (order) => order.isMaintenancePlan === true
+  );
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Maintenance Plans</CardTitle>
+    <Card className="mt-4">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Maintenance Plans</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y">
+        <div className="space-y-2 p-3">
           {maintenancePlans.length === 0 ? (
-            <div className="p-4 text-center">
-              <p className="text-muted-foreground">No maintenance plans to schedule</p>
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              No maintenance plans available
             </div>
           ) : (
             maintenancePlans.map((plan) => (
-              <MaintenancePlanItem 
-                key={plan.id} 
-                plan={plan}
-                onDragStart={onDragStart}
-                onSchedule={onSchedule}
-              />
+              <div
+                key={plan.id}
+                draggable
+                onDragStart={
+                  onDragStart ? () => onDragStart(plan) : undefined
+                }
+                className="border rounded-md p-3 cursor-move hover:bg-accent transition-colors flex"
+              >
+                <div className="flex items-center mr-3 text-muted-foreground">
+                  <GripVertical className="h-4 w-4" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm">{plan.customerName}</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {plan.address.length > 30
+                      ? plan.address.substring(0, 30) + "..."
+                      : plan.address}
+                  </p>
+                  
+                  <div className="flex justify-between items-center mt-2">
+                    {plan.scheduledDate ? (
+                      <span className="text-xs text-muted-foreground flex items-center">
+                        <CalendarCheck className="h-3 w-3 mr-1" />
+                        {formatDate(plan.scheduledDate)}
+                      </span>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        Not scheduled
+                      </Badge>
+                    )}
+                    
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={onSchedule ? () => onSchedule(plan) : undefined}
+                    >
+                      Schedule
+                    </Button>
+                  </div>
+                </div>
+              </div>
             ))
           )}
         </div>
       </CardContent>
     </Card>
   );
-};
-
-const MaintenancePlanItem = ({ plan, onDragStart, onSchedule }: { 
-  plan: any, 
-  onDragStart?: (item: any) => void,
-  onSchedule?: (item: any) => void
-}) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `maintenance-plan-${plan.id}`,
-    data: plan,
-  });
-  
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 1000 : 1,
-  } : undefined;
-  
-  const handleDragStart = () => {
-    if (onDragStart) {
-      onDragStart(plan);
-    }
-  };
-  
-  const handleScheduleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (onSchedule) {
-      onSchedule(plan);
-    }
-  };
-  
-  return (
-    <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      style={style}
-      className="cursor-grab p-3 transition-colors hover:bg-muted relative"
-      onDragStart={handleDragStart}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-medium">{plan.customerName}</p>
-          <p className="text-sm text-muted-foreground">{plan.address}</p>
-          {plan.preferredTime && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Preferred: {plan.preferredTime}
-            </p>
-          )}
-        </div>
-        <Button variant="ghost" size="icon" onClick={handleScheduleClick}>
-          <CalendarPlus className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-};
+}
 
 export default MaintenancePlanList;

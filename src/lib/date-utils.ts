@@ -1,26 +1,39 @@
 
-type FormatDateOptions = {
-  includeTime?: boolean;
-  timeOnly?: boolean;
-}
-
-export function formatDate(date: Date, options?: FormatDateOptions): string {
-  const { includeTime = false, timeOnly = false } = options || {};
+/**
+ * Formats a date string or Date object to a localized string
+ */
+export function formatDate(dateString: string | Date): string {
+  if (!dateString) return 'No date';
   
-  if (timeOnly) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return 'Invalid date';
   }
   
-  const formattedDate = date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
     day: 'numeric'
   });
+}
+
+/**
+ * Formats a time string or Date object to a localized time string
+ */
+export function formatTime(dateString: string | Date): string {
+  if (!dateString) return 'No time';
   
-  if (includeTime) {
-    const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return `${formattedDate} at ${formattedTime}`;
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return 'Invalid time';
   }
   
-  return formattedDate;
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  });
 }

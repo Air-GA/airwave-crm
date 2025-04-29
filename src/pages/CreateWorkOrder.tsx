@@ -1,7 +1,4 @@
-// Only updating the specific import line that needs to be changed
-// This is a partial update of the file
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { z } from "zod";
@@ -87,6 +84,7 @@ const CreateWorkOrder = () => {
   const [partName, setPartName] = useState("");
   const [partQuantity, setPartQuantity] = useState(1);
   const [partPrice, setPartPrice] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const customerId = query.get("customerId");
   const customerName = query.get("customerName");
@@ -125,16 +123,18 @@ const CreateWorkOrder = () => {
     setIsSubmitting(true);
     
     try {
+      const formValues = form.getValues();
+      
       const workOrderData: Omit<WorkOrder, "id" | "createdAt" | "updatedAt"> = {
-        customerName,
-        customerId: customer?.id || "unknown",
-        address: address || "",
-        type,
-        description,
-        priority,
+        customerName: formValues.customerName,
+        customerId: customerId || "unknown",
+        address: formValues.address || "",
+        type: formValues.type as any,
+        description: formValues.description,
+        priority: formValues.priority as any,
         status: "pending",
-        scheduledDate: scheduledDate?.toISOString() || new Date().toISOString(),
-        notes: notes ? [notes] : [],
+        scheduledDate: formValues.scheduledDate?.toISOString() || new Date().toISOString(),
+        notes: formValues.notes ? [formValues.notes] : [],
       };
       
       await createWorkOrder(workOrderData);

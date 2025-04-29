@@ -69,6 +69,7 @@ export interface WorkOrder {
   status: 'pending' | 'scheduled' | 'in-progress' | 'completed' | 'cancelled' | 'pending-completion';
   scheduledDate: string;
   createdAt: string;
+  updatedAt: string; // Changed to non-optional
   completedDate?: string;
   estimatedHours?: number;
   technicianId?: string;
@@ -79,10 +80,12 @@ export interface WorkOrder {
   pendingReason?: string;
   // Additional fields used in the app
   isMaintenancePlan?: boolean;
+  maintenancePlanId?: string; // Added this field
   currentProgressStep?: string;
   email?: string;
   phoneNumber?: string;
   estimatedArrivalTime?: string;
   partsUsed?: any[];
   completionRequired?: boolean;
+  completionDetails?: any;
 }

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Sheet,
@@ -230,3 +231,5 @@ export function WorkOrderDetailsPanel({
     </>
   );
 }
+
+export default WorkOrderDetailsPanel;
