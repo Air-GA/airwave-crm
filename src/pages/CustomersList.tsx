@@ -25,7 +25,7 @@ const CustomersList = () => {
         // Fetch customers from Supabase
         const { data, error } = await supabase
           .from("customers")
-          .select("*, service_addresses(*)");
+          .select("*, service_addresses(*), contacts(*)");
 
         if (error) {
           console.error("Error fetching customers:", error);
@@ -35,25 +35,41 @@ const CustomersList = () => {
         if (data && data.length > 0) {
           console.log("Fetched customers from Supabase:", data);
           // Map the Supabase data to our Customer type
-          const transformedData: Customer[] = data.map(customer => ({
-            id: customer.id,
-            name: customer.name || "Unknown",
-            email: customer.email || "",
-            phone: customer.phone || "",
-            address: customer.address || "",
-            billAddress: customer.bill_address || customer.address || "",
-            billCity: customer.billing_city || "",
-            serviceAddresses: customer.service_addresses?.map((sa: any) => ({
+          const transformedData: Customer[] = data.map(customer => {
+            // Find primary contact for email/phone
+            const primaryContact = customer.contacts?.find(c => c.is_primary === true) || customer.contacts?.[0];
+            
+            // Get primary service address
+            const primaryAddress = customer.service_addresses?.find(sa => sa.name === 'primary' || sa.location_code === 'primary') || 
+                                  customer.service_addresses?.[0];
+            
+            // Generate a combined address string
+            const addressStr = primaryAddress ? 
+              `${primaryAddress.address_line1 || ''} ${primaryAddress.city || ''} ${primaryAddress.state || ''}` : '';
+            
+            // Map service addresses to our ServiceAddress type
+            const serviceAddresses = customer.service_addresses?.map(sa => ({
               id: sa.id,
-              address: sa.address,
-              isPrimary: sa.is_primary,
-              notes: sa.notes
-            })) || [],
-            type: (customer.type as Customer["type"]) || "residential",
-            status: (customer.status as Customer["status"]) || "active",
-            createdAt: customer.created_at || new Date().toISOString(),
-            lastService: customer.last_service || undefined
-          }));
+              address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`,
+              isPrimary: sa.location_code === 'primary' || false,
+              notes: sa.name || ''
+            })) || [];
+
+            return {
+              id: customer.id,
+              name: customer.name || "Unknown",
+              email: primaryContact?.email || "",
+              phone: primaryContact?.phone || "",
+              address: addressStr,
+              billAddress: customer.billing_address_line1 || "",
+              billCity: customer.billing_city || "",
+              serviceAddresses: serviceAddresses,
+              type: (customer.status?.includes('commercial') ? 'commercial' : 'residential') as Customer["type"],
+              status: (customer.status as Customer["status"]) || "active",
+              createdAt: customer.created_at || new Date().toISOString(),
+              lastService: customer.last_service || undefined
+            };
+          });
           return transformedData;
         }
 
