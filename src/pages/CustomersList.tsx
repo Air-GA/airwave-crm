@@ -67,7 +67,7 @@ const CustomersList = () => {
               type: (customer.status?.includes('commercial') ? 'commercial' : 'residential') as Customer["type"],
               status: (customer.status as Customer["status"]) || "active",
               createdAt: customer.created_at || new Date().toISOString(),
-              lastService: customer.last_service || undefined
+              lastService: ""  // No direct mapping for this field in our database yet
             };
           });
           return transformedData;

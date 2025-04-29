@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,33 +15,30 @@ const sampleTechs: Technician[] = [
     name: "Mike Johnson", 
     status: "available", 
     specialties: ["HVAC", "Cooling"],
-    currentLocation: {
-      lat: 33.7952, 
-      lng: -83.7136,
-      address: "Monroe, GA"
-    }
+    currentLocationLat: 33.7952,
+    currentLocationLng: -83.7136,
+    currentLocationAddress: "Monroe, GA",
+    createdAt: new Date().toISOString()
   },
   { 
     id: "tech2", 
     name: "Sarah Williams", 
     status: "busy", 
     specialties: ["Installation", "Repair"],
-    currentLocation: {
-      lat: 33.8304, 
-      lng: -83.6909,
-      address: "Downtown Monroe, GA"
-    }
+    currentLocationLat: 33.8304,
+    currentLocationLng: -83.6909,
+    currentLocationAddress: "Downtown Monroe, GA",
+    createdAt: new Date().toISOString()
   },
   { 
     id: "tech3", 
     name: "Robert Taylor", 
     status: "available", 
     specialties: ["Heating", "Maintenance"],
-    currentLocation: {
-      lat: 33.7490, 
-      lng: -83.7376,
-      address: "East Monroe, GA"
-    }
+    currentLocationLat: 33.7490,
+    currentLocationLng: -83.7376,
+    currentLocationAddress: "East Monroe, GA",
+    createdAt: new Date().toISOString()
   },
 ];
 
@@ -210,7 +206,7 @@ const TechLocationMap = ({ onError, apiKey }: TechLocationMapProps) => {
 
       // Use real technicians if available, otherwise use sample data
       const techsToShow = technicians.length > 0 
-        ? technicians.filter(t => t.currentLocation) 
+        ? technicians.filter(t => t.currentLocationLat && t.currentLocationLng) 
         : sampleTechs;
 
       console.log(`Adding ${techsToShow.length} technician markers to map`);
@@ -222,18 +218,18 @@ const TechLocationMap = ({ onError, apiKey }: TechLocationMapProps) => {
 
       // Add markers for each technician
       const newMarkers = techsToShow.map(tech => {
-        if (!tech.currentLocation) {
+        if (!tech.currentLocationLat || !tech.currentLocationLng) {
           console.log(`Technician ${tech.name} has no location data, skipping marker`);
           return null;
         }
         
         const position = { 
-          lat: tech.currentLocation.lat, 
-          lng: tech.currentLocation.lng 
+          lat: tech.currentLocationLat, 
+          lng: tech.currentLocationLng 
         };
         
         // Choose marker color based on status
-        const status = tech.status || 'offline';
+        const status = tech.status || 'off-duty';
         const icon = {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 10,
@@ -252,7 +248,7 @@ const TechLocationMap = ({ onError, apiKey }: TechLocationMapProps) => {
         });
 
         // Add info window with technician details
-        const address = tech.currentLocation.address || "Location not specified";
+        const address = tech.currentLocationAddress || "Location not specified";
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div style="padding: 8px;">

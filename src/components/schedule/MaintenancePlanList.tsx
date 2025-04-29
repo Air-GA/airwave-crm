@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -154,7 +153,9 @@ const MaintenancePlanList = ({
   const workOrders = useWorkOrderStore(state => state.workOrders);
   const scheduledMaintenanceIds = useMemo(() => {
     return workOrders
-      .filter(order => order.type === 'maintenance' && order.isMaintenancePlan)
+      .filter(order => order.type === 'maintenance' && 
+              // Check if maintenance is already planned/scheduled
+              (order.isMaintenancePlan === true || order.description?.toLowerCase().includes('maintenance')))
       .map(order => order.customerId);
   }, [workOrders]);
 

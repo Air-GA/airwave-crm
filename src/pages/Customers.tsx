@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -12,13 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Customer, ServiceAddress, customers as initialCustomers } from "@/data/mockData";
+import { Customer, ServiceAddress } from "@/types";
 import { ChevronDown, FileEdit, Plus, Search, UserRound } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { CustomerCard } from "@/components/customers/CustomerCard";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { customers as initialCustomers } from "@/data/mockData";
 
 const Customers = () => {
   const isMobile = useIsMobile();
@@ -27,6 +27,7 @@ const Customers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [customers, setCustomers] = useState<Customer[]>(() => {
     // Map any existing customers to ensure they have serviceAddresses property
+    // and that isPrimary is not optional
     return initialCustomers.map(customer => {
       if (!customer.serviceAddresses) {
         return {
@@ -39,8 +40,16 @@ const Customers = () => {
             }
           ]
         };
+      } else {
+        // Ensure all service addresses have isPrimary set
+        return {
+          ...customer,
+          serviceAddresses: customer.serviceAddresses.map(addr => ({
+            ...addr,
+            isPrimary: typeof addr.isPrimary === 'boolean' ? addr.isPrimary : true
+          }))
+        };
       }
-      return customer;
     });
   });
   const [showAddCustomerDialog, setShowAddCustomerDialog] = useState(false);

@@ -31,6 +31,14 @@ export interface Technician {
   currentLocationAddress?: string;
   currentLocationLat?: number;
   currentLocationLng?: number;
+  // Adding this for backward compatibility with existing code
+  currentLocation?: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+  email?: string;
+  phone?: string;
   createdAt: string;
 }
 
@@ -40,6 +48,12 @@ export interface ProgressStep {
   status: 'pending' | 'in-progress' | 'completed' | 'skipped';
   timestamp?: string;
   notes?: string;
+  // Add properties used in WorkOrderProgressTracker
+  name?: string;
+  description?: string;
+  notifyCustomer?: boolean;
+  notifyTech?: boolean;
+  notifyAdmin?: boolean;
 }
 
 export interface WorkOrder {
@@ -61,4 +75,10 @@ export interface WorkOrder {
   progressSteps?: ProgressStep[];
   progressPercentage?: number;
   pendingReason?: string;
+  // Additional fields used in the app
+  isMaintenancePlan?: boolean;
+  currentProgressStep?: string;
+  email?: string;
+  phoneNumber?: string;
+  estimatedArrivalTime?: string;
 }
