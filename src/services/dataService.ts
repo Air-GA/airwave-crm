@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { WorkOrder, Technician, Customer } from "@/types";
 import { workOrders as mockWorkOrders, technicians as mockTechnicians } from "@/data/mockData";
@@ -33,13 +34,12 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
         let formattedAddress = 'No address available';
         if (wo.addresses && typeof wo.addresses === 'object' && !Array.isArray(wo.addresses)) {
           try {
-            const address = wo.addresses as any; // Use any type to bypass strict typing temporarily
-            if (address) {
-              formattedAddress = `${address.street || ''}, ${address.city || ''}, ${address.state || ''} ${address.zip_code || ''}`.trim();
-              // If we end up with just commas, use a default message
-              if (formattedAddress.replace(/,/g, '').trim() === '') {
-                formattedAddress = 'No address available';
-              }
+            // Use type assertion to bypass TypeScript's type checking for this object
+            const address = wo.addresses as Record<string, any>;
+            formattedAddress = `${address.street || ''}, ${address.city || ''}, ${address.state || ''} ${address.zip_code || ''}`.trim();
+            // If we end up with just commas, use a default message
+            if (formattedAddress.replace(/,/g, '').trim() === '') {
+              formattedAddress = 'No address available';
             }
           } catch (err) {
             console.error("Error formatting address:", err);
