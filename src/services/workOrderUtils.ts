@@ -1,101 +1,190 @@
 
-import { WorkOrder } from '@/types';
-import { updateWorkOrder, cancelWorkOrder, completeWorkOrder } from './workOrderService';
+import { WorkOrder } from "@/types";
+import { useWorkOrderStore } from "@/services/workOrderStore";
+import { v4 as uuidv4 } from "uuid";
 
-/**
- * Creates a new work order
- */
-export const createWorkOrder = async (workOrder: Partial<WorkOrder>): Promise<WorkOrder> => {
-  console.log('Creating work order', workOrder);
-  // In a real app, we would make an API call here
-  const newWorkOrder: WorkOrder = {
-    id: `wo-${Date.now()}`,
-    customerId: workOrder.customerId || '',
-    customerName: workOrder.customerName || 'Unknown Customer',
-    address: workOrder.address || 'No Address',
-    status: workOrder.status || 'pending',
-    priority: workOrder.priority || 'medium',
-    type: workOrder.type || 'repair',
-    description: workOrder.description || '',
-    scheduledDate: workOrder.scheduledDate || new Date().toISOString(),
-    technicianId: workOrder.technicianId,
-    technicianName: workOrder.technicianName,
-    createdAt: workOrder.createdAt || new Date().toISOString(),
-    completedDate: workOrder.completedDate,
-    estimatedHours: workOrder.estimatedHours || 1,
-    notes: workOrder.notes || [],
-    partsUsed: workOrder.partsUsed || [],
-    progressPercentage: workOrder.progressPercentage || 0,
-    progressSteps: workOrder.progressSteps || [],
-    isMaintenancePlan: workOrder.isMaintenancePlan || false,
-    completionRequired: workOrder.completionRequired || true,
-    email: workOrder.email,
-    phoneNumber: workOrder.phoneNumber
-  };
-  return newWorkOrder;
+// Create a new work order
+export const createWorkOrder = async (
+  workOrderData: Omit<WorkOrder, "id" | "createdAt" | "updatedAt">
+): Promise<WorkOrder> => {
+  try {
+    const newWorkOrder: WorkOrder = {
+      id: uuidv4(),
+      ...workOrderData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // In a real app, this would be an API call
+    // For now, add it to the store
+    useWorkOrderStore.getState().addWorkOrder(newWorkOrder);
+
+    return newWorkOrder;
+  } catch (error) {
+    console.error("Error creating work order:", error);
+    throw error;
+  }
 };
 
-/**
- * Creates a new maintenance work order
- */
+// Create a maintenance work order from a maintenance plan
 export const createMaintenanceWorkOrder = async (
-  workOrderData: any,
+  maintenancePlan: any,
   technicianId?: string,
   technicianName?: string,
   scheduledDate?: string
 ): Promise<WorkOrder> => {
-  console.log('Creating maintenance work order', workOrderData);
-  const maintenanceWorkOrder: Partial<WorkOrder> = {
-    ...workOrderData,
-    isMaintenancePlan: true,
-    type: 'maintenance',
-    technicianId,
-    technicianName,
-    scheduledDate: scheduledDate || new Date().toISOString()
-  };
-  return createWorkOrder(maintenanceWorkOrder);
-};
+  try {
+    // Extract the base data from the maintenance plan
+    const baseData = {
+      customerName: maintenancePlan.customerName,
+      customerId: maintenancePlan.customerId,
+      address: maintenancePlan.address,
+      type: "maintenance" as const, // Ensure type is explicitly "maintenance" as required by WorkOrder type
+      description: "Scheduled HVAC maintenance",
+      priority: "medium" as const,
+      notes: "",
+      status: technicianId ? "scheduled" : "pending",
+      maintenancePlanId: maintenancePlan.id,
+      isMaintenancePlan: false,
+      scheduledDate: scheduledDate || new Date().toISOString(),
+      technicianId,
+      technicianName,
+      completionDetails: null
+    };
 
-/**
- * Reschedules a maintenance work order
- */
-export const rescheduleMaintenanceWorkOrder = async (
-  workOrderId: string, 
-  newDate: string
-): Promise<boolean> => {
-  console.log(`Rescheduling maintenance work order ${workOrderId} to ${newDate}`);
-  return true;
-};
+    const workOrder = await createWorkOrder(baseData);
 
-/**
- * Assigns a technician to a work order
- */
-export const assignWorkOrder = async (
-  workOrderId: string, 
-  technicianId: string
-): Promise<boolean> => {
-  console.log(`Assigning technician ${technicianId} to work order ${workOrderId}`);
-  return true;
-};
+    // Mark the maintenance plan as scheduled
+    const { workOrders, updateWorkOrder } = useWorkOrderStore.getState();
+    const plan = workOrders.find(
+      (order) => order.id === maintenancePlan.id && order.isMaintenancePlan
+    );
 
-/**
- * Unassigns a technician from a work order
- */
-export const unassignWorkOrder = async (workOrderId: string): Promise<boolean> => {
-  console.log(`Unassigning technician from work order ${workOrderId}`);
-  return true;
-};
+    if (plan) {
+      updateWorkOrder({
+        ...plan,
+        scheduledDate: scheduledDate || new Date().toISOString(),
+      });
+    }
 
-/**
- * Marks a work order as pending completion
- */
-export const markOrderPendingCompletion = async (
-  workOrderId: string,
-  notes?: string
-): Promise<boolean> => {
-  console.log(`Marking work order ${workOrderId} as pending completion`);
-  if (notes) {
-    console.log(`Notes: ${notes}`);
+    return workOrder;
+  } catch (error) {
+    console.error("Error creating maintenance work order:", error);
+    throw error;
   }
-  return true;
+};
+
+// Reschedule a maintenance work order
+export const rescheduleMaintenanceWorkOrder = async (
+  maintenanceOrderId: string,
+  scheduledDate: string
+): Promise<WorkOrder | null> => {
+  try {
+    const { workOrders, updateWorkOrder } = useWorkOrderStore.getState();
+    const workOrder = workOrders.find((order) => order.id === maintenanceOrderId);
+
+    if (!workOrder) {
+      return null;
+    }
+
+    const updatedWorkOrder = {
+      ...workOrder,
+      scheduledDate,
+      updatedAt: new Date().toISOString(),
+    };
+
+    updateWorkOrder(updatedWorkOrder);
+
+    return updatedWorkOrder;
+  } catch (error) {
+    console.error("Error rescheduling maintenance work order:", error);
+    throw error;
+  }
+};
+
+// Assign a work order to a technician
+export const assignWorkOrder = async (
+  workOrderId: string,
+  technicianId: string,
+  technicianName: string
+): Promise<WorkOrder | null> => {
+  try {
+    const { workOrders, updateWorkOrder } = useWorkOrderStore.getState();
+    const workOrder = workOrders.find((order) => order.id === workOrderId);
+
+    if (!workOrder) {
+      return null;
+    }
+
+    const updatedWorkOrder = {
+      ...workOrder,
+      technicianId,
+      technicianName,
+      status: "scheduled",
+      updatedAt: new Date().toISOString(),
+    };
+
+    updateWorkOrder(updatedWorkOrder);
+
+    return updatedWorkOrder;
+  } catch (error) {
+    console.error("Error assigning work order:", error);
+    throw error;
+  }
+};
+
+// Unassign a work order from a technician
+export const unassignWorkOrder = async (
+  workOrderId: string
+): Promise<WorkOrder | null> => {
+  try {
+    const { workOrders, updateWorkOrder } = useWorkOrderStore.getState();
+    const workOrder = workOrders.find((order) => order.id === workOrderId);
+
+    if (!workOrder) {
+      return null;
+    }
+
+    const updatedWorkOrder = {
+      ...workOrder,
+      technicianId: undefined,
+      technicianName: undefined,
+      status: "pending",
+      updatedAt: new Date().toISOString(),
+    };
+
+    updateWorkOrder(updatedWorkOrder);
+
+    return updatedWorkOrder;
+  } catch (error) {
+    console.error("Error unassigning work order:", error);
+    throw error;
+  }
+};
+
+// Mark a work order as pending completion
+export const markOrderPendingCompletion = async (
+  workOrderId: string
+): Promise<WorkOrder | null> => {
+  try {
+    const { workOrders, updateWorkOrder } = useWorkOrderStore.getState();
+    const workOrder = workOrders.find((order) => order.id === workOrderId);
+
+    if (!workOrder) {
+      return null;
+    }
+
+    const updatedWorkOrder = {
+      ...workOrder,
+      status: "pending-completion",
+      updatedAt: new Date().toISOString(),
+    };
+
+    updateWorkOrder(updatedWorkOrder);
+
+    return updatedWorkOrder;
+  } catch (error) {
+    console.error("Error marking work order as pending completion:", error);
+    throw error;
+  }
 };

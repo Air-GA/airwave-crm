@@ -56,12 +56,14 @@ export default function WorkOrders() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { toast } = useToast();
 
-  const { data: workOrders, isLoading, error } = useQuery({
-    queryKey: ['work-orders'],
-    queryFn: async () => {
-      const orders = await fetchWorkOrders();
-      return orders;
-    }
+  const { 
+    data: workOrders = [], 
+    isLoading, 
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['workOrders'],
+    queryFn: () => fetchWorkOrders(),
   });
 
   const handleSyncFromCRM = async () => {
@@ -95,6 +97,14 @@ export default function WorkOrders() {
   const handleDataSyncComplete = () => {
     setRefreshTrigger(prev => prev + 1);
     refetch();
+  };
+
+  const handleRefreshOrders = async () => {
+    await refetch();
+    toast({
+      title: "Refreshed",
+      description: "Work orders have been refreshed",
+    });
   };
 
   const filteredWorkOrders = workOrders
@@ -335,6 +345,10 @@ export default function WorkOrders() {
               Showing {filteredWorkOrders.length} of {workOrders.length}{" "}
               work orders
             </div>
+            <Button variant="outline" size="sm" onClick={handleRefreshOrders}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
           </CardFooter>
         </Card>
       </div>

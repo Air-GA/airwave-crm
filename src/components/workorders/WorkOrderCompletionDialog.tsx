@@ -1,154 +1,167 @@
-
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { WorkOrder } from "@/types";
-import { completeWorkOrder } from "@/services/dataService";
-import { markOrderPendingCompletion } from "@/services/dataService";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { updateWorkOrder } from "@/services/workOrderService";
+import {
+  markOrderPendingCompletion,
+} from "@/services/workOrderUtils";
+
+const formSchema = z.object({
+  notes: z.string().optional(),
+  partsUsed: z.string().optional(),
+  laborHours: z.string().refine(value => {
+    const numValue = Number(value);
+    return !isNaN(numValue) && numValue >= 0;
+  }, {
+    message: "Labor hours must be a non-negative number",
+  }).optional(),
+});
 
 interface WorkOrderCompletionDialogProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
   workOrder: WorkOrder | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onComplete: () => void;
+  onCompletion: () => void;
 }
 
-const WorkOrderCompletionDialog = ({ 
-  workOrder, 
-  isOpen, 
-  onClose, 
-  onComplete 
+const WorkOrderCompletionDialog = ({
+  open,
+  setOpen,
+  workOrder,
+  onCompletion,
 }: WorkOrderCompletionDialogProps) => {
-  const [completionStatus, setCompletionStatus] = useState<"completed" | "pending">("completed");
-  const [notes, setNotes] = useState("");
-  const [pendingReason, setPendingReason] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      notes: "",
+      partsUsed: "",
+      laborHours: "",
+    },
+  });
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!workOrder) return;
     
     try {
-      setIsSubmitting(true);
+      // Mark order as pending completion first
+      await markOrderPendingCompletion(workOrder.id);
       
-      if (completionStatus === "completed") {
-        await completeWorkOrder(workOrder.id);
-        toast.success("Work order marked as completed");
-      } else {
-        if (!pendingReason) {
-          toast.error("Please provide a reason for pending completion");
-          return;
-        }
-        await markOrderPendingCompletion(workOrder.id, pendingReason);
-        toast.info("Work order marked as pending completion");
-      }
+      // Continue with the rest of the processing
+      const completionDetails = {
+        notes: data.notes,
+        partsUsed: data.partsUsed,
+        laborHours: data.laborHours ? parseFloat(data.laborHours) : 0,
+        completedAt: new Date().toISOString(),
+      };
       
-      onComplete();
-      onClose();
+      // Update the work order with completion details
+      await updateWorkOrder(workOrder.id, {
+        status: "pending-completion",
+        completionDetails: completionDetails,
+      });
+      
+      toast({
+        title: "Work Order Updated",
+        description: "Work order marked as pending completion.",
+      });
+      
+      onCompletion();
+      setOpen(false);
     } catch (error) {
-      console.error("Error updating work order completion status:", error);
-      toast.error("Failed to update work order status");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setCompletionStatus("completed");
-    setNotes("");
-    setPendingReason("");
-  };
-
-  // Reset the form when the dialog opens with a new work order
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      resetForm();
-      onClose();
+      console.error("Failed to update work order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update work order. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Complete Work Order</DialogTitle>
           <DialogDescription>
-            {workOrder && (
-              <span>
-                #{workOrder.id} - {workOrder.type} for {workOrder.customerName} at {workOrder.address}
-              </span>
-            )}
+            Enter completion details for work order.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <RadioGroup 
-            value={completionStatus} 
-            onValueChange={(value) => setCompletionStatus(value as "completed" | "pending")}
-            className="space-y-3"
-          >
-            <div className="flex items-start space-x-2">
-              <RadioGroupItem value="completed" id="completed" />
-              <div className="grid gap-1.5">
-                <Label htmlFor="completed" className="font-medium">
-                  Work order completed
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  All tasks have been finished successfully
-                </p>
-              </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Completion Notes</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Any notes about the completion of this work order."
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="partsUsed"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Parts Used</FormLabel>
+                  <FormControl>
+                    <Input placeholder="List of parts used" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="laborHours"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Labor Hours</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Number of labor hours" type="number" step="0.5" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Submit Completion</Button>
             </div>
-
-            <div className="flex items-start space-x-2">
-              <RadioGroupItem value="pending" id="pending" />
-              <div className="grid gap-1.5">
-                <Label htmlFor="pending" className="font-medium">
-                  Work order pending completion
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Work cannot be completed at this time
-                </p>
-              </div>
-            </div>
-          </RadioGroup>
-
-          {completionStatus === "completed" ? (
-            <div className="space-y-2">
-              <Label htmlFor="notes">Completion Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Enter any notes about the completed work..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="pendingReason">Reason for Pending Completion <span className="text-red-500">*</span></Label>
-              <Textarea
-                id="pendingReason"
-                placeholder="Explain why the work cannot be completed at this time..."
-                value={pendingReason}
-                onChange={(e) => setPendingReason(e.target.value)}
-                rows={3}
-                required
-              />
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || (completionStatus === "pending" && !pendingReason)}>
-            {isSubmitting ? "Submitting..." : "Submit"}
-          </Button>
-        </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
