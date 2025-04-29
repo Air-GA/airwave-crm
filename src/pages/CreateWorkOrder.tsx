@@ -1,3 +1,7 @@
+
+// Only updating the specific import line that needs to be changed
+// This is a partial update of the file
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
@@ -42,7 +46,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { createWorkOrder } from "@/services/workOrderService";
+import { createWorkOrder } from "@/services/dataService";
 import { WorkOrder } from "@/types";
 
 const workOrderSchema = z.object({

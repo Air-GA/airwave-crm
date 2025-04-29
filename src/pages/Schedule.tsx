@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -12,12 +11,14 @@ import { Technician, WorkOrder } from "@/types";
 import { fetchTechnicians } from "@/services/technicianService";
 import { 
   fetchWorkOrders, 
-  useWorkOrderStore, 
-  updateWorkOrder, 
+  updateWorkOrder
+} from "@/services/dataService";
+import { 
+  useWorkOrderStore,
   createWorkOrder,
   createMaintenanceWorkOrder,
   rescheduleMaintenanceWorkOrder
-} from "@/services/workOrderService";
+} from "@/services/dataService";
 import { syncWorkOrdersFromCRM } from "@/services/crmSyncService";
 import { useToast } from "@/hooks/use-toast";
 import { SyncThreeCustomersButton } from "@/components/SyncThreeCustomersButton";

@@ -87,23 +87,23 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
   }
 };
 
-export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> => {
+export const updateWorkOrder = async (workOrderId: string, updates: Partial<WorkOrder>): Promise<WorkOrder> => {
   try {
-    console.log(`Updating work order ${workOrder.id} in Supabase...`);
+    console.log(`Updating work order ${workOrderId} in Supabase...`);
     
     // Map our WorkOrder fields to the Supabase table fields
     const supabaseWorkOrder = {
-      description: workOrder.description,
-      technician_id: workOrder.technicianId,
+      description: updates.description,
+      technician_id: updates.technicianId,
       // We'll store status in a custom field until we establish the proper mapping
-      custom_status: workOrder.status,
-      custom_completed_at: workOrder.completedDate
+      custom_status: updates.status,
+      custom_completed_at: updates.completedDate
     };
     
     const { data, error } = await supabase
       .from("work_orders")
       .update(supabaseWorkOrder)
-      .eq("id", workOrder.id)
+      .eq("id", workOrderId)
       .select()
       .single();
 
@@ -116,11 +116,12 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
     
     if (!data) {
       console.log("Work order updated but no data returned, using original work order");
-      return workOrder;
+      return { ...cachedWorkOrders?.find(wo => wo.id === workOrderId)!, ...updates };
     }
     
     return {
-      ...workOrder,
+      ...cachedWorkOrders?.find(wo => wo.id === workOrderId)!,
+      ...updates,
       technicianId: data.technician_id || undefined
     };
   } catch (error) {
@@ -128,11 +129,11 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
     
     if (cachedWorkOrders) {
       cachedWorkOrders = cachedWorkOrders.map(wo => 
-        wo.id === workOrder.id ? workOrder : wo
+        wo.id === workOrderId ? { ...wo, ...updates } : wo
       );
     }
     
-    return workOrder;
+    return { ...cachedWorkOrders?.find(wo => wo.id === workOrderId)!, ...updates };
   }
 };
 

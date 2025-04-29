@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { WorkOrder } from "@/types";
-import { completeWorkOrder, markOrderPendingCompletion } from "@/services/workOrderService";
+import { completeWorkOrder } from "@/services/dataService";
+import { markOrderPendingCompletion } from "@/services/dataService";
 import { toast } from "sonner";
 
 interface WorkOrderCompletionDialogProps {
@@ -34,7 +35,7 @@ const WorkOrderCompletionDialog = ({
       setIsSubmitting(true);
       
       if (completionStatus === "completed") {
-        await completeWorkOrder(workOrder.id, notes || undefined);
+        await completeWorkOrder(workOrder.id);
         toast.success("Work order marked as completed");
       } else {
         if (!pendingReason) {
