@@ -1,6 +1,8 @@
 
 import { Customer } from "@/types";
-import { CustomerCard } from "./CustomerCard";
+import { CustomersGrid } from "./CustomersGrid";
+import { CustomerDetails } from "./CustomerDetails";
+import { useState } from "react";
 
 interface CustomerGridViewProps {
   customers: Customer[];
@@ -8,16 +10,40 @@ interface CustomerGridViewProps {
 }
 
 export const CustomerGridView = ({ customers, onCustomerClick }: CustomerGridViewProps) => {
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const handleViewDetails = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setDetailsOpen(true);
+  };
+
+  const handleCreateWorkOrder = (customer: Customer, serviceAddress?: string) => {
+    console.log("Creating work order for", customer.name, "at address:", serviceAddress);
+    onCustomerClick(customer.id);
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {customers.map((customer) => (
-        <CustomerCard
-          key={customer.id}
-          customer={customer}
-          onClick={() => onCustomerClick(customer.id)}
-          onViewDetails={() => onCustomerClick(customer.id)}
+    <>
+      <CustomersGrid 
+        customers={customers}
+        onCustomerClick={(customer) => onCustomerClick(customer.id)}
+        onViewDetails={handleViewDetails}
+        onCreateWorkOrder={handleCreateWorkOrder}
+      />
+      
+      {selectedCustomer && (
+        <CustomerDetails
+          customer={selectedCustomer}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          onCreateWorkOrder={handleCreateWorkOrder}
+          permissions={{
+            canViewCustomerPaymentHistory: true,
+            canViewFuturePaymentPlans: true,
+          }}
         />
-      ))}
-    </div>
+      )}
+    </>
   );
 };

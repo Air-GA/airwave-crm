@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Eye, Mail, Phone, Home, Building2, User, MapPin } from "lucide-react";
+import { UserRound, Mail, Phone, Home, Building2, MapPin } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,10 +10,14 @@ interface CustomerCardProps {
   customer: Customer;
   onClick: () => void;
   onViewDetails: () => void;
-  onCreateWorkOrder?: (serviceAddress: string) => void;
+  onCreateWorkOrder?: (serviceAddress?: string) => void;
 }
 
 export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, onViewDetails, onCreateWorkOrder }) => {
+  const primaryAddress = customer.serviceAddresses?.find(addr => addr.isPrimary) || 
+                        (customer.serviceAddresses && customer.serviceAddresses[0]) || 
+                        { address: customer.address || "No address available" };
+
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
       <CardContent className="pt-6 pb-2">
@@ -23,7 +27,7 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, o
               {customer.type === "commercial" ? (
                 <Building2 className="h-5 w-5 text-primary" />
               ) : (
-                <User className="h-5 w-5 text-primary" />
+                <UserRound className="h-5 w-5 text-primary" />
               )}
             </div>
             <div>
@@ -54,10 +58,10 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, o
             </div>
           )}
           
-          {customer.address && (
-            <div className="flex items-center text-muted-foreground">
-              <Home className="h-4 w-4 mr-2" />
-              <span className="truncate">{customer.address}</span>
+          {primaryAddress && (
+            <div className="flex items-start text-muted-foreground">
+              <Home className="h-4 w-4 mr-2 mt-1" />
+              <span className="truncate">{primaryAddress.address}</span>
             </div>
           )}
 
@@ -67,17 +71,31 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, o
               <span className="truncate">Billing City: {customer.billCity}</span>
             </div>
           )}
+
+          {customer.lastService && (
+            <div className="mt-2 text-xs text-muted-foreground pt-2 border-t">
+              Last service: {new Date(customer.lastService).toLocaleDateString()}
+            </div>
+          )}
         </div>
       </CardContent>
       
-      <CardFooter className="px-6 py-3 border-t bg-muted/30 flex justify-end">
+      <CardFooter className="px-6 py-3 border-t bg-muted/30 flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={(e) => {
           e.stopPropagation();
           onViewDetails();
         }}>
-          <Eye className="h-4 w-4 mr-1" />
-          Details
+          View Details
         </Button>
+
+        {onCreateWorkOrder && (
+          <Button variant="outline" size="sm" onClick={(e) => {
+            e.stopPropagation();
+            onCreateWorkOrder();
+          }}>
+            Work Order
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
