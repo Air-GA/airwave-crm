@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { WorkOrder, Technician, Customer } from "@/types";
 import { workOrders as mockWorkOrders, technicians as mockTechnicians } from "@/data/mockData";
@@ -22,7 +21,7 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching work orders from Supabase:", error);
+      console.log("Error fetching work orders from Supabase:", error);
       throw error;
     }
 
@@ -30,12 +29,20 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
       console.log(`Fetched ${data.length} work orders from Supabase`);
       
       const transformedData: WorkOrder[] = data.map(wo => {
-        // Safely handle addresses, which might be null or a SelectQueryError
+        // Safely handle addresses, which might be null or have missing properties
         let formattedAddress = 'No address available';
         if (wo.addresses && typeof wo.addresses === 'object' && !Array.isArray(wo.addresses)) {
-          const addressObj = wo.addresses;
-          if (addressObj.street && addressObj.city) { // Check if these properties exist
-            formattedAddress = `${addressObj.street}, ${addressObj.city}, ${addressObj.state || ''} ${addressObj.zip_code || ''}`;
+          try {
+            const address = wo.addresses as any; // Use any type to bypass strict typing temporarily
+            if (address) {
+              formattedAddress = `${address.street || ''}, ${address.city || ''}, ${address.state || ''} ${address.zip_code || ''}`.trim();
+              // If we end up with just commas, use a default message
+              if (formattedAddress.replace(/,/g, '').trim() === '') {
+                formattedAddress = 'No address available';
+              }
+            }
+          } catch (err) {
+            console.error("Error formatting address:", err);
           }
         }
           
@@ -44,7 +51,7 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
           customerId: wo.customer_id,
           customerName: wo.customers?.name || 'Unknown Customer',
           address: formattedAddress,
-          status: wo.status_id ? 'pending' : 'pending' as WorkOrder['status'], // Default status
+          status: 'pending' as WorkOrder['status'], // Default status
           priority: 'medium',
           type: 'repair',
           description: wo.description || '',
@@ -52,9 +59,14 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
           technicianId: wo.technician_id || undefined,
           technicianName: 'Assigned Technician',
           createdAt: wo.created_at,
-          completedDate: undefined, // No direct mapping yet
+          completedDate: undefined,
           estimatedHours: 1,
-          notes: []
+          notes: [],
+          partsUsed: [],
+          progressPercentage: 0,
+          progressSteps: [],
+          isMaintenancePlan: false,
+          completionRequired: true
         };
       });
       

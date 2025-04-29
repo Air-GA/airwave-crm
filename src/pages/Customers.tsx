@@ -165,8 +165,9 @@ const Customers = () => {
             <CustomerCard 
               key={customer.id} 
               customer={customer} 
-              onCreateWorkOrder={(serviceAddress) => handleCreateWorkOrder(customer, serviceAddress)}
+              onClick={() => handleViewCustomerDetails(customer)}
               onViewDetails={() => handleViewCustomerDetails(customer)}
+              onCreateWorkOrder={(serviceAddress) => handleCreateWorkOrder(customer, serviceAddress)}
             />
           ))}
         </div>

@@ -1,4 +1,3 @@
-
 import { Technician, WorkOrder } from "@/types";
 
 // Mock technicians data
@@ -12,7 +11,8 @@ export const mockTechnicians: Technician[] = [
       lat: 33.7490,
       lng: -84.3880,
       address: "Atlanta, GA"
-    }
+    },
+    createdAt: new Date().toISOString() // Add missing createdAt property
   },
   {
     id: "2",
@@ -23,7 +23,8 @@ export const mockTechnicians: Technician[] = [
       lat: 33.7590,
       lng: -84.3920,
       address: "Midtown, Atlanta, GA"
-    }
+    },
+    createdAt: new Date().toISOString() // Add missing createdAt property
   }
 ];
 
