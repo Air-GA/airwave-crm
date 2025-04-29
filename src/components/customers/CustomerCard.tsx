@@ -1,6 +1,6 @@
 
 import React from "react";
-import { UserRound, Mail, Phone, Home, Building2, MapPin } from "lucide-react";
+import { UserRound, Mail, Phone, Home, Building2, MapPin, Calendar } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, o
   const primaryAddress = customer.serviceAddresses?.find(addr => addr.isPrimary) || 
                         (customer.serviceAddresses && customer.serviceAddresses[0]) || 
                         { address: customer.address || "No address available" };
-
+  
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
       <CardContent className="pt-6 pb-2">
@@ -68,13 +68,14 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, o
           {customer.billCity && (
             <div className="flex items-center text-muted-foreground">
               <MapPin className="h-4 w-4 mr-2" />
-              <span className="truncate">Billing City: {customer.billCity}</span>
+              <span className="truncate">{customer.billCity}</span>
             </div>
           )}
 
           {customer.lastService && (
-            <div className="mt-2 text-xs text-muted-foreground pt-2 border-t">
-              Last service: {new Date(customer.lastService).toLocaleDateString()}
+            <div className="flex items-center text-muted-foreground pt-2 border-t mt-2">
+              <Calendar className="h-4 w-4 mr-2" />
+              <span className="text-xs">Last service: {new Date(customer.lastService).toLocaleDateString()}</span>
             </div>
           )}
         </div>

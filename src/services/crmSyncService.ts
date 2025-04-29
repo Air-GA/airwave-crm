@@ -1,7 +1,7 @@
 
 import { workOrders } from '@/data/mockData';
 import { WorkOrder } from '@/types';
-import { useWorkOrderStore } from './workOrderService';
+import { useWorkOrderStore } from './workOrderStore';
 
 /**
  * Simulates syncing work orders from an external CRM
