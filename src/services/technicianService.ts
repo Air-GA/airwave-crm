@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { Technician } from "@/types";
 import { technicians as mockTechnicians } from "@/data/mockData";
+import { useWorkOrderStore } from "./workOrderStore";
 
 interface TechnicianState {
   technicians: Technician[];
@@ -106,5 +107,56 @@ export const updateTechnician = (
   } catch (error) {
     console.error("Error updating technician:", error);
     return null;
+  }
+};
+
+// Add the missing functions for assigning and unassigning work orders
+export const assignWorkOrder = async (
+  workOrderId: string,
+  technicianId: string,
+  technicianName: string
+): Promise<void> => {
+  try {
+    const { workOrders, setWorkOrders } = useWorkOrderStore.getState();
+    
+    // Find the work order to update
+    const updatedWorkOrders = workOrders.map(wo => 
+      wo.id === workOrderId 
+        ? { ...wo, technicianId, technicianName, updatedAt: new Date().toISOString() }
+        : wo
+    );
+    
+    // Update the store
+    setWorkOrders(updatedWorkOrders);
+    console.log(`Work order ${workOrderId} assigned to ${technicianName}`);
+    
+    // In a real app, this would make an API call to update the database
+    return Promise.resolve();
+  } catch (error) {
+    console.error("Error assigning work order:", error);
+    throw error;
+  }
+};
+
+export const unassignWorkOrder = async (workOrderId: string): Promise<void> => {
+  try {
+    const { workOrders, setWorkOrders } = useWorkOrderStore.getState();
+    
+    // Find the work order to update
+    const updatedWorkOrders = workOrders.map(wo => 
+      wo.id === workOrderId 
+        ? { ...wo, technicianId: null, technicianName: null, updatedAt: new Date().toISOString() }
+        : wo
+    );
+    
+    // Update the store
+    setWorkOrders(updatedWorkOrders);
+    console.log(`Work order ${workOrderId} unassigned`);
+    
+    // In a real app, this would make an API call to update the database
+    return Promise.resolve();
+  } catch (error) {
+    console.error("Error unassigning work order:", error);
+    throw error;
   }
 };

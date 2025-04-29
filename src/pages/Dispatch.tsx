@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -239,7 +238,8 @@ const Dispatch = () => {
           </div>
 
           <div className="grid gap-6">
-            <MapView selectedTechnicianId={selectedTechnicianId} />
+            {/* Remove the selectedTechnicianId prop from MapView if it doesn't accept it */}
+            <MapView />
 
             <Card>
               <CardHeader>
