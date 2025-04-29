@@ -88,7 +88,6 @@ export const createWorkOrder = async (workOrderData: Partial<WorkOrder>): Promis
     technicianId: workOrderData.technicianId,
     technicianName: workOrderData.technicianName,
     completedDate: workOrderData.completedDate,
-    partsUsed: workOrderData.partsUsed || [],
     notes: workOrderData.notes || [],  // Fix: Ensure notes is initialized as an array
     pendingReason: workOrderData.pendingReason,
     isMaintenancePlan: workOrderData.isMaintenancePlan || false

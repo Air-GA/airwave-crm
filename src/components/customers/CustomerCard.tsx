@@ -10,9 +10,10 @@ interface CustomerCardProps {
   customer: Customer;
   onClick: () => void;
   onViewDetails: () => void;
+  onCreateWorkOrder?: (serviceAddress: any) => void; // Added this prop
 }
 
-export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, onViewDetails }) => {
+export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, onViewDetails, onCreateWorkOrder }) => {
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
       <CardContent className="pt-6 pb-2">

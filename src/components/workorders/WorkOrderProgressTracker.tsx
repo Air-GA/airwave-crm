@@ -37,6 +37,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "sale",
     name: "Initial Sale",
+    label: "Initial Sale",
     description: "Service order created and scheduled",
     status: "completed",
     notifyCustomer: true,
@@ -46,6 +47,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "assignment",
     name: "Technician Assignment",
+    label: "Technician Assignment",
     description: "Technician assigned to the work order",
     status: "pending",
     notifyCustomer: true,
@@ -55,6 +57,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "reminder",
     name: "Service Reminder",
+    label: "Service Reminder",
     description: "24-hour reminder sent to customer",
     status: "pending",
     notifyCustomer: true,
@@ -64,6 +67,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "supplies",
     name: "Supplies Prepared",
+    label: "Supplies Prepared",
     description: "Inventory loaded on service vehicle",
     status: "pending",
     notifyCustomer: false,
@@ -73,6 +77,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "enroute",
     name: "Technician En Route",
+    label: "Technician En Route",
     description: "Technician on the way to service location",
     status: "pending",
     notifyCustomer: true,
@@ -82,6 +87,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "arrival",
     name: "Technician Arrival",
+    label: "Technician Arrival",
     description: "Technician arrived at service location",
     status: "pending",
     notifyCustomer: true,
@@ -91,6 +97,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "service",
     name: "Service In Progress",
+    label: "Service In Progress",
     description: "Work being performed at location",
     status: "pending",
     notifyCustomer: false,
@@ -100,6 +107,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "completion",
     name: "Service Completed",
+    label: "Service Completed",
     description: "Work order has been completed",
     status: "pending",
     notifyCustomer: true,
@@ -109,6 +117,7 @@ const DEFAULT_PROGRESS_STEPS: ProgressStep[] = [
   {
     id: "invoice",
     name: "Invoice Generated",
+    label: "Invoice Generated",
     description: "Invoice created and sent to customer",
     status: "pending",
     notifyCustomer: true,

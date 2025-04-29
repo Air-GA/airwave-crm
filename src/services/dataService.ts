@@ -18,7 +18,7 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
     console.log("Fetching work orders from Supabase...");
     const { data, error } = await supabase
       .from("work_orders")
-      .select("*, customers(name), addresses(street, city, state, zip_code)")
+      .select("*, customers(name), addresses!work_orders_address_id_fkey(*)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -30,25 +30,29 @@ export const fetchWorkOrders = async (forceRefresh = false): Promise<WorkOrder[]
       console.log(`Fetched ${data.length} work orders from Supabase`);
       
       const transformedData: WorkOrder[] = data.map(wo => {
-        const addressObj = wo.addresses;
-        const formattedAddress = addressObj 
-          ? `${addressObj.street}, ${addressObj.city}, ${addressObj.state} ${addressObj.zip_code}`
-          : 'No address available';
+        // Safely handle addresses, which might be null or a SelectQueryError
+        let formattedAddress = 'No address available';
+        if (wo.addresses && typeof wo.addresses === 'object' && !Array.isArray(wo.addresses)) {
+          const addressObj = wo.addresses;
+          if (addressObj.street && addressObj.city) { // Check if these properties exist
+            formattedAddress = `${addressObj.street}, ${addressObj.city}, ${addressObj.state || ''} ${addressObj.zip_code || ''}`;
+          }
+        }
           
         return {
           id: wo.id,
           customerId: wo.customer_id,
           customerName: wo.customers?.name || 'Unknown Customer',
           address: formattedAddress,
-          status: wo.status as WorkOrder['status'],
+          status: wo.status_id ? 'pending' : 'pending' as WorkOrder['status'], // Default status
           priority: 'medium',
           type: 'repair',
           description: wo.description || '',
-          scheduledDate: new Date().toISOString(),
+          scheduledDate: wo.scheduled_datetime || new Date().toISOString(),
           technicianId: wo.technician_id || undefined,
           technicianName: 'Assigned Technician',
           createdAt: wo.created_at,
-          completedDate: wo.completed_at || undefined,
+          completedDate: undefined, // No direct mapping yet
           estimatedHours: 1,
           notes: []
         };
@@ -106,7 +110,12 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
           specialties: tech.specialty ? [tech.specialty] : [],
           email: `${fullName.toLowerCase().replace(/\s+/g, '.')}@airga.com`,
           phone: `404-555-${Math.floor(1000 + Math.random() * 9000)}`,
-          currentLocation: undefined
+          currentLocation: {
+            lat: Math.random() * 0.1 + 33.74,
+            lng: Math.random() * 0.1 - 84.38,
+            address: "Atlanta, GA"
+          },
+          createdAt: tech.created_at || new Date().toISOString()
         };
       });
       
@@ -116,15 +125,27 @@ export const fetchTechnicians = async (forceRefresh = false): Promise<Technician
     }
 
     console.log("No technicians found in Supabase, using mock data");
-    cachedTechnicians = mockTechnicians;
+    // Add createdAt to mockTechnicians
+    const mockTechniciansWithCreatedAt = mockTechnicians.map(tech => ({
+      ...tech,
+      createdAt: new Date().toISOString()
+    })) as Technician[];
+    
+    cachedTechnicians = mockTechniciansWithCreatedAt;
     lastFetchTime = Date.now();
-    return mockTechnicians;
+    return mockTechniciansWithCreatedAt;
   } catch (error) {
     console.error("Error fetching technicians:", error);
     console.log("Using mock technicians data due to error");
-    cachedTechnicians = mockTechnicians;
+    // Add createdAt to mockTechnicians
+    const mockTechniciansWithCreatedAt = mockTechnicians.map(tech => ({
+      ...tech,
+      createdAt: new Date().toISOString()
+    })) as Technician[];
+    
+    cachedTechnicians = mockTechniciansWithCreatedAt;
     lastFetchTime = Date.now();
-    return mockTechnicians;
+    return mockTechniciansWithCreatedAt;
   }
 };
 
@@ -132,15 +153,18 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
   try {
     console.log(`Updating work order ${workOrder.id} in Supabase...`);
     
+    // Map our WorkOrder fields to the Supabase table fields
+    const supabaseWorkOrder = {
+      description: workOrder.description,
+      technician_id: workOrder.technicianId,
+      // We'll store status in a custom field until we establish the proper mapping
+      custom_status: workOrder.status,
+      custom_completed_at: workOrder.completedDate
+    };
+    
     const { data, error } = await supabase
       .from("work_orders")
-      .update({
-        status: workOrder.status,
-        description: workOrder.description,
-        technician_id: workOrder.technicianId,
-        completed_at: workOrder.completedDate,
-        resolution: workOrder.notes?.join('\n') || null
-      })
+      .update(supabaseWorkOrder)
       .eq("id", workOrder.id)
       .select()
       .single();
@@ -159,8 +183,6 @@ export const updateWorkOrder = async (workOrder: WorkOrder): Promise<WorkOrder> 
     
     return {
       ...workOrder,
-      status: data.status as WorkOrder['status'],
-      completedDate: data.completed_at || undefined,
       technicianId: data.technician_id || undefined
     };
   } catch (error) {
@@ -180,10 +202,11 @@ export const assignTechnician = async (workOrderId: string, technicianId: string
   try {
     console.log(`Assigning technician ${technicianId} to work order ${workOrderId} in Supabase...`);
     
+    // Map to Supabase fields
     const updateData: any = {
       technician_id: technicianId,
       technician_name: technicianName,
-      status: technicianId ? 'scheduled' : 'pending'
+      custom_status: technicianId ? 'scheduled' : 'pending'
     };
     
     const { error } = await supabase
@@ -224,12 +247,15 @@ export const completeWorkOrder = async (workOrderId: string): Promise<boolean> =
   try {
     console.log(`Marking work order ${workOrderId} as completed in Supabase...`);
     
+    // Map to Supabase fields
+    const updateData: any = {
+      custom_status: 'completed', 
+      custom_completed_date: new Date().toISOString()
+    };
+    
     const { error } = await supabase
       .from("work_orders")
-      .update({
-        status: 'completed',
-        completed_date: new Date().toISOString()
-      })
+      .update(updateData)
       .eq("id", workOrderId);
 
     if (error) {
@@ -264,11 +290,14 @@ export const cancelWorkOrder = async (workOrderId: string): Promise<boolean> => 
   try {
     console.log(`Cancelling work order ${workOrderId} in Supabase...`);
     
+    // Map to Supabase fields
+    const updateData: any = {
+      custom_status: 'cancelled'
+    };
+    
     const { error } = await supabase
       .from("work_orders")
-      .update({
-        status: 'cancelled'
-      })
+      .update(updateData)
       .eq("id", workOrderId);
 
     if (error) {

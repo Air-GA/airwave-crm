@@ -22,7 +22,7 @@ export interface Customer {
   lastService?: string;
 }
 
-// Add the missing types that are causing errors
+// Updated Technician interface to include currentLocation
 export interface Technician {
   id: string;
   name: string;
@@ -31,7 +31,7 @@ export interface Technician {
   currentLocationAddress?: string;
   currentLocationLat?: number;
   currentLocationLng?: number;
-  // Adding this for backward compatibility with existing code
+  // This is needed for backwards compatibility
   currentLocation?: {
     lat: number;
     lng: number;
@@ -42,6 +42,7 @@ export interface Technician {
   createdAt: string;
 }
 
+// Updated ProgressStep interface to include all required properties
 export interface ProgressStep {
   id: string;
   label: string;
@@ -56,6 +57,7 @@ export interface ProgressStep {
   notifyAdmin?: boolean;
 }
 
+// Updated WorkOrder interface to include all required properties
 export interface WorkOrder {
   id: string;
   customerName: string;
@@ -81,4 +83,6 @@ export interface WorkOrder {
   email?: string;
   phoneNumber?: string;
   estimatedArrivalTime?: string;
+  partsUsed?: any[];
+  completionRequired?: boolean;
 }
