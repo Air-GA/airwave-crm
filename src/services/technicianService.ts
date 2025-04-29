@@ -1,81 +1,46 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { Technician } from "@/types";
 import { technicians as mockTechnicians } from "@/data/mockData";
-import { CACHE_DURATION, getLastFetchTime, setCache, setLastFetchTime } from "./cacheService";
+import { useTechnicianStore } from "./technicianStore";
 
-// Cache for technicians
-let cachedTechnicians: Technician[] | null = null;
+// Export the technician store
+export { useTechnicianStore } from "./technicianStore";
 
-export const fetchTechnicians = async (forceRefresh = false): Promise<Technician[]> => {
-  if (!forceRefresh && cachedTechnicians && Date.now() - getLastFetchTime() < CACHE_DURATION) {
-    console.log("Using cached technicians");
-    return cachedTechnicians;
+export const fetchTechnicians = async (): Promise<Technician[]> => {
+  // This would be a real API call in a production environment
+  console.log("Fetching technicians...");
+  
+  // Fake a short loading time
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // For now, just return mock data
+  return mockTechnicians;
+};
+
+export const updateTechnician = async (technicianId: string, updates: Partial<Technician>): Promise<Technician> => {
+  const technician = mockTechnicians.find(tech => tech.id === technicianId);
+  
+  if (!technician) {
+    throw new Error(`Technician with ID ${technicianId} not found`);
   }
+  
+  // In a real app, this would make an API call
+  const updatedTechnician = {
+    ...technician,
+    ...updates
+  };
+  
+  console.log(`Updated technician ${technicianId}:`, updatedTechnician);
+  
+  return updatedTechnician;
+};
 
-  try {
-    console.log("Fetching technicians from Supabase...");
-    const { data, error } = await supabase
-      .from("technicians")
-      .select("*, users(first_name, last_name)")
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching technicians from Supabase:", error);
-      throw error;
-    }
-
-    if (data && data.length > 0) {
-      console.log(`Fetched ${data.length} technicians from Supabase`);
-      
-      const transformedData: Technician[] = data.map(tech => {
-        const fullName = tech.users 
-          ? `${tech.users.first_name || ''} ${tech.users.last_name || ''}`.trim()
-          : `Technician ${tech.id.substring(0, 4)}`;
-          
-        return {
-          id: tech.id,
-          name: fullName,
-          status: (tech.availability_status === 'available' ? 'available' : 
-                 tech.availability_status === 'busy' ? 'busy' : 'off-duty') as Technician['status'],
-          specialties: tech.specialty ? [tech.specialty] : [],
-          email: `${fullName.toLowerCase().replace(/\s+/g, '.')}@airga.com`,
-          phone: `404-555-${Math.floor(1000 + Math.random() * 9000)}`,
-          currentLocation: {
-            lat: Math.random() * 0.1 + 33.74,
-            lng: Math.random() * 0.1 - 84.38,
-            address: "Atlanta, GA"
-          },
-          createdAt: tech.created_at || new Date().toISOString()
-        };
-      });
-      
-      cachedTechnicians = transformedData;
-      setLastFetchTime(Date.now());
-      return transformedData;
-    }
-
-    console.log("No technicians found in Supabase, using mock data");
-    // Add createdAt to mockTechnicians
-    const mockTechniciansWithCreatedAt = mockTechnicians.map(tech => ({
-      ...tech,
-      createdAt: new Date().toISOString()
-    })) as Technician[];
-    
-    cachedTechnicians = mockTechniciansWithCreatedAt;
-    setLastFetchTime(Date.now());
-    return mockTechniciansWithCreatedAt;
-  } catch (error) {
-    console.error("Error fetching technicians:", error);
-    console.log("Using mock technicians data due to error");
-    // Add createdAt to mockTechnicians
-    const mockTechniciansWithCreatedAt = mockTechnicians.map(tech => ({
-      ...tech,
-      createdAt: new Date().toISOString()
-    })) as Technician[];
-    
-    cachedTechnicians = mockTechniciansWithCreatedAt;
-    setLastFetchTime(Date.now());
-    return mockTechniciansWithCreatedAt;
-  }
+export const updateTechnicianLocation = async (
+  technicianId: string, 
+  latitude: number, 
+  longitude: number, 
+  address: string
+): Promise<boolean> => {
+  console.log(`Updating location for technician ${technicianId}: ${latitude}, ${longitude}, ${address}`);
+  return true;
 };

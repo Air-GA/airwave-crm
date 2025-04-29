@@ -1,18 +1,22 @@
 
-import { resetCache } from "./cacheService";
-export { fetchWorkOrders, updateWorkOrder, assignTechnician, completeWorkOrder, cancelWorkOrder } from "./workOrderService";
-export { fetchTechnicians } from "./technicianService";
-export { useWorkOrderStore } from "./workOrderStore";
-export { useTechnicianStore } from "./technicianStore";
-export { 
-  createWorkOrder, 
-  createMaintenanceWorkOrder, 
-  rescheduleMaintenanceWorkOrder,
+// Re-export all necessary functions from the dedicated service files
+export {
+  fetchWorkOrders,
+  updateWorkOrder,
+  completeWorkOrder,
+  cancelWorkOrder,
   assignWorkOrder,
   unassignWorkOrder,
-  markOrderPendingCompletion
-} from "./workOrderUtils";
+  createWorkOrder,
+  createMaintenanceWorkOrder,
+  rescheduleMaintenanceWorkOrder,
+  markOrderPendingCompletion,
+  useWorkOrderStore
+} from './workOrderService';
 
-export const refreshAllData = () => {
-  resetCache();
-};
+export {
+  fetchTechnicians,
+  updateTechnician,
+  updateTechnicianLocation,
+  useTechnicianStore
+} from './technicianService';

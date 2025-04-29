@@ -1,8 +1,11 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { WorkOrder } from "@/types";
 import { workOrders as mockWorkOrders } from "@/data/mockData";
 import { CACHE_DURATION, getLastFetchTime, resetCache, setCache, setLastFetchTime } from "./cacheService";
+import { useWorkOrderStore } from "./workOrderStore";
+
+// Export the store so it's available to components
+export { useWorkOrderStore } from "./workOrderStore";
 
 // Cache for work orders
 let cachedWorkOrders: WorkOrder[] | null = null;
@@ -265,3 +268,13 @@ export const cancelWorkOrder = async (workOrderId: string): Promise<boolean> => 
     return true;
   }
 };
+
+// Re-export functions from workOrderUtils
+export {
+  createWorkOrder,
+  createMaintenanceWorkOrder,
+  rescheduleMaintenanceWorkOrder,
+  assignWorkOrder,
+  unassignWorkOrder,
+  markOrderPendingCompletion
+} from "./workOrderUtils";

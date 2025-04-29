@@ -56,9 +56,12 @@ export default function WorkOrders() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { toast } = useToast();
 
-  const { data: workOrders = [], isLoading, refetch } = useQuery({
-    queryKey: ["work-orders", refreshTrigger],
-    queryFn: fetchWorkOrders,
+  const { data: workOrders, isLoading, error } = useQuery({
+    queryKey: ['work-orders'],
+    queryFn: async () => {
+      const orders = await fetchWorkOrders();
+      return orders;
+    }
   });
 
   const handleSyncFromCRM = async () => {
