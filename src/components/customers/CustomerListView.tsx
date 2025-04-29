@@ -1,5 +1,5 @@
 
-import { Mail, Phone, Home, UserRound } from "lucide-react";
+import { Mail, Phone, Home, UserRound, MapPin } from "lucide-react";
 import { Customer } from "@/types";
 import {
   Table,
@@ -26,6 +26,7 @@ export const CustomerListView = ({ customers, onCustomerClick }: CustomerListVie
             <TableHead>Name</TableHead>
             <TableHead>Contact</TableHead>
             <TableHead>Location</TableHead>
+            <TableHead>Billing City</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
@@ -64,6 +65,14 @@ export const CustomerListView = ({ customers, onCustomerClick }: CustomerListVie
                   <Home className="h-3 w-3 mr-1 text-muted-foreground" />
                   <span className="text-sm truncate max-w-[200px]">
                     {customer.address}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center">
+                  <MapPin className="h-3 w-3 mr-1 text-muted-foreground" />
+                  <span className="text-sm">
+                    {customer.billCity || "Not specified"}
                   </span>
                 </div>
               </TableCell>

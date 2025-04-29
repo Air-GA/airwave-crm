@@ -46,15 +46,7 @@ export type Database = {
           updated_at?: string | null
           zip_code?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "addresses_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       appointments: {
         Row: {
@@ -111,20 +103,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "appointments_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_equipment_id_fkey"
-            columns: ["equipment_id"]
-            isOneToOne: false
-            referencedRelation: "equipment"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "appointments_technician_id_fkey"
             columns: ["technician_id"]
             isOneToOne: false
@@ -133,35 +111,62 @@ export type Database = {
           },
         ]
       }
-      contacts: {
+      branches: {
         Row: {
-          contact_name: string | null
           created_at: string | null
-          customer_id: string | null
-          email: string | null
           id: string
-          is_primary: boolean | null
-          phone: string | null
+          name: string
           updated_at: string | null
         }
         Insert: {
-          contact_name?: string | null
           created_at?: string | null
-          customer_id?: string | null
-          email?: string | null
           id?: string
-          is_primary?: boolean | null
-          phone?: string | null
+          name: string
           updated_at?: string | null
         }
         Update: {
-          contact_name?: string | null
           created_at?: string | null
-          customer_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          email: string | null
+          id: string
+          is_primary: boolean | null
+          name: string
+          original_crm_id: string | null
+          phone: string | null
+          service_address_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
           email?: string | null
           id?: string
           is_primary?: boolean | null
+          name: string
+          original_crm_id?: string | null
           phone?: string | null
+          service_address_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          name?: string
+          original_crm_id?: string | null
+          phone?: string | null
+          service_address_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -172,95 +177,188 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contacts_service_address_id_fkey"
+            columns: ["service_address_id"]
+            isOneToOne: false
+            referencedRelation: "service_addresses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       customers: {
         Row: {
+          auto_email_statements: boolean | null
+          billing_address_line1: string | null
+          billing_address_line2: string | null
+          billing_city: string | null
+          billing_county: string | null
+          billing_state: string | null
+          billing_zip: string | null
+          branch_id: string | null
           created_at: string | null
           id: string
-          markup_plan: string | null
+          markup_plan_id: string | null
           name: string
-          notes: string | null
           on_hold: boolean | null
-          rate_plan: string | null
-          region: string | null
-          sales_code: string | null
-          status: string
-          type: string
+          original_crm_id: string | null
+          payment_terms: string | null
+          quickbooks_synced_at: string | null
+          rate_plan_id: string | null
+          sales_code_id: string | null
+          status: string | null
+          third_party_provider: string | null
+          third_party_service_fee: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_email_statements?: boolean | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_county?: string | null
+          billing_state?: string | null
+          billing_zip?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          markup_plan_id?: string | null
+          name: string
+          on_hold?: boolean | null
+          original_crm_id?: string | null
+          payment_terms?: string | null
+          quickbooks_synced_at?: string | null
+          rate_plan_id?: string | null
+          sales_code_id?: string | null
+          status?: string | null
+          third_party_provider?: string | null
+          third_party_service_fee?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_email_statements?: boolean | null
+          billing_address_line1?: string | null
+          billing_address_line2?: string | null
+          billing_city?: string | null
+          billing_county?: string | null
+          billing_state?: string | null
+          billing_zip?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          markup_plan_id?: string | null
+          name?: string
+          on_hold?: boolean | null
+          original_crm_id?: string | null
+          payment_terms?: string | null
+          quickbooks_synced_at?: string | null
+          rate_plan_id?: string | null
+          sales_code_id?: string | null
+          status?: string | null
+          third_party_provider?: string | null
+          third_party_service_fee?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_markup_plan_id_fkey"
+            columns: ["markup_plan_id"]
+            isOneToOne: false
+            referencedRelation: "markup_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_rate_plan_id_fkey"
+            columns: ["rate_plan_id"]
+            isOneToOne: false
+            referencedRelation: "rate_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_sales_code_id_fkey"
+            columns: ["sales_code_id"]
+            isOneToOne: false
+            referencedRelation: "sales_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      divisions: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          id: string
-          markup_plan?: string | null
+          id?: string
           name: string
-          notes?: string | null
-          on_hold?: boolean | null
-          rate_plan?: string | null
-          region?: string | null
-          sales_code?: string | null
-          status: string
-          type: string
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
-          markup_plan?: string | null
           name?: string
-          notes?: string | null
-          on_hold?: boolean | null
-          rate_plan?: string | null
-          region?: string | null
-          sales_code?: string | null
-          status?: string
-          type?: string
           updated_at?: string | null
         }
         Relationships: []
       }
       equipment: {
         Row: {
-          brand: string | null
           created_at: string | null
-          customer_id: string | null
+          customer_id: string
           id: string
-          installation_date: string | null
-          last_service_date: string | null
+          install_date: string | null
+          last_serviced_date: string | null
+          location_description: string | null
           model: string | null
-          notes: string | null
+          name: string | null
+          original_crm_id: string | null
           serial_number: string | null
-          status: string | null
-          type: string
+          service_address_id: string
+          type: string | null
           updated_at: string | null
+          warranty_info: string | null
         }
         Insert: {
-          brand?: string | null
           created_at?: string | null
-          customer_id?: string | null
+          customer_id: string
           id?: string
-          installation_date?: string | null
-          last_service_date?: string | null
+          install_date?: string | null
+          last_serviced_date?: string | null
+          location_description?: string | null
           model?: string | null
-          notes?: string | null
+          name?: string | null
+          original_crm_id?: string | null
           serial_number?: string | null
-          status?: string | null
-          type: string
+          service_address_id: string
+          type?: string | null
           updated_at?: string | null
+          warranty_info?: string | null
         }
         Update: {
-          brand?: string | null
           created_at?: string | null
-          customer_id?: string | null
+          customer_id?: string
           id?: string
-          installation_date?: string | null
-          last_service_date?: string | null
+          install_date?: string | null
+          last_serviced_date?: string | null
+          location_description?: string | null
           model?: string | null
-          notes?: string | null
+          name?: string | null
+          original_crm_id?: string | null
           serial_number?: string | null
-          status?: string | null
-          type?: string
+          service_address_id?: string
+          type?: string | null
           updated_at?: string | null
+          warranty_info?: string | null
         }
         Relationships: [
           {
@@ -268,6 +366,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_service_address_id_fkey"
+            columns: ["service_address_id"]
+            isOneToOne: false
+            referencedRelation: "service_addresses"
             referencedColumns: ["id"]
           },
         ]
@@ -449,22 +554,28 @@ export type Database = {
           updated_at?: string | null
           work_order_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      markup_plans: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       profit_rhino_parts: {
         Row: {
@@ -507,6 +618,144 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      rate_plans: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      regions: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sales_codes: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      service_addresses: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          auto_invoice_enabled: boolean | null
+          city: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          location_code: string | null
+          name: string | null
+          original_crm_id: string | null
+          phone: string | null
+          recurring_pm_enabled: boolean | null
+          region_id: string | null
+          state: string | null
+          status: string | null
+          updated_at: string | null
+          zip: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          auto_invoice_enabled?: boolean | null
+          city?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          location_code?: string | null
+          name?: string | null
+          original_crm_id?: string | null
+          phone?: string | null
+          recurring_pm_enabled?: boolean | null
+          region_id?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          auto_invoice_enabled?: boolean | null
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          location_code?: string | null
+          name?: string | null
+          original_crm_id?: string | null
+          phone?: string | null
+          recurring_pm_enabled?: boolean | null
+          region_id?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_addresses_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       technicians: {
         Row: {
@@ -594,13 +843,6 @@ export type Database = {
             referencedRelation: "technicians"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "time_entries_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders"
-            referencedColumns: ["id"]
-          },
         ]
       }
       users: {
@@ -678,73 +920,106 @@ export type Database = {
             referencedRelation: "inventory_items"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "work_order_items_work_order_id_fkey"
-            columns: ["work_order_id"]
-            isOneToOne: false
-            referencedRelation: "work_orders"
-            referencedColumns: ["id"]
-          },
         ]
       }
-      work_orders: {
+      work_order_statuses: {
         Row: {
-          address_id: string | null
-          appointment_id: string | null
-          completed_at: string | null
           created_at: string | null
-          customer_id: string | null
-          description: string | null
-          equipment_id: string | null
           id: string
-          resolution: string | null
-          status: string | null
-          technician_id: string | null
+          name: string
           updated_at: string | null
         }
         Insert: {
-          address_id?: string | null
-          appointment_id?: string | null
-          completed_at?: string | null
           created_at?: string | null
-          customer_id?: string | null
-          description?: string | null
-          equipment_id?: string | null
           id?: string
-          resolution?: string | null
-          status?: string | null
-          technician_id?: string | null
+          name: string
           updated_at?: string | null
         }
         Update: {
-          address_id?: string | null
-          appointment_id?: string | null
-          completed_at?: string | null
           created_at?: string | null
-          customer_id?: string | null
-          description?: string | null
-          equipment_id?: string | null
           id?: string
-          resolution?: string | null
-          status?: string | null
-          technician_id?: string | null
+          name?: string
           updated_at?: string | null
         }
+        Relationships: []
+      }
+      work_order_types: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      work_orders: {
+        Row: {
+          auto_created: boolean | null
+          created_at: string | null
+          customer_id: string
+          description: string | null
+          division_id: string | null
+          id: string
+          original_crm_id: string | null
+          region_id: string | null
+          sales_code_id: string | null
+          scheduled_datetime: string | null
+          service_address_id: string
+          status_id: string | null
+          technician_id: string | null
+          type_id: string | null
+          updated_at: string | null
+          work_order_number: string | null
+        }
+        Insert: {
+          auto_created?: boolean | null
+          created_at?: string | null
+          customer_id: string
+          description?: string | null
+          division_id?: string | null
+          id?: string
+          original_crm_id?: string | null
+          region_id?: string | null
+          sales_code_id?: string | null
+          scheduled_datetime?: string | null
+          service_address_id: string
+          status_id?: string | null
+          technician_id?: string | null
+          type_id?: string | null
+          updated_at?: string | null
+          work_order_number?: string | null
+        }
+        Update: {
+          auto_created?: boolean | null
+          created_at?: string | null
+          customer_id?: string
+          description?: string | null
+          division_id?: string | null
+          id?: string
+          original_crm_id?: string | null
+          region_id?: string | null
+          sales_code_id?: string | null
+          scheduled_datetime?: string | null
+          service_address_id?: string
+          status_id?: string | null
+          technician_id?: string | null
+          type_id?: string | null
+          updated_at?: string | null
+          work_order_number?: string | null
+        }
         Relationships: [
-          {
-            foreignKeyName: "work_orders_address_id_fkey"
-            columns: ["address_id"]
-            isOneToOne: false
-            referencedRelation: "addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_orders_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: false
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "work_orders_customer_id_fkey"
             columns: ["customer_id"]
@@ -753,17 +1028,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "work_orders_equipment_id_fkey"
-            columns: ["equipment_id"]
+            foreignKeyName: "work_orders_division_id_fkey"
+            columns: ["division_id"]
             isOneToOne: false
-            referencedRelation: "equipment"
+            referencedRelation: "divisions"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "work_orders_technician_id_fkey"
-            columns: ["technician_id"]
+            foreignKeyName: "work_orders_region_id_fkey"
+            columns: ["region_id"]
             isOneToOne: false
-            referencedRelation: "technicians"
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_sales_code_id_fkey"
+            columns: ["sales_code_id"]
+            isOneToOne: false
+            referencedRelation: "sales_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_service_address_id_fkey"
+            columns: ["service_address_id"]
+            isOneToOne: false
+            referencedRelation: "service_addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_types"
             referencedColumns: ["id"]
           },
         ]

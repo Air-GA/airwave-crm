@@ -1,10 +1,10 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Customer } from "@/types";
-import { staticCustomers } from "@/data/mockData";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { CustomerFilterDialog } from "@/components/customers/CustomerFilterDialog";
 import { CustomersHeader } from "@/components/customers/CustomersHeader";
@@ -22,6 +22,7 @@ const CustomersList = () => {
     queryKey: ["customers"],
     queryFn: async () => {
       try {
+        // Fetch customers from Supabase
         const { data, error } = await supabase
           .from("customers")
           .select("*, service_addresses(*)");
@@ -33,6 +34,7 @@ const CustomersList = () => {
 
         if (data && data.length > 0) {
           console.log("Fetched customers from Supabase:", data);
+          // Map the Supabase data to our Customer type
           const transformedData: Customer[] = data.map(customer => ({
             id: customer.id,
             name: customer.name || "Unknown",
@@ -40,6 +42,7 @@ const CustomersList = () => {
             phone: customer.phone || "",
             address: customer.address || "",
             billAddress: customer.bill_address || customer.address || "",
+            billCity: customer.billing_city || "",
             serviceAddresses: customer.service_addresses?.map((sa: any) => ({
               id: sa.id,
               address: sa.address,
@@ -54,11 +57,11 @@ const CustomersList = () => {
           return transformedData;
         }
 
-        console.log("No customers in Supabase, using static data");
-        return staticCustomers;
+        // If no data from Supabase, return empty array
+        return [];
       } catch (error) {
         console.error("Error in fetching customers:", error);
-        return staticCustomers;
+        return [];
       }
     }
   });
@@ -69,7 +72,8 @@ const CustomersList = () => {
       customer.name?.toLowerCase().includes(query) ||
       customer.email?.toLowerCase().includes(query) ||
       customer.phone?.toLowerCase().includes(query) ||
-      customer.address?.toLowerCase().includes(query)
+      customer.address?.toLowerCase().includes(query) ||
+      customer.billCity?.toLowerCase().includes(query)
     );
   }) || [];
 
