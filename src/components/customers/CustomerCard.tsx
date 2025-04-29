@@ -1,6 +1,6 @@
 
 import React from "react";
-import { UserRound, Mail, Phone, Home, Building2, MapPin, Calendar } from "lucide-react";
+import { UserRound, Mail, Phone, Home, Building2, MapPin, Calendar, Loader2 } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +11,16 @@ interface CustomerCardProps {
   onClick: () => void;
   onViewDetails: () => void;
   onCreateWorkOrder?: (serviceAddress?: string) => void;
+  isLoading?: boolean;
 }
 
-export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, onViewDetails, onCreateWorkOrder }) => {
+export const CustomerCard: React.FC<CustomerCardProps> = ({ 
+  customer, 
+  onClick, 
+  onViewDetails, 
+  onCreateWorkOrder,
+  isLoading = false 
+}) => {
   const primaryAddress = customer.serviceAddresses?.find(addr => addr.isPrimary) || 
                         (customer.serviceAddresses && customer.serviceAddresses[0]) || 
                         { address: customer.address || "No address available" };
@@ -82,11 +89,23 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({ customer, onClick, o
       </CardContent>
       
       <CardFooter className="px-6 py-3 border-t bg-muted/30 flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={(e) => {
-          e.stopPropagation();
-          onViewDetails();
-        }}>
-          View Details
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails();
+          }}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            "View Details"
+          )}
         </Button>
 
         {onCreateWorkOrder && (

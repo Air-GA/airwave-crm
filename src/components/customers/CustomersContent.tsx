@@ -54,6 +54,10 @@ export const CustomersContent = ({
     <CustomerListView 
       customers={customers}
       onCustomerClick={onCustomerClick}
+      onViewDetails={(customer) => {
+        // This is just a pass-through - the actual implementation is in CustomerGridView
+        onCustomerClick(customer.id);
+      }}
     />
   );
 };

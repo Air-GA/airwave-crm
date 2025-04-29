@@ -1,5 +1,5 @@
 
-import { Mail, Phone, Home, UserRound, MapPin } from "lucide-react";
+import { Mail, Phone, Home, UserRound, MapPin, ExternalLink } from "lucide-react";
 import { Customer } from "@/types";
 import {
   Table,
@@ -11,13 +11,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface CustomerListViewProps {
   customers: Customer[];
   onCustomerClick: (customerId: string) => void;
+  onViewDetails?: (customer: Customer) => void;
 }
 
-export const CustomerListView = ({ customers, onCustomerClick }: CustomerListViewProps) => {
+export const CustomerListView = ({ 
+  customers, 
+  onCustomerClick,
+  onViewDetails
+}: CustomerListViewProps) => {
   return (
     <Card>
       <Table>
@@ -29,6 +35,7 @@ export const CustomerListView = ({ customers, onCustomerClick }: CustomerListVie
             <TableHead>Billing City</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Status</TableHead>
+            {onViewDetails && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -90,6 +97,21 @@ export const CustomerListView = ({ customers, onCustomerClick }: CustomerListVie
                   {customer.status}
                 </Badge>
               </TableCell>
+              {onViewDetails && (
+                <TableCell className="text-right">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewDetails(customer);
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    <span className="sr-only">View Details</span>
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

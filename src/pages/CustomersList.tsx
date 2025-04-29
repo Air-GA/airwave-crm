@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
@@ -10,12 +9,16 @@ import { CustomerFilterDialog } from "@/components/customers/CustomerFilterDialo
 import { CustomersHeader } from "@/components/customers/CustomersHeader";
 import { CustomersToolbar } from "@/components/customers/CustomersToolbar";
 import { CustomersContent } from "@/components/customers/CustomersContent";
+import { CustomerDetails } from "@/components/customers/CustomerDetails";
 
 const CustomersList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: customersData, isLoading, refetch } = useQuery({
@@ -82,6 +85,85 @@ const CustomersList = () => {
     }
   });
 
+  // Query for fetching a single customer with service addresses
+  const { data: customerDetails, isLoading: isCustomerLoading, refetch: refetchCustomer } = useQuery({
+    queryKey: ["customer", selectedCustomerId],
+    queryFn: async () => {
+      if (!selectedCustomerId) return null;
+
+      try {
+        // Fetch customer details
+        const { data: customerData, error: customerError } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', selectedCustomerId)
+          .single();
+          
+        if (customerError) {
+          throw new Error(`Error fetching customer: ${customerError.message}`);
+        }
+        
+        // Fetch service addresses for this customer
+        const { data: serviceAddressesData, error: addressesError } = await supabase
+          .from('service_addresses')
+          .select('*')
+          .eq('customer_id', selectedCustomerId);
+          
+        if (addressesError) {
+          throw new Error(`Error fetching service addresses: ${addressesError.message}`);
+        }
+        
+        // Fetch primary contact info
+        const { data: contactsData } = await supabase
+          .from('contacts')
+          .select('*')
+          .eq('customer_id', selectedCustomerId);
+          
+        let email = '';
+        let phone = '';
+        
+        if (contactsData && contactsData.length > 0) {
+          const primaryContact = contactsData.find(c => c.is_primary) || contactsData[0];
+          email = primaryContact.email || '';
+          phone = primaryContact.phone || '';
+        }
+        
+        // Transform service addresses to match our app's format
+        const serviceAddresses = serviceAddressesData.map(addr => ({
+          id: addr.id,
+          address: `${addr.address_line1 || ''} ${addr.address_line2 || ''}, ${addr.city || ''}, ${addr.state || ''} ${addr.zip || ''}`.trim(),
+          isPrimary: addr.location_code === 'primary' || false,
+          notes: addr.name || ''
+        }));
+        
+        // Create combined customer object
+        return {
+          id: customerData.id,
+          name: customerData.name || 'Unknown',
+          email: email,
+          phone: phone,
+          address: serviceAddresses.find(addr => addr.isPrimary)?.address || '',
+          billAddress: customerData.billing_address_line1 || '',
+          billCity: customerData.billing_city || '',
+          serviceAddresses: serviceAddresses,
+          type: (customerData.status?.includes('commercial') ? 'commercial' : 'residential') as Customer["type"],
+          status: (customerData.status as Customer["status"]) || "active",
+          createdAt: customerData.created_at || new Date().toISOString(),
+          lastService: ""  // No direct mapping for this field
+        } as Customer;
+      } catch (error) {
+        console.error("Error fetching customer details:", error);
+        toast({
+          title: "Error",
+          description: `Could not load customer details: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          variant: "destructive"
+        });
+        return null;
+      }
+    },
+    enabled: !!selectedCustomerId
+  });
+
   const filteredCustomers = customersData?.filter(customer => {
     const query = searchQuery.toLowerCase();
     return (
@@ -95,9 +177,29 @@ const CustomersList = () => {
 
   const handleCustomerClick = (customerId: string) => {
     console.log("Customer clicked:", customerId);
+    setSelectedCustomerId(customerId);
+    
+    // If we have customer details, update the selectedCustomer and open the dialog
+    if (customerDetails?.id === customerId) {
+      setSelectedCustomer(customerDetails);
+      setDetailsDialogOpen(true);
+    } else {
+      // Otherwise, fetch the customer details
+      setSelectedCustomerId(customerId);
+      refetchCustomer().then(() => {
+        if (customerDetails) {
+          setSelectedCustomer(customerDetails);
+          setDetailsDialogOpen(true);
+        }
+      });
+    }
+  };
+  
+  const handleCreateWorkOrder = (customer: Customer, serviceAddress?: string) => {
+    console.log("Creating work order for", customer.name, "at address:", serviceAddress);
     toast({
-      title: "Customer Selected",
-      description: `Customer ID: ${customerId}`,
+      title: "Work Order",
+      description: `Creating work order for ${customer.name}`,
     });
   };
 
@@ -126,6 +228,19 @@ const CustomersList = () => {
           onAddCustomer={() => setShowAddDialog(true)}
         />
       </div>
+
+      {selectedCustomer && (
+        <CustomerDetails
+          customer={selectedCustomer}
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          onCreateWorkOrder={handleCreateWorkOrder}
+          permissions={{
+            canViewCustomerPaymentHistory: true,
+            canViewFuturePaymentPlans: true,
+          }}
+        />
+      )}
 
       <AddCustomerDialog 
         open={showAddDialog} 
