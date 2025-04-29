@@ -76,3 +76,36 @@ export const updateTechnicianLocation = (
 ): void => {
   useTechnicianStore.getState().updateTechnicianLocation(technicianId, lat, lng, address);
 };
+
+// Function to update a technician
+export const updateTechnician = (
+  technicianId: string,
+  updates: Partial<Technician>
+): Technician | null => {
+  try {
+    const { technicians, setTechnicians } = useTechnicianStore.getState();
+    const technician = technicians.find((tech) => tech.id === technicianId);
+    
+    if (!technician) {
+      console.error("Technician not found:", technicianId);
+      return null;
+    }
+    
+    const updatedTechnician = {
+      ...technician,
+      ...updates,
+    };
+    
+    // Update the technicians array
+    setTechnicians(
+      technicians.map((tech) =>
+        tech.id === technicianId ? updatedTechnician : tech
+      )
+    );
+    
+    return updatedTechnician;
+  } catch (error) {
+    console.error("Error updating technician:", error);
+    return null;
+  }
+};

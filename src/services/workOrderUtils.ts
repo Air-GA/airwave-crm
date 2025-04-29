@@ -35,14 +35,14 @@ export const createMaintenanceWorkOrder = async (
 ): Promise<WorkOrder> => {
   try {
     // Extract the base data from the maintenance plan
-    const baseData = {
+    const baseData: Omit<WorkOrder, "id" | "createdAt" | "updatedAt"> = {
       customerName: maintenancePlan.customerName,
       customerId: maintenancePlan.customerId,
       address: maintenancePlan.address,
-      type: "maintenance" as const, // Ensure type is explicitly "maintenance" as required by WorkOrder type
+      type: "maintenance", 
       description: "Scheduled HVAC maintenance",
-      priority: "medium" as const,
-      notes: "",
+      priority: "medium",
+      notes: [],
       status: technicianId ? "scheduled" : "pending",
       maintenancePlanId: maintenancePlan.id,
       isMaintenancePlan: false,
@@ -116,7 +116,7 @@ export const assignWorkOrder = async (
       return null;
     }
 
-    const updatedWorkOrder = {
+    const updatedWorkOrder: WorkOrder = {
       ...workOrder,
       technicianId,
       technicianName,
@@ -145,7 +145,7 @@ export const unassignWorkOrder = async (
       return null;
     }
 
-    const updatedWorkOrder = {
+    const updatedWorkOrder: WorkOrder = {
       ...workOrder,
       technicianId: undefined,
       technicianName: undefined,
@@ -174,7 +174,7 @@ export const markOrderPendingCompletion = async (
       return null;
     }
 
-    const updatedWorkOrder = {
+    const updatedWorkOrder: WorkOrder = {
       ...workOrder,
       status: "pending-completion",
       updatedAt: new Date().toISOString(),

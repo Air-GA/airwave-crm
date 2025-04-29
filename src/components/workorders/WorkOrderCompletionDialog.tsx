@@ -1,170 +1,133 @@
-import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
+
+import React, { useState } from "react";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
   DialogTitle,
-  DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import { markOrderPendingCompletion, updateWorkOrder } from "@/services/workOrderService";
 import { WorkOrder } from "@/types";
-import { useToast } from "@/hooks/use-toast";
-import { updateWorkOrder } from "@/services/workOrderService";
-import {
-  markOrderPendingCompletion,
-} from "@/services/workOrderUtils";
-
-const formSchema = z.object({
-  notes: z.string().optional(),
-  partsUsed: z.string().optional(),
-  laborHours: z.string().refine(value => {
-    const numValue = Number(value);
-    return !isNaN(numValue) && numValue >= 0;
-  }, {
-    message: "Labor hours must be a non-negative number",
-  }).optional(),
-});
 
 interface WorkOrderCompletionDialogProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  workOrder: WorkOrder | null;
-  onCompletion: () => void;
+  workOrder: WorkOrder;
+  open: boolean; 
+  onClose: () => void;
+  onComplete: () => void;
 }
 
-const WorkOrderCompletionDialog = ({
-  open,
-  setOpen,
+export function WorkOrderCompletionDialog({
   workOrder,
-  onCompletion,
-}: WorkOrderCompletionDialogProps) => {
+  open,
+  onClose,
+  onComplete,
+}: WorkOrderCompletionDialogProps) {
+  const [notes, setNotes] = useState("");
+  const [hoursWorked, setHoursWorked] = useState("1");
+  const [partsUsed, setPartsUsed] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      notes: "",
-      partsUsed: "",
-      laborHours: "",
-    },
-  });
 
-  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (!workOrder) return;
-    
+  const handleSubmit = async () => {
     try {
-      // Mark order as pending completion first
-      await markOrderPendingCompletion(workOrder.id);
+      setIsSubmitting(true);
       
-      // Continue with the rest of the processing
+      // Build completion details
       const completionDetails = {
-        notes: data.notes,
-        partsUsed: data.partsUsed,
-        laborHours: data.laborHours ? parseFloat(data.laborHours) : 0,
-        completedAt: new Date().toISOString(),
+        notes,
+        hoursWorked: parseFloat(hoursWorked),
+        partsUsed: partsUsed.split(",").map(part => part.trim()).filter(Boolean),
+        completedBy: "Current User", // In a real app, this would come from auth context
+        completedAt: new Date().toISOString()
       };
-      
+
       // Update the work order with completion details
       await updateWorkOrder(workOrder.id, {
-        status: "pending-completion",
-        completionDetails: completionDetails,
+        status: "completed",
+        completedDate: new Date().toISOString()
       });
       
       toast({
-        title: "Work Order Updated",
-        description: "Work order marked as pending completion.",
+        title: "Work Order Completed",
+        description: "The work order has been marked as completed.",
       });
       
-      onCompletion();
-      setOpen(false);
+      onComplete();
+      onClose();
+      
     } catch (error) {
-      console.error("Failed to update work order:", error);
+      console.error("Error completing work order:", error);
       toast({
         title: "Error",
-        description: "Failed to update work order. Please try again.",
+        description: "Failed to complete the work order. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Complete Work Order</DialogTitle>
-          <DialogDescription>
-            Enter completion details for work order.
-          </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Completion Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Any notes about the completion of this work order."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="hours" className="text-right">
+              Hours
+            </Label>
+            <Input
+              id="hours"
+              type="number"
+              min="0"
+              step="0.5"
+              value={hoursWorked}
+              onChange={(e) => setHoursWorked(e.target.value)}
+              className="col-span-3"
             />
-            <FormField
-              control={form.control}
-              name="partsUsed"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Parts Used</FormLabel>
-                  <FormControl>
-                    <Input placeholder="List of parts used" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="parts" className="text-right">
+              Parts Used
+            </Label>
+            <Input
+              id="parts"
+              placeholder="Part1, Part2, Part3..."
+              value={partsUsed}
+              onChange={(e) => setPartsUsed(e.target.value)}
+              className="col-span-3"
             />
-            <FormField
-              control={form.control}
-              name="laborHours"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Labor Hours</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Number of labor hours" type="number" step="0.5" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="notes" className="text-right">
+              Notes
+            </Label>
+            <Textarea
+              id="notes"
+              placeholder="Describe the work completed..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="col-span-3"
             />
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Submit Completion</Button>
-            </div>
-          </form>
-        </Form>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Complete Work Order"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default WorkOrderCompletionDialog;
+}

@@ -1,204 +1,232 @@
-
+import React, { useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, User, AlertCircle, CheckCircle2, Clock10, Medal } from "lucide-react";
+import { Calendar, MapPin, User, Phone, Mail, Clock, CheckCircle } from "lucide-react";
+import { WorkOrder, Technician } from "@/types";
 import { formatDate } from "@/lib/date-utils";
-import { WorkOrder, ProgressStep } from "@/types";
-import { useState } from "react";
-import WorkOrderCompletionDialog from "./WorkOrderCompletionDialog";
-import WorkOrderProgressTracker from "./WorkOrderProgressTracker";
+import { WorkOrderProgressTracker } from "@/components/workorders/WorkOrderProgressTracker";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { WorkOrderCompletionDialog } from "@/components/workorders/WorkOrderCompletionDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface WorkOrderDetailsPanelProps {
+// Updated props interface to include optional showAssignOption
+export interface WorkOrderDetailsPanelProps {
   workOrder: WorkOrder;
-  onUnassign?: (orderId: string) => void;
-  showCompletionOptions?: boolean;
-  onStatusUpdate?: () => void;
-  onProgressUpdate?: (progressSteps: ProgressStep[], currentStep: string, percentage: number) => void;
+  onClose?: () => void;
+  showAssignOption?: boolean; // Make this optional
+  technicians?: Technician[];
+  onAssign?: (workOrderId: string, technicianId: string) => Promise<void>;
+  onUnassign?: (workOrderId: string) => Promise<void>;
 }
 
-const WorkOrderDetailsPanel = ({ 
-  workOrder, 
-  onUnassign, 
-  showCompletionOptions = false,
-  onStatusUpdate,
-  onProgressUpdate
-}: WorkOrderDetailsPanelProps) => {
-  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
-  const [showProgressTracker, setShowProgressTracker] = useState(false);
+export function WorkOrderDetailsPanel({
+  workOrder,
+  onClose = () => {},
+  showAssignOption = false, // Default to false
+  technicians = [],
+  onAssign,
+  onUnassign,
+}: WorkOrderDetailsPanelProps) {
+  const [open, setOpen] = useState(true);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   
-  const getStatusBadge = () => {
-    switch (workOrder.status) {
-      case "completed":
-        return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50">Completed</Badge>;
-      case "pending-completion":
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 hover:bg-amber-50">Pending Completion</Badge>;
-      case "in-progress":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-50">In Progress</Badge>;
-      case "scheduled":
-        return <Badge variant="outline" className="bg-sky-50 text-sky-700 hover:bg-sky-50">Scheduled</Badge>;
-      case "pending":
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700 hover:bg-gray-50">Pending</Badge>;
-      case "cancelled":
-        return <Badge variant="outline" className="bg-red-50 text-red-700 hover:bg-red-50">Cancelled</Badge>;
-      default:
-        return null;
-    }
+  const handleClose = () => {
+    setOpen(false);
+    setTimeout(onClose, 300); // Allow animation to complete
   };
-  
-  const handleOpenCompletionDialog = () => {
-    setIsCompletionDialogOpen(true);
+
+  const handleComplete = () => {
+    setShowCompletionDialog(true);
   };
-  
-  const handleCompletionDialogClose = () => {
-    setIsCompletionDialogOpen(false);
-  };
-  
-  const handleWorkOrderStatusUpdate = () => {
-    if (onStatusUpdate) {
-      onStatusUpdate();
+
+  const handleTechnicianAssign = async (technicianId: string) => {
+    if (onAssign && technicianId) {
+      await onAssign(workOrder.id, technicianId);
     }
   };
 
-  const handleProgressUpdate = (progressSteps: ProgressStep[], currentStep: string, percentage: number) => {
-    if (onProgressUpdate) {
-      onProgressUpdate(progressSteps, currentStep, percentage);
+  const handleTechnicianUnassign = async () => {
+    if (onUnassign) {
+      await onUnassign(workOrder.id);
     }
   };
-  
-  // Calculate service time if available from progress steps
-  const calculateServiceTime = () => {
-    if (!workOrder.progressSteps) return null;
-    
-    const arrivalStep = workOrder.progressSteps.find(step => step.id === "arrival");
-    const completionStep = workOrder.progressSteps.find(step => step.id === "completion");
-    
-    if (!arrivalStep?.timestamp || !completionStep?.timestamp || 
-        arrivalStep.status !== "completed" || completionStep.status !== "completed") {
-      return null;
-    }
-    
-    const startTime = new Date(arrivalStep.timestamp).getTime();
-    const endTime = new Date(completionStep.timestamp).getTime();
-    const diffMinutes = Math.round((endTime - startTime) / (1000 * 60));
-    
-    if (diffMinutes < 60) {
-      return `${diffMinutes} minutes`;
-    } else {
-      const hours = Math.floor(diffMinutes / 60);
-      const mins = diffMinutes % 60;
-      return `${hours}h ${mins}m`;
+
+  const getPriorityBadge = (priority: WorkOrder["priority"]) => {
+    switch (priority) {
+      case "low":
+        return <Badge variant="outline">Low</Badge>;
+      case "medium":
+        return <Badge>Medium</Badge>;
+      case "high":
+        return <Badge className="bg-orange-500">High</Badge>;
+      case "emergency":
+        return <Badge variant="destructive">Emergency</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
     }
   };
-  
-  const serviceTime = calculateServiceTime();
-  
+
+  const getStatusBadge = (status: WorkOrder["status"]) => {
+    switch (status) {
+      case "pending":
+        return <Badge className="bg-yellow-500">Pending</Badge>;
+      case "scheduled":
+        return <Badge className="bg-blue-500">Scheduled</Badge>;
+      case "in-progress":
+        return <Badge className="bg-purple-500">In Progress</Badge>;
+      case "completed":
+        return <Badge className="bg-green-500">Completed</Badge>;
+      case "cancelled":
+        return <Badge variant="destructive">Cancelled</Badge>;
+      case "pending-completion":
+        return <Badge className="bg-amber-500">Pending Completion</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
   return (
     <>
-      <div className="rounded-md border p-4">
-        <div className="flex items-center justify-between">
-          <p className="font-medium">#{workOrder.id} - {workOrder.type}</p>
-          {getStatusBadge()}
-        </div>
-        <div className="mt-2 space-y-1.5 text-sm">
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <span>{workOrder.customerName}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span>{workOrder.address}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>{formatDate(new Date(workOrder.scheduledDate))}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span>{formatDate(new Date(workOrder.scheduledDate), { timeOnly: true })}</span>
-          </div>
+      <Sheet open={open} onOpenChange={(newOpen) => !newOpen && handleClose()}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Work Order Details</SheetTitle>
+            <SheetDescription>
+              {workOrder.type} - {formatDate(workOrder.scheduledDate)}
+            </SheetDescription>
+          </SheetHeader>
           
-          {serviceTime && (
-            <div className="flex items-center gap-2">
-              <Clock10 className="h-4 w-4 text-muted-foreground" />
-              <span>Service time: {serviceTime}</span>
+          <div className="mt-6 space-y-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-semibold">{workOrder.customerName}</h3>
+                <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {workOrder.address}
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                {getPriorityBadge(workOrder.priority)}
+                {getStatusBadge(workOrder.status)}
+              </div>
             </div>
-          )}
-          
-          {workOrder.status === "pending-completion" && workOrder.pendingReason && (
-            <div className="mt-1 flex items-start gap-1.5 text-sm text-amber-600 bg-amber-50 p-2 rounded-md">
-              <AlertCircle className="h-4 w-4 mt-0.5" />
-              <span>Pending: {workOrder.pendingReason}</span>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium mb-2">Description</h4>
+              <p className="text-sm">{workOrder.description}</p>
             </div>
-          )}
-          
-          {workOrder.status === "completed" && (
-            <div className="mt-1 flex items-start gap-1.5 text-sm text-green-600">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Completed: {workOrder.completedDate ? formatDate(new Date(workOrder.completedDate)) : "N/A"}</span>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium mb-2">Scheduled Date</h4>
+                <div className="flex items-center text-sm">
+                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {formatDate(workOrder.scheduledDate)}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Estimated Hours</h4>
+                <div className="flex items-center text-sm">
+                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {workOrder.estimatedHours || "Not specified"}
+                </div>
+              </div>
             </div>
-          )}
-          
-          {/* Show progress percentage if available */}
-          {workOrder.progressPercentage !== undefined && (
-            <div className="mt-1 flex items-center gap-1.5 text-sm">
-              <progress 
-                value={workOrder.progressPercentage} 
-                max="100" 
-                className="w-full h-2 rounded-full"
-              />
-              <span className="text-xs">{workOrder.progressPercentage}%</span>
+            
+            <Separator />
+            
+            <div>
+              <h4 className="font-medium mb-2">Technician</h4>
+              {showAssignOption ? (
+                <div className="flex items-center space-x-2">
+                  <Select 
+                    onValueChange={handleTechnicianAssign}
+                    value={workOrder.technicianId || ''}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Assign technician" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {technicians.map((tech) => (
+                        <SelectItem key={tech.id} value={tech.id}>
+                          {tech.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  {workOrder.technicianId && onUnassign && (
+                    <Button variant="ghost" size="sm" onClick={handleTechnicianUnassign}>
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center text-sm">
+                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {workOrder.technicianName || "Not assigned"}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2 justify-end">
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={() => setShowProgressTracker(!showProgressTracker)}
-          >
-            {showProgressTracker ? "Hide Progress" : "Show Progress"}
-          </Button>
-          
-          {onUnassign && (
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onUnassign(workOrder.id)}
-            >
-              Unassign
-            </Button>
-          )}
-          
-          {showCompletionOptions && workOrder.status !== "completed" && (
-            <Button 
-              size="sm" 
-              onClick={handleOpenCompletionDialog}
-              variant={workOrder.status === "pending-completion" ? "outline" : "default"}
-            >
-              {workOrder.status === "pending-completion" ? "Update Status" : "Complete Work Order"}
-            </Button>
-          )}
-        </div>
-      </div>
-      
-      {showProgressTracker && (
-        <div className="mt-4">
-          <WorkOrderProgressTracker 
-            workOrder={workOrder} 
-            onProgressUpdate={handleProgressUpdate}
-          />
-        </div>
-      )}
+            
+            {(workOrder.email || workOrder.phoneNumber) && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h4 className="font-medium mb-2">Contact Information</h4>
+                  {workOrder.phoneNumber && (
+                    <div className="flex items-center text-sm">
+                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {workOrder.phoneNumber}
+                    </div>
+                  )}
+                  {workOrder.email && (
+                    <div className="flex items-center text-sm">
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {workOrder.email}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            
+            <Separator />
+            
+            <WorkOrderProgressTracker workOrder={workOrder} />
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              {workOrder.status !== "completed" && workOrder.status !== "cancelled" && (
+                <Button onClick={handleComplete}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Complete
+                </Button>
+              )}
+              <Button variant="outline" onClick={handleClose}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
       
       <WorkOrderCompletionDialog
         workOrder={workOrder}
-        isOpen={isCompletionDialogOpen}
-        onClose={handleCompletionDialogClose}
-        onComplete={handleWorkOrderStatusUpdate}
+        open={showCompletionDialog}
+        onClose={() => setShowCompletionDialog(false)}
+        onComplete={() => {
+          setShowCompletionDialog(false);
+          handleClose();
+        }}
       />
     </>
   );
-};
-
-export default WorkOrderDetailsPanel;
+}

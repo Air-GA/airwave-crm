@@ -1,24 +1,66 @@
-
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import MainLayout from "@/components/layout/MainLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import TechLocationMap from "@/components/maps/TechLocationMap";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { formatDate } from "@/lib/date-utils";
-import { fetchTechnicians } from "@/services/technicianService";
-import MapView from "@/components/maps/MapView";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
-import WorkOrderDetailsPanel from "@/components/workorders/WorkOrderDetailsPanel";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RefreshCw } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/components/ui/use-toast";
+import { 
+  fetchTechnicians, 
+  updateTechnicianLocation 
+} from "@/services/technicianService";
+import { 
+  fetchWorkOrders, 
   assignWorkOrder, 
-  unassignWorkOrder,
-  useWorkOrderStore
+  unassignWorkOrder, 
+  useWorkOrderStore 
 } from "@/services/workOrderService";
-import { Technician, WorkOrder } from "@/types";
+import { WorkOrder, Technician } from "@/types";
+import { WorkOrderDetailsPanel } from "@/components/workorders/WorkOrderDetailsPanel";
+
+interface TechFilterProps {
+  selectedTechnicianId: string; // Changed from any to string
+  onTechSelect: (techId: string) => void;
+  technicians: Technician[];
+}
+
+const TechFilter = ({ selectedTechnicianId, onTechSelect, technicians }: TechFilterProps) => {
+  return (
+    <Select value={selectedTechnicianId} onValueChange={onTechSelect}>
+      <SelectTrigger className="w-[180px]">
+        <SelectValue placeholder="Filter by technician" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All Technicians</SelectItem>
+        {technicians.map((tech) => (
+          <SelectItem key={tech.id} value={tech.id}>
+            {tech.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
 
 const Dispatch = () => {
   const [date, setDate] = useState<Date>(new Date());
@@ -187,7 +229,7 @@ const Dispatch = () => {
           </div>
 
           <div className="grid gap-6">
-            <MapView selectedTechnicianId={selectedTechnicianId} />
+            <TechLocationMap selectedTechnicianId={selectedTechnicianId} />
 
             <Card>
               <CardHeader>

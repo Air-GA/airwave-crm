@@ -1,160 +1,143 @@
-
-// Update the import to use the correct import path 
+import React from "react";
 import { useWorkOrderStore } from "@/services/workOrderService";
-
-import React, { useMemo } from "react";
-import { Technician, WorkOrder } from "@/types";
+import { useTechnicianStore } from "@/services/technicianService";
+import { Calendar, Clock, MapPin, User } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/date-utils";
-import { Clock, MapPin } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { WorkOrder, Technician } from "@/types";
 
 interface TechnicianScheduleViewProps {
-  technician: Technician | null;
-  workOrders: WorkOrder[];
-  selectedDate: Date;
-  showAllAppointments?: boolean;
-  onWorkOrderClick?: (workOrder: WorkOrder) => void;
-  isLoading?: boolean;
+  technicianId?: string;
+  date?: Date;
+  onSelectWorkOrder?: (workOrder: WorkOrder) => void;
 }
 
 const TechnicianScheduleView = ({
-  technician,
-  workOrders,
-  selectedDate,
-  showAllAppointments = false,
-  onWorkOrderClick,
-  isLoading = false,
+  technicianId,
+  date = new Date(),
+  onSelectWorkOrder,
 }: TechnicianScheduleViewProps) => {
+  const workOrders = useWorkOrderStore((state) => state.workOrders);
+  const technicians = useTechnicianStore((state) => state.technicians);
   
-  const relevantWorkOrders = useMemo(() => {
-    if (isLoading) return [];
+  // Filter work orders for the selected technician and date
+  const technicianWorkOrders = React.useMemo(() => {
+    if (!technicianId) return [];
     
-    const filtered = workOrders.filter((order) => {
-      // Filter by date
-      const orderDate = new Date(order.scheduledDate);
-      const dateMatches =
-        orderDate.getFullYear() === selectedDate.getFullYear() &&
-        orderDate.getMonth() === selectedDate.getMonth() &&
-        orderDate.getDate() === selectedDate.getDate();
-        
-      // Filter by technician if applicable
-      const techMatches = showAllAppointments || 
-        (technician && order.technicianId === technician.id);
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    return workOrders.filter((order) => {
+      // Check if assigned to this technician
+      if (order.technicianId !== technicianId) return false;
       
-      return dateMatches && (techMatches || !order.technicianId);
+      // Check if scheduled for the selected date
+      const orderDate = new Date(order.scheduledDate);
+      orderDate.setHours(0, 0, 0, 0);
+      
+      return orderDate.getTime() === selectedDate.getTime();
     });
-    
-    // Sort by time
-    return filtered.sort((a, b) => {
+  }, [workOrders, technicianId, date]);
+  
+  // Get technician details
+  const technician = React.useMemo(() => {
+    if (!technicianId) return null;
+    return technicians.find((tech) => tech.id === technicianId) || null;
+  }, [technicians, technicianId]);
+  
+  // Sort work orders by scheduled time
+  const sortedWorkOrders = React.useMemo(() => {
+    return [...technicianWorkOrders].sort((a, b) => {
       return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
     });
-  }, [workOrders, technician, selectedDate, showAllAppointments, isLoading]);
+  }, [technicianWorkOrders]);
   
-  const timeSlots = useMemo(() => {
-    const slots = [];
-    for (let hour = 7; hour <= 19; hour++) {
-      const time = hour < 12 
-        ? `${hour}:00 AM` 
-        : hour === 12 
-          ? `${hour}:00 PM`
-          : `${hour - 12}:00 PM`;
-      
-      const slotOrders = relevantWorkOrders.filter(order => {
-        const orderDate = new Date(order.scheduledDate);
-        return orderDate.getHours() === hour;
-      });
-      
-      slots.push({
-        time,
-        hour,
-        workOrders: slotOrders,
-      });
-    }
-    return slots;
-  }, [relevantWorkOrders]);
-  
-  if (isLoading) {
+  if (!technicianId || !technician) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading schedule...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (relevantWorkOrders.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-muted-foreground mb-2">No appointments scheduled for this day</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Technician Schedule</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-center py-8">
+            Select a technician to view their schedule
+          </p>
+        </CardContent>
+      </Card>
     );
   }
   
   return (
-    <div className="space-y-4">
-      {timeSlots.map((slot) => (
-        <div key={slot.hour} className="relative">
-          <div className="sticky top-0 bg-background z-10 py-1">
-            <div className="flex items-center">
-              <div className="w-16 text-sm font-medium">{slot.time}</div>
-              <div className="h-px flex-grow bg-border"></div>
-            </div>
-          </div>
-          
-          <div className="ml-16 space-y-2">
-            {slot.workOrders.length === 0 ? (
-              <div className="h-6"></div>
-            ) : (
-              slot.workOrders.map((order) => (
-                <div
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>{technician.name}'s Schedule</span>
+          <Badge className={
+            technician.status === 'available' ? 'bg-green-500' :
+            technician.status === 'busy' ? 'bg-orange-500' : 'bg-gray-500'
+          }>
+            {technician.status}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center mb-4">
+          <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+          <span>{formatDate(date)}</span>
+        </div>
+        
+        {sortedWorkOrders.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">
+            No work orders scheduled for this day
+          </p>
+        ) : (
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {sortedWorkOrders.map((order) => (
+                <div 
                   key={order.id}
-                  className={`p-3 rounded-md cursor-pointer transition-colors ${
-                    order.status === "completed"
-                      ? "bg-green-100 dark:bg-green-900/20 hover:bg-green-200 dark:hover:bg-green-900/30"
-                      : order.status === "in-progress"
-                      ? "bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/30"
-                      : order.status === "pending"
-                      ? "bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30"
-                      : "bg-muted hover:bg-muted/80"
-                  }`}
-                  onClick={() => onWorkOrderClick && onWorkOrderClick(order)}
+                  className="p-3 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => onSelectWorkOrder && onSelectWorkOrder(order)}
                 >
-                  <div className="flex justify-between">
-                    <div className="font-medium">{order.customerName}</div>
-                    <div className="text-sm text-muted-foreground">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-medium">{order.customerName}</h4>
+                      <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {order.address}
+                      </div>
+                    </div>
+                    <Badge className={
+                      order.priority === 'low' ? 'bg-blue-500' :
+                      order.priority === 'medium' ? 'bg-yellow-500' :
+                      order.priority === 'high' ? 'bg-orange-500' : 'bg-red-500'
+                    }>
+                      {order.priority}
+                    </Badge>
+                  </div>
+                  
+                  <Separator className="my-2" />
+                  
+                  <div className="flex justify-between text-sm">
+                    <div className="flex items-center">
+                      <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
                       {new Date(order.scheduledDate).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
                     </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground flex items-center">
-                    <MapPin className="mr-1 h-3 w-3" /> {order.address}
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="text-sm">
-                      {order.type.charAt(0).toUpperCase() + order.type.slice(1)} 
-                    </div>
-                    {!technician && order.technicianId && (
-                      <div className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded">
-                        {order.technicianName || "Assigned"}
-                      </div>
-                    )}
-                    {!order.technicianId && showAllAppointments && (
-                      <div className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded">
-                        Unassigned
-                      </div>
-                    )}
+                    <div className="capitalize">{order.type}</div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

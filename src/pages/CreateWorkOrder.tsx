@@ -1,4 +1,3 @@
-
 // Only updating the specific import line that needs to be changed
 // This is a partial update of the file
 
@@ -46,7 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarIcon, Plus, Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { createWorkOrder } from "@/services/dataService";
+import { createWorkOrder } from "@/services/workOrderService";
 import { WorkOrder } from "@/types";
 
 const workOrderSchema = z.object({
@@ -121,48 +120,41 @@ const CreateWorkOrder = () => {
     }
   }, [customerId, customerName, customerPhone, customerEmail, customerAddress, form]);
   
-  const onSubmit = (data: WorkOrderFormValues) => {
-    const formattedParts = parts.map(part => ({
-      id: part.id,
-      name: part.name,
-      quantity: part.quantity,
-      price: part.price
-    }));
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmitting(true);
     
-    // Ensure type is correctly cast to a valid WorkOrder type
-    const workOrderType = data.type as WorkOrder["type"];
-    const workOrderPriority = data.priority as WorkOrder["priority"];
-    
-    createWorkOrder({
-      status: "pending",
-      customerId: customerId || undefined,
-      customerName: data.customerName,
-      email: data.email,
-      phoneNumber: data.phoneNumber,
-      address: data.address,
-      type: workOrderType,
-      description: data.description,
-      priority: workOrderPriority,
-      scheduledDate: data.scheduledDate.toISOString(),
-      createdAt: new Date().toISOString(),
-      partsUsed: formattedParts.length > 0 ? formattedParts : undefined,
-    })
-    .then((newWorkOrder) => {
+    try {
+      const workOrderData: Omit<WorkOrder, "id" | "createdAt" | "updatedAt"> = {
+        customerName,
+        customerId: customer?.id || "unknown",
+        address: address || "",
+        type,
+        description,
+        priority,
+        status: "pending",
+        scheduledDate: scheduledDate?.toISOString() || new Date().toISOString(),
+        notes: notes ? [notes] : [],
+      };
+      
+      await createWorkOrder(workOrderData);
+      
       toast({
         title: "Work Order Created",
-        description: `Work order #${newWorkOrder.id} has been created successfully.`,
+        description: "The work order has been created successfully.",
       });
       
       navigate("/work-orders");
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error("Error creating work order:", error);
       toast({
         title: "Error",
         description: "Failed to create work order. Please try again.",
         variant: "destructive",
       });
-    });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const addPart = () => {
