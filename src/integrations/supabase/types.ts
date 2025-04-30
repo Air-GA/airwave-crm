@@ -975,7 +975,9 @@ export type Database = {
           original_crm_id: string | null
           region_id: string | null
           sales_code_id: string | null
+          scheduled_date: string | null
           scheduled_datetime: string | null
+          scheduled_time: string | null
           service_address_id: string
           status_id: string | null
           technician_id: string | null
@@ -993,7 +995,9 @@ export type Database = {
           original_crm_id?: string | null
           region_id?: string | null
           sales_code_id?: string | null
+          scheduled_date?: string | null
           scheduled_datetime?: string | null
+          scheduled_time?: string | null
           service_address_id: string
           status_id?: string | null
           technician_id?: string | null
@@ -1011,7 +1015,9 @@ export type Database = {
           original_crm_id?: string | null
           region_id?: string | null
           sales_code_id?: string | null
+          scheduled_date?: string | null
           scheduled_datetime?: string | null
+          scheduled_time?: string | null
           service_address_id?: string
           status_id?: string | null
           technician_id?: string | null

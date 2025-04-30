@@ -1,16 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { supabase } from "@/integrations/supabase/client";
-import MapView from "@/components/maps/MapView";
-import TechnicianScheduleView from "@/components/schedule/TechnicianScheduleView";
 import { 
   RefreshCw, 
-  Calendar as CalendarIcon, 
-  MapPin, 
-  ChevronDown 
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { formatDate } from "@/lib/date-utils";
 import { 
@@ -28,96 +23,57 @@ import {
   Alert,
   AlertDescription
 } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { 
   Card, 
   CardContent, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
 import { WorkOrderDetailsPanel } from "@/components/workorders/WorkOrderDetailsPanel";
 import { useToast } from "@/hooks/use-toast";
-import { useWorkOrderStore } from "@/services/workOrderStore";
-import { fetchTechnicians, assignWorkOrder, unassignWorkOrder } from "@/services/technicianService";
-import { getCustomerById } from "@/services/customerStore";
-import { Technician, WorkOrder, Customer } from "@/types";
-
-interface TechFilterProps {
-  selectedTechnicianId: string; 
-  onTechSelect: (techId: string) => void;
-  technicians: Technician[];
-}
-
-const TechFilter = ({ selectedTechnicianId, onTechSelect, technicians }: TechFilterProps) => {
-  return (
-    <Select value={selectedTechnicianId} onValueChange={onTechSelect}>
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Filter by technician" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All Technicians</SelectItem>
-        {technicians.map((tech) => (
-          <SelectItem key={tech.id} value={tech.id}>
-            {tech.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-};
+import { Technician, WorkOrder } from "@/types";
+import DragAndDropScheduler from "@/components/schedule/DragAndDropScheduler";
+import { 
+  fetchWorkOrdersFromSupabase, 
+  fetchCustomersForWorkOrders, 
+  fetchAddressesForWorkOrders, 
+  fetchTechniciansFromSupabase 
+} from "@/services/dispatchService";
 
 const Dispatch = () => {
   const [date, setDate] = useState<Date>(new Date());
-  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [isWorkOrderDetailOpen, setIsWorkOrderDetailOpen] = useState(false);
-  const [customerData, setCustomerData] = useState<Record<string, Customer>>({});
+  const [activeTab, setActiveTab] = useState<string>("schedule");
   const { toast } = useToast();
-
-  const workOrders = useWorkOrderStore(state => state.workOrders);
-  const setWorkOrders = useWorkOrderStore(state => state.setWorkOrders);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Load technicians
-      const techData = await fetchTechnicians();
+      // Fetch technicians
+      const techData = await fetchTechniciansFromSupabase();
       setTechnicians(techData);
+
+      // Fetch work orders
+      let workOrdersData = await fetchWorkOrdersFromSupabase();
       
-      // Load customers for any work orders
-      const workOrdersData = useWorkOrderStore.getState().workOrders;
-      const customerIds = [...new Set(workOrdersData.map(wo => wo.customerId))];
+      // Fetch related data
+      workOrdersData = await fetchCustomersForWorkOrders(workOrdersData);
+      workOrdersData = await fetchAddressesForWorkOrders(workOrdersData);
       
-      // Fetch customer data for each work order
-      const customersMap: Record<string, Customer> = {};
-      for (const customerId of customerIds) {
-        try {
-          const customer = await getCustomerById(customerId);
-          if (customer) {
-            customersMap[customerId] = customer;
-          }
-        } catch (err) {
-          console.error(`Failed to load customer data for ID ${customerId}:`, err);
-        }
-      }
-      
-      setCustomerData(customersMap);
-      
-      // Check if we need a more refined view
-      if (techData.length > 0 && !selectedTechnicianId) {
-        setSelectedTechnicianId(techData[0].id);
-      }
+      setWorkOrders(workOrdersData);
       
     } catch (error) {
       console.error("Failed to load dispatch data:", error);
@@ -140,60 +96,12 @@ const Dispatch = () => {
   };
 
   const handleWorkOrderClick = (workOrder: WorkOrder) => {
-    // Enhance the work order with customer info if available
-    if (customerData[workOrder.customerId]) {
-      const enhancedWorkOrder = {
-        ...workOrder,
-        customerDetails: customerData[workOrder.customerId]
-      };
-      setSelectedWorkOrder(enhancedWorkOrder as any);
-    } else {
-      setSelectedWorkOrder(workOrder);
-    }
+    setSelectedWorkOrder(workOrder);
     setIsWorkOrderDetailOpen(true);
   };
 
-  const handleAssignWorkOrder = async (workOrderId: string, technicianId: string) => {
-    try {
-      const technician = technicians.find(t => t.id === technicianId);
-      if (!technician) return;
-      
-      await assignWorkOrder(workOrderId, technicianId, technician.name);
-      
-      await loadData();
-      
-      toast({
-        title: "Work Order Assigned",
-        description: `Successfully assigned to ${technician.name}.`,
-      });
-    } catch (error) {
-      console.error("Failed to assign work order:", error);
-      toast({
-        title: "Error",
-        description: "Failed to assign work order. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUnassignWorkOrder = async (workOrderId: string) => {
-    try {
-      await unassignWorkOrder(workOrderId);
-      
-      await loadData();
-      
-      toast({
-        title: "Work Order Unassigned",
-        description: "Successfully removed technician assignment.",
-      });
-    } catch (error) {
-      console.error("Failed to unassign work order:", error);
-      toast({
-        title: "Error",
-        description: "Failed to unassign work order. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleWorkOrderUpdated = () => {
+    loadData();
   };
   
   return (
@@ -203,13 +111,32 @@ const Dispatch = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dispatch</h1>
             <p className="text-muted-foreground">
-              Manage technician locations and service calls
+              Manage technician schedules and work orders
             </p>
           </div>
-          <Button onClick={handleRefresh}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh Data
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formatDate(date)}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(date) => date && setDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <Button onClick={handleRefresh}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -218,77 +145,41 @@ const Dispatch = () => {
           </Alert>
         )}
 
-        <div className="grid gap-6 md:grid-cols-[300px_1fr]">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Calendar</CardTitle>
+        <Tabs defaultValue="schedule" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            <TabsTrigger value="map">Map</TabsTrigger>
+          </TabsList>
+          <TabsContent value="schedule" className="space-y-4 mt-2">
+            <Card className="flex-1">
+              <CardHeader className="py-3">
+                <CardTitle>Technician Schedule</CardTitle>
               </CardHeader>
               <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(date) => date && setDate(date)}
-                  className="rounded-md border"
+                <DragAndDropScheduler
+                  technicians={technicians}
+                  workOrders={workOrders}
+                  selectedDate={date}
+                  isLoading={loading}
+                  onWorkOrderUpdated={handleWorkOrderUpdated}
                 />
               </CardContent>
             </Card>
-
+          </TabsContent>
+          
+          <TabsContent value="map">
             <Card>
               <CardHeader>
-                <CardTitle>Technicians</CardTitle>
+                <CardTitle>Technician Locations</CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {technicians.map((technician) => (
-                    <div
-                      key={technician.id}
-                      className={`cursor-pointer p-3 transition-colors hover:bg-muted ${
-                        technician.id === selectedTechnicianId ? "bg-muted" : ""
-                      }`}
-                      onClick={() => setSelectedTechnicianId(technician.id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`h-2 w-2 rounded-full ${
-                            technician.status === "available"
-                              ? "bg-green-500"
-                              : technician.status === "busy"
-                              ? "bg-amber-500"
-                              : "bg-gray-500"
-                          }`}
-                        />
-                        <p>{technician.name}</p>
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="h-[600px]">
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  Map view is not implemented in this demo
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          <div className="grid gap-6">
-            {/* Remove the selectedTechnicianId prop from MapView if it doesn't accept it */}
-            <MapView />
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{`Schedule - ${formatDate(date)}`}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedTechnicianId && (
-                  <TechnicianScheduleView
-                    technician={technicians.find(t => t.id === selectedTechnicianId) || null}
-                    selectedDate={date}
-                    onWorkOrderClick={handleWorkOrderClick}
-                    isLoading={loading}
-                    customerData={customerData}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isWorkOrderDetailOpen} onOpenChange={setIsWorkOrderDetailOpen}>
           <DialogContent className="sm:max-w-md">
@@ -298,11 +189,12 @@ const Dispatch = () => {
             {selectedWorkOrder && (
               <WorkOrderDetailsPanel 
                 workOrder={selectedWorkOrder}
-                onUnassign={handleUnassignWorkOrder}
                 showAssignOption={true}
                 technicians={technicians}
-                onAssign={handleAssignWorkOrder}
-                customerData={customerData[selectedWorkOrder.customerId]}
+                onAssign={async () => {
+                  await handleWorkOrderUpdated();
+                  setIsWorkOrderDetailOpen(false);
+                }}
               />
             )}
           </DialogContent>
