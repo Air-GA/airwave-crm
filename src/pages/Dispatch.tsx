@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { 
@@ -195,6 +194,7 @@ const Dispatch = () => {
                   await handleWorkOrderUpdated();
                   setIsWorkOrderDetailOpen(false);
                 }}
+                onUnassign={() => {}}
               />
             )}
           </DialogContent>

@@ -34,11 +34,11 @@ export const fetchWorkOrdersFromSupabase = async (): Promise<WorkOrder[]> => {
       customerName: 'Loading...', // Will be filled in with customer data later
       address: 'Loading...', // Will be filled in with address data later
       scheduledDate: wo.scheduled_date || wo.scheduled_datetime,
-      scheduledTime: wo.scheduled_time,
       status: getWorkOrderStatus(wo.status_id),
       priority: 'medium', // Default priority
       technicianId: wo.technician_id,
-      serviceAddressId: wo.service_address_id
+      createdAt: new Date().toISOString(), // Adding required field with default value
+      updatedAt: new Date().toISOString(), // Adding required field with default value
     }));
 
     return workOrders;
@@ -84,16 +84,18 @@ export const fetchCustomersForWorkOrders = async (workOrders: WorkOrder[]): Prom
 // Fetch service addresses for work orders
 export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Promise<WorkOrder[]> => {
   try {
-    // Get unique service address IDs
-    const addressIds = [...new Set(workOrders.map(wo => wo.serviceAddressId))];
+    // Get unique service address IDs - need to check if this field exists in workOrder
+    const serviceAddressIds = workOrders
+      .filter(wo => 'serviceAddressId' in wo as any)
+      .map(wo => (wo as any).serviceAddressId);
     
-    if (addressIds.length === 0) return workOrders;
+    if (serviceAddressIds.length === 0) return workOrders;
 
     // Fetch address data
     const { data: addresses, error } = await supabase
       .from('service_addresses')
       .select('id, address_line1, address_line2, city, state, zip')
-      .in('id', addressIds);
+      .in('id', serviceAddressIds);
 
     if (error) throw error;
 
@@ -110,10 +112,13 @@ export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Prom
     }, {} as Record<string, string>);
 
     // Enhance work orders with addresses
-    return workOrders.map(wo => ({
-      ...wo,
-      address: addressMap[wo.serviceAddressId] || 'No address'
-    }));
+    return workOrders.map(wo => {
+      const serviceAddressId = (wo as any).serviceAddressId;
+      return {
+        ...wo,
+        address: serviceAddressId && addressMap[serviceAddressId] ? addressMap[serviceAddressId] : 'No address'
+      };
+    });
   } catch (error) {
     console.error("Error fetching addresses:", error);
     return workOrders; // Return original work orders if there's an error

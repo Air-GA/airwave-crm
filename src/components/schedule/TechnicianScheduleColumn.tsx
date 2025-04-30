@@ -17,7 +17,7 @@ const ScheduledWorkOrder: React.FC<ScheduledWorkOrderProps> = ({ workOrder }) =>
       <div className="text-xs text-muted-foreground">{workOrder.customerName}</div>
       <div className="text-xs mt-1 flex items-center">
         <Calendar className="h-3 w-3 mr-1" />
-        {workOrder.scheduledTime || "No time set"}
+        {workOrder.scheduledDate || "No time set"}
       </div>
     </Card>
   );
