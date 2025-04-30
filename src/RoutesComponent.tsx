@@ -2,6 +2,7 @@
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import CustomersList from './pages/CustomersList';
+import Customers from './pages/Customers';
 import Schedule from './pages/Schedule';
 import Login from './pages/Login';
 import Dispatch from './pages/Dispatch';
@@ -25,6 +26,7 @@ const RoutesComponent = () => {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/customers" element={<Customers />} />
       <Route path="/customers-list" element={<CustomersList />} />
       <Route path="/schedule" element={<Schedule />} />
       <Route path="/dispatch" element={<Dispatch />} />

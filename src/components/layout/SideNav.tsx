@@ -40,7 +40,7 @@ export const navigationItems = [
   },
   {
     title: "Customers",
-    href: "/customers-list",
+    href: "/customers",
     icon: Users,
   },
   {
