@@ -39,6 +39,7 @@ export const fetchWorkOrdersFromSupabase = async (): Promise<WorkOrder[]> => {
       technicianId: wo.technician_id,
       createdAt: new Date().toISOString(), // Adding required field with default value
       updatedAt: new Date().toISOString(), // Adding required field with default value
+      serviceAddressId: wo.service_address_id, // Add serviceAddressId field
     }));
 
     return workOrders;
@@ -84,10 +85,10 @@ export const fetchCustomersForWorkOrders = async (workOrders: WorkOrder[]): Prom
 // Fetch service addresses for work orders
 export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Promise<WorkOrder[]> => {
   try {
-    // Get unique service address IDs - need to check if this field exists in workOrder
+    // Get unique service address IDs - checking if serviceAddressId exists
     const serviceAddressIds = workOrders
-      .filter(wo => 'serviceAddressId' in wo as any)
-      .map(wo => (wo as any).serviceAddressId);
+      .filter(wo => wo.serviceAddressId)
+      .map(wo => wo.serviceAddressId);
     
     if (serviceAddressIds.length === 0) return workOrders;
 
@@ -113,10 +114,11 @@ export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Prom
 
     // Enhance work orders with addresses
     return workOrders.map(wo => {
-      const serviceAddressId = (wo as any).serviceAddressId;
       return {
         ...wo,
-        address: serviceAddressId && addressMap[serviceAddressId] ? addressMap[serviceAddressId] : 'No address'
+        address: wo.serviceAddressId && addressMap[wo.serviceAddressId] 
+          ? addressMap[wo.serviceAddressId] 
+          : 'No address'
       };
     });
   } catch (error) {

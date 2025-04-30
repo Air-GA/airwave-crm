@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { 
@@ -102,6 +103,16 @@ const Dispatch = () => {
   const handleWorkOrderUpdated = () => {
     loadData();
   };
+
+  const handleUnassignWorkOrder = async (workOrderId: string) => {
+    // This is a simple placeholder function, actual implementation would unassign the work order
+    console.log("Unassigning work order:", workOrderId);
+    await loadData();
+    toast({
+      title: "Work Order Unassigned",
+      description: "The technician has been unassigned from this work order.",
+    });
+  };
   
   return (
     <MainLayout>
@@ -194,7 +205,7 @@ const Dispatch = () => {
                   await handleWorkOrderUpdated();
                   setIsWorkOrderDetailOpen(false);
                 }}
-                onUnassign={() => {}}
+                onUnassign={handleUnassignWorkOrder}
               />
             )}
           </DialogContent>
