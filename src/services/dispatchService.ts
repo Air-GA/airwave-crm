@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { WorkOrder, Technician } from "@/types";
 
@@ -85,10 +84,10 @@ export const fetchCustomersForWorkOrders = async (workOrders: WorkOrder[]): Prom
 // Fetch service addresses for work orders
 export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Promise<WorkOrder[]> => {
   try {
-    // Get unique service address IDs - checking if serviceAddressId exists in the custom type extensions
+    // Get unique service address IDs
     const serviceAddressIds = workOrders
       .filter(wo => wo.serviceAddressId !== undefined)
-      .map(wo => wo.serviceAddressId as string);
+      .map(wo => wo.serviceAddressId);
     
     if (serviceAddressIds.length === 0) return workOrders;
 
@@ -116,8 +115,8 @@ export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Prom
     return workOrders.map(wo => {
       return {
         ...wo,
-        address: wo.serviceAddressId !== undefined && addressMap[wo.serviceAddressId as string] 
-          ? addressMap[wo.serviceAddressId as string] 
+        address: wo.serviceAddressId !== undefined && addressMap[wo.serviceAddressId] 
+          ? addressMap[wo.serviceAddressId] 
           : 'No address'
       };
     });

@@ -88,4 +88,5 @@ export interface WorkOrder {
   partsUsed?: any[];
   completionRequired?: boolean;
   completionDetails?: any;
+  serviceAddressId?: string; // Added this field to fix type errors
 }
