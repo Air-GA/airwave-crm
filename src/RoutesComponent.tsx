@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import CustomersList from './pages/CustomersList';
 import Customers from './pages/Customers';
@@ -20,8 +20,14 @@ import Messages from './pages/Messages';
 import ServiceAddresses from './pages/ServiceAddresses';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
+import { fetchCustomers } from './services/customerStore';
 
 const RoutesComponent = () => {
+  useEffect(() => {
+    // Initialize customer store when the app loads
+    fetchCustomers();
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<Index />} />
