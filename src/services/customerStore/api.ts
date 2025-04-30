@@ -1,96 +1,9 @@
-import { create } from "zustand";
-import { Customer, ServiceAddress } from "@/types";
+
+import { Customer } from "@/types";
 import { customers as initialCustomers } from "@/data/mockData";
 import { supabase } from "@/integrations/supabase/client";
-
-interface CustomerState {
-  customers: Customer[];
-  setCustomers: (customers: Customer[]) => void;
-  isLoading: boolean;
-  setIsLoading: (isLoading: boolean) => void;
-  error: string | null;
-  setError: (error: string | null) => void;
-  selectedCustomerId: string | null;
-  setSelectedCustomerId: (id: string | null) => void;
-  searchFilter: string;
-  setSearchFilter: (query: string) => void;
-  filteredCustomers: Customer[];
-}
-
-export const useCustomerStore = create<CustomerState>((set, get) => ({
-  customers: [],
-  setCustomers: (customers) => set({ customers }),
-  isLoading: false,
-  setIsLoading: (isLoading) => set({ isLoading }),
-  error: null,
-  setError: (error) => set({ error }),
-  selectedCustomerId: null,
-  setSelectedCustomerId: (id) => set({ selectedCustomerId: id }),
-  searchFilter: '',
-  setSearchFilter: (query) => set({ searchFilter: query }),
-  get filteredCustomers() {
-    const { customers, searchFilter } = get();
-    if (!searchFilter.trim()) return customers;
-    
-    const lowerCaseQuery = searchFilter.toLowerCase();
-    return customers.filter(customer => {
-      return (
-        customer.name?.toLowerCase().includes(lowerCaseQuery) ||
-        customer.email?.toLowerCase().includes(lowerCaseQuery) ||
-        customer.phone?.toLowerCase().includes(lowerCaseQuery) ||
-        customer.address?.toLowerCase().includes(lowerCaseQuery) ||
-        customer.billCity?.toLowerCase().includes(lowerCaseQuery) ||
-        customer.serviceAddresses?.some(addr => 
-          addr.address.toLowerCase().includes(lowerCaseQuery)
-        )
-      );
-    });
-  }
-}));
-
-// Format customer data consistently across the app
-export const formatCustomerData = (customer: any): Customer => {
-  // Map service addresses to the expected format
-  const serviceAddresses = customer.serviceAddresses?.map(addr => ({
-    id: addr.id || `addr-${Math.random().toString(36).substring(2, 11)}`,
-    address: addr.address || '',
-    isPrimary: typeof addr.isPrimary === 'boolean' ? addr.isPrimary : true,
-    notes: addr.notes || ''
-  })) || [];
-
-  // Ensure the primary address is available
-  const primaryAddress = serviceAddresses.find(addr => addr.isPrimary)?.address ||
-    serviceAddresses[0]?.address ||
-    customer.address || '';
-
-  // Format the customer object with all required fields
-  return {
-    id: customer.id,
-    name: customer.name || 'Unknown',
-    email: customer.email || '',
-    phone: customer.phone || '',
-    address: primaryAddress,
-    billAddress: customer.billAddress || '',
-    billCity: customer.billCity || '',
-    serviceAddresses: serviceAddresses,
-    type: (customer.type === 'commercial' ? 'commercial' : 'residential') as Customer["type"],
-    status: (customer.status === 'active' || customer.status === 'inactive' || 
-             customer.status === 'pending' || customer.status === 'new') ? 
-             customer.status as Customer["status"] : 'active',
-    createdAt: customer.createdAt || new Date().toISOString(),
-    lastService: customer.lastService || null
-  };
-};
-
-// Initialize the store with data from mockData
-export const initializeCustomerStore = () => {
-  const { setCustomers, setIsLoading } = useCustomerStore.getState();
-  
-  // Format the initial customers data consistently
-  const formattedCustomers = initialCustomers.map(formatCustomerData);
-  
-  setCustomers(formattedCustomers);
-};
+import { formatCustomerData } from "./formatters";
+import { useCustomerStore } from "./store";
 
 // Fetch customers from Supabase or fall back to mock data
 export const fetchCustomers = async (): Promise<Customer[]> => {
@@ -225,12 +138,4 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
     const mockCustomer = initialCustomers.find(c => c.id === id);
     return mockCustomer ? formatCustomerData(mockCustomer) : null;
   }
-};
-
-// Update CustomersList page to use the store
-export const updateCustomersList = () => {
-  // Initialize the store when the app starts
-  initializeCustomerStore();
-  // Fetch customers when needed
-  fetchCustomers();
 };

@@ -13,7 +13,7 @@ import { CustomerDetails } from "@/components/customers/CustomerDetails";
 import { CustomerEmptyState } from "@/components/customers/CustomerEmptyState";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useCustomerStore } from "@/services/customerStore";
+import { useCustomerStore, fetchCustomers } from "@/services/customerStore";
 
 const Customers = () => {
   const isMobile = useIsMobile();
