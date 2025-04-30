@@ -1,4 +1,3 @@
-
 import { create } from "zustand";
 import { Customer, ServiceAddress } from "@/types";
 import { customers as initialCustomers } from "@/data/mockData";
@@ -13,9 +12,12 @@ interface CustomerState {
   setError: (error: string | null) => void;
   selectedCustomerId: string | null;
   setSelectedCustomerId: (id: string | null) => void;
+  searchFilter: string;
+  setSearchFilter: (query: string) => void;
+  filteredCustomers: Customer[];
 }
 
-export const useCustomerStore = create<CustomerState>((set) => ({
+export const useCustomerStore = create<CustomerState>((set, get) => ({
   customers: [],
   setCustomers: (customers) => set({ customers }),
   isLoading: false,
@@ -24,6 +26,26 @@ export const useCustomerStore = create<CustomerState>((set) => ({
   setError: (error) => set({ error }),
   selectedCustomerId: null,
   setSelectedCustomerId: (id) => set({ selectedCustomerId: id }),
+  searchFilter: '',
+  setSearchFilter: (query) => set({ searchFilter: query }),
+  get filteredCustomers() {
+    const { customers, searchFilter } = get();
+    if (!searchFilter.trim()) return customers;
+    
+    const lowerCaseQuery = searchFilter.toLowerCase();
+    return customers.filter(customer => {
+      return (
+        customer.name?.toLowerCase().includes(lowerCaseQuery) ||
+        customer.email?.toLowerCase().includes(lowerCaseQuery) ||
+        customer.phone?.toLowerCase().includes(lowerCaseQuery) ||
+        customer.address?.toLowerCase().includes(lowerCaseQuery) ||
+        customer.billCity?.toLowerCase().includes(lowerCaseQuery) ||
+        customer.serviceAddresses?.some(addr => 
+          addr.address.toLowerCase().includes(lowerCaseQuery)
+        )
+      );
+    });
+  }
 }));
 
 // Format customer data consistently across the app

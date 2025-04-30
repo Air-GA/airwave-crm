@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -20,10 +19,7 @@ const CustomersList = () => {
   const { toast } = useToast();
 
   // Get data from the customer store
-  const customers = useCustomerStore(state => state.customers);
-  const isLoading = useCustomerStore(state => state.isLoading);
-  const selectedCustomerId = useCustomerStore(state => state.selectedCustomerId);
-  const setSelectedCustomerId = useCustomerStore(state => state.setSelectedCustomerId);
+  const { filteredCustomers, isLoading, setSearchFilter, selectedCustomerId, setSelectedCustomerId } = useCustomerStore();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   // Initialize on component mount
@@ -71,16 +67,10 @@ const CustomersList = () => {
     loadCustomerDetails();
   }, [selectedCustomerId, toast]);
 
-  const filteredCustomers = customers.filter(customer => {
-    const query = searchQuery.toLowerCase();
-    return (
-      customer.name?.toLowerCase().includes(query) ||
-      customer.email?.toLowerCase().includes(query) ||
-      customer.phone?.toLowerCase().includes(query) ||
-      customer.address?.toLowerCase().includes(query) ||
-      customer.billCity?.toLowerCase().includes(query)
-    );
-  });
+  // Sync search query with the store
+  useEffect(() => {
+    setSearchFilter(searchQuery);
+  }, [searchQuery, setSearchFilter]);
 
   const handleCustomerClick = (customerId: string) => {
     console.log("Customer clicked:", customerId);
