@@ -69,11 +69,7 @@ const Customers = () => {
       setCustomers(transformedCustomers);
     } catch (error) {
       console.error("Error fetching customers:", error);
-      toast({
-        title: "Error fetching customers",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive"
-      });
+      toast.error(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
