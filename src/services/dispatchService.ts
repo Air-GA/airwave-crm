@@ -85,10 +85,10 @@ export const fetchCustomersForWorkOrders = async (workOrders: WorkOrder[]): Prom
 // Fetch service addresses for work orders
 export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Promise<WorkOrder[]> => {
   try {
-    // Get unique service address IDs - checking if serviceAddressId exists
+    // Get unique service address IDs - checking if serviceAddressId exists in the custom type extensions
     const serviceAddressIds = workOrders
-      .filter(wo => wo.serviceAddressId)
-      .map(wo => wo.serviceAddressId);
+      .filter(wo => wo.serviceAddressId !== undefined)
+      .map(wo => wo.serviceAddressId as string);
     
     if (serviceAddressIds.length === 0) return workOrders;
 
@@ -116,8 +116,8 @@ export const fetchAddressesForWorkOrders = async (workOrders: WorkOrder[]): Prom
     return workOrders.map(wo => {
       return {
         ...wo,
-        address: wo.serviceAddressId && addressMap[wo.serviceAddressId] 
-          ? addressMap[wo.serviceAddressId] 
+        address: wo.serviceAddressId !== undefined && addressMap[wo.serviceAddressId as string] 
+          ? addressMap[wo.serviceAddressId as string] 
           : 'No address'
       };
     });
