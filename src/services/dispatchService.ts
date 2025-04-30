@@ -29,7 +29,7 @@ export const fetchWorkOrdersFromSupabase = async (): Promise<WorkOrder[]> => {
     const workOrders: WorkOrder[] = data.map(wo => ({
       id: wo.id,
       description: wo.description || 'No description',
-      type: getWorkOrderType(wo.type_id),
+      type: getWorkOrderType(wo.type_id) as "repair" | "maintenance" | "installation" | "inspection", // Ensure proper typing
       customerId: wo.customer_id,
       customerName: 'Loading...', // Will be filled in with customer data later
       address: 'Loading...', // Will be filled in with address data later
@@ -174,8 +174,8 @@ export const fetchTechniciansFromSupabase = async (): Promise<Technician[]> => {
 // Helper functions for mapping values
 function getWorkOrderType(typeId: string | null): string {
   // In a real application, you would look up the type from a types table
-  // For now, return a default value
-  return 'service';
+  // For now, return a default value that matches the expected union type
+  return 'repair'; // One of the allowed values: "repair" | "maintenance" | "installation" | "inspection"
 }
 
 function getWorkOrderStatus(statusId: string | null): "pending" | "scheduled" | "in-progress" | "completed" | "cancelled" {
