@@ -13,7 +13,7 @@ import { CustomersGrid } from "@/components/customers/CustomersGrid";
 import { CustomerDetails } from "@/components/customers/CustomerDetails";
 import { CustomerEmptyState } from "@/components/customers/CustomerEmptyState";
 import { Button } from "@/components/ui/button";
-import { fetchCustomers, useCustomerStore } from "@/services/customerStore";
+import { supabase } from "@/integrations/supabase/client";
 
 const Customers = () => {
   const isMobile = useIsMobile();
@@ -24,11 +24,62 @@ const Customers = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
   
-  // Use data from the customer store
-  const customers = useCustomerStore(state => state.customers);
-  const isLoading = useCustomerStore(state => state.isLoading);
+  // Replace the store with direct Supabase data
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Initialize on component mount
+  // Function to fetch customers from Supabase
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .select(`
+          id, 
+          name, 
+          status, 
+          billing_city, 
+          billing_address_line1, 
+          billing_state,
+          billing_zip,
+          created_at,
+          updated_at
+        `);
+      
+      if (error) {
+        throw new Error(`Error fetching customers: ${error.message}`);
+      }
+      
+      // Transform the data to match our Customer type
+      const transformedCustomers: Customer[] = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        address: item.billing_address_line1 || '',
+        billAddress: item.billing_address_line1 || '',
+        billCity: item.billing_city || '',
+        status: (item.status as Customer["status"]) || "active",
+        type: "residential", // Default to residential as we don't have this info yet
+        createdAt: item.created_at,
+        // Additional default values to satisfy Customer type
+        serviceAddresses: []
+      }));
+      
+      console.log("Fetched customers:", transformedCustomers);
+      setCustomers(transformedCustomers);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      toast({
+        title: "Error fetching customers",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Fetch customers on component mount
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -58,7 +109,8 @@ const Customers = () => {
   
   // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
-    fetchCustomers(); // Refresh from store
+    // Refresh data after adding a customer
+    fetchCustomers();
     toast.success("Customer added successfully!");
   };
   
