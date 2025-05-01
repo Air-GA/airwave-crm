@@ -1,36 +1,49 @@
 
-import { UserRound, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FileUp, Plus, RefreshCw } from "lucide-react";
+import { SyncThreeCustomersButton } from "../SyncThreeCustomersButton";
 
 interface CustomerEmptyStateProps {
-  userRole: string;
+  userRole?: string;
   onAddCustomer: () => void;
   canAddCustomer: boolean;
+  onRefresh?: () => void;
 }
 
-export const CustomerEmptyState = ({ 
-  userRole, 
-  onAddCustomer, 
-  canAddCustomer
+export const CustomerEmptyState = ({
+  userRole = "admin",
+  onAddCustomer,
+  canAddCustomer,
+  onRefresh
 }: CustomerEmptyStateProps) => {
   return (
-    <div className="rounded-lg border border-dashed p-8 text-center">
-      <UserRound className="mx-auto h-12 w-12 text-muted-foreground" />
-      <h3 className="mt-4 text-lg font-medium">
-        {userRole === 'sales' 
-          ? 'No customers assigned to you' 
-          : 'No customers found'}
-      </h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {userRole === 'sales' 
-          ? 'You don\'t have any customers assigned to you yet.' 
-          : 'Try adjusting your search, or add a new customer.'}
+    <div className="flex flex-col items-center justify-center py-12 px-4 border rounded-md bg-muted/30">
+      <div className="mb-6 bg-primary/10 p-4 rounded-full">
+        <FileUp className="h-10 w-10 text-primary" />
+      </div>
+      <h3 className="text-xl font-semibold mb-2">No Customers Found</h3>
+      <p className="text-muted-foreground text-center mb-6 max-w-md">
+        {userRole === 'customer' 
+          ? 'No customer information is available for your account.' 
+          : 'You haven\'t added any customers yet. Start by adding your first customer or importing from CSV.'}
       </p>
-      {canAddCustomer && (
-        <Button className="mt-4" onClick={onAddCustomer}>
-          <Plus className="mr-2 h-4 w-4" /> Add Customer
-        </Button>
-      )}
+      <div className="flex flex-wrap gap-3 justify-center">
+        {canAddCustomer && (
+          <Button variant="default" onClick={onAddCustomer}>
+            <Plus className="mr-2 h-4 w-4" /> Add Customer
+          </Button>
+        )}
+        
+        <SyncThreeCustomersButton 
+          onSyncComplete={onRefresh ?? (() => {})} 
+        />
+        
+        {onRefresh && (
+          <Button variant="outline" onClick={onRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Refresh Data
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

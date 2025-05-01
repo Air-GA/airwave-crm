@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getStaticCustomers } from "@/services/customerSyncService";
+import { Customer } from "@/types";
+import { useCustomerStore } from "@/services/customerStore";
 
 interface PurchaseOrderDialogProps {
   open: boolean;
@@ -24,7 +25,7 @@ export function PurchaseOrderDialog({
   const [selectedVendor, setSelectedVendor] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const { toast } = useToast();
-  const customers = getStaticCustomers();
+  const { customers } = useCustomerStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

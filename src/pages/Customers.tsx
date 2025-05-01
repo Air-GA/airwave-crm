@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -13,7 +14,7 @@ import { CustomerDetails } from "@/components/customers/CustomerDetails";
 import { CustomerEmptyState } from "@/components/customers/CustomerEmptyState";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useCustomerStore } from "@/services/customerStore";
+import { useCustomerStore, fetchCustomers } from "@/services/customerStore";
 
 const Customers = () => {
   const isMobile = useIsMobile();
@@ -25,11 +26,11 @@ const Customers = () => {
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
   
   // Use the customer store instead of local state
-  const { filteredCustomers, isLoading, setSearchFilter, fetchCustomers: refreshCustomers } = useCustomerStore();
+  const { filteredCustomers, isLoading, setSearchFilter } = useCustomerStore();
   
   // Fetch customers on component mount
   useEffect(() => {
-    refreshCustomers();
+    fetchCustomers();
   }, []);
   
   // Filter customers based on user role and permissions
@@ -58,7 +59,7 @@ const Customers = () => {
   // Add a new customer to the list
   const handleAddCustomer = (newCustomer: Customer) => {
     // Refresh data after adding a customer
-    refreshCustomers();
+    fetchCustomers();
     toast.success("Customer added successfully!");
   };
   
@@ -86,6 +87,12 @@ const Customers = () => {
   
   // Check if user can add customers
   const canAddCustomer = !permissions?.canViewOnlyAssociatedCustomers && userRole !== 'customer';
+  
+  // Handle refresh data
+  const handleRefreshData = () => {
+    fetchCustomers();
+    toast.success("Customer data refreshed");
+  };
   
   return (
     <MainLayout>
@@ -132,6 +139,7 @@ const Customers = () => {
             userRole={userRole}
             onAddCustomer={() => setShowAddCustomerDialog(true)}
             canAddCustomer={canAddCustomer}
+            onRefresh={handleRefreshData}
           />
         )}
         
