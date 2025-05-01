@@ -1,17 +1,12 @@
 
-import { customers as initialCustomers } from "@/data/mockData";
 import { formatCustomerData } from "./formatters";
 import { useCustomerStore } from "./store";
 import { fetchCustomers } from "./api";
 
-// Initialize the store with data from mockData
+// Initialize the store with empty data instead of mockData
 export const initializeCustomerStore = () => {
   const { setCustomers } = useCustomerStore.getState();
-  
-  // Format the initial customers data consistently
-  const formattedCustomers = initialCustomers.map(formatCustomerData);
-  
-  setCustomers(formattedCustomers);
+  setCustomers([]);
 };
 
 // Update CustomersList page to use the store

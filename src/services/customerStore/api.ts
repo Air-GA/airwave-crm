@@ -1,11 +1,10 @@
 
 import { Customer } from "@/types";
-import { customers as initialCustomers } from "@/data/mockData";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCustomerData } from "./formatters";
 import { useCustomerStore } from "./store";
 
-// Fetch customers from Supabase or fall back to mock data
+// Fetch customers from Supabase without falling back to mock data
 export const fetchCustomers = async (): Promise<Customer[]> => {
   const { setCustomers, setIsLoading, setError } = useCustomerStore.getState();
   
@@ -13,7 +12,7 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     setIsLoading(true);
     setError(null);
     
-    // Try to fetch from Supabase first
+    // Fetch from Supabase
     const { data, error } = await supabase
       .from("customers")
       .select("*, service_addresses(*), contacts(*)");
@@ -61,18 +60,15 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
       return formattedCustomers;
     }
     
-    // Fall back to mock data
-    console.log("No customers found in Supabase, using mock data");
-    const formattedCustomers = initialCustomers.map(formatCustomerData);
-    setCustomers(formattedCustomers);
-    return formattedCustomers;
+    // If no customers found, return empty array instead of mock data
+    setCustomers([]);
+    return [];
     
   } catch (error) {
     console.error("Error in fetchCustomers:", error);
-    // Fall back to mock data
-    const formattedCustomers = initialCustomers.map(formatCustomerData);
-    setCustomers(formattedCustomers);
-    return formattedCustomers;
+    setError(error instanceof Error ? error.message : "Failed to fetch customers");
+    setCustomers([]);
+    return [];
   } finally {
     setIsLoading(false);
   }
@@ -98,9 +94,7 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
       
     if (error) {
       console.error(`Error fetching customer with ID ${id}:`, error);
-      // Fall back to mock data
-      const mockCustomer = initialCustomers.find(c => c.id === id);
-      return mockCustomer ? formatCustomerData(mockCustomer) : null;
+      return null;
     }
     
     if (data) {
@@ -134,8 +128,6 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
     return null;
   } catch (error) {
     console.error(`Error in getCustomerById for ID ${id}:`, error);
-    // Fall back to mock data
-    const mockCustomer = initialCustomers.find(c => c.id === id);
-    return mockCustomer ? formatCustomerData(mockCustomer) : null;
+    return null;
   }
 };
