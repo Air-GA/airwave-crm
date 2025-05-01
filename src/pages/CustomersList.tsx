@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -9,11 +8,7 @@ import { CustomersHeader } from "@/components/customers/CustomersHeader";
 import { CustomersToolbar } from "@/components/customers/CustomersToolbar";
 import { CustomersContent } from "@/components/customers/CustomersContent";
 import { CustomerDetails } from "@/components/customers/CustomerDetails";
-import { 
-  useCustomerStore, 
-  fetchCustomers, 
-  getCustomerById 
-} from "@/services/customerStore";
+import { useCustomerStore, fetchCustomers, getCustomerById } from "@/services/customerStore";
 
 const CustomersList = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,20 +86,11 @@ const CustomersList = () => {
   };
   
   const handleRefresh = async () => {
-    try {
-      await fetchCustomers();
-      toast({
-        title: "Refreshed",
-        description: "Customer data has been refreshed.",
-      });
-    } catch (error) {
-      console.error("Error refreshing customers:", error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh customers. Please try again.",
-        variant: "destructive",
-      });
-    }
+    await fetchCustomers();
+    toast({
+      title: "Refreshed",
+      description: "Customer data has been refreshed.",
+    });
   };
 
   return (
