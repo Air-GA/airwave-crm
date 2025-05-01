@@ -21,67 +21,15 @@ export const CustomerGridView = ({ customers, onCustomerClick }: CustomerGridVie
     try {
       setIsLoading(true);
       
-      // Fetch customer details
-      const { data: customerData, error: customerError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', customerId)
-        .single();
-        
-      if (customerError) {
-        throw new Error(`Error fetching customer: ${customerError.message}`);
+      // Find the customer in our local state first
+      const localCustomer = customers.find(c => c.id === customerId);
+      
+      if (!localCustomer) {
+        throw new Error(`Customer with ID ${customerId} not found`);
       }
       
-      // Fetch service addresses for this customer
-      const { data: serviceAddressesData, error: addressesError } = await supabase
-        .from('service_addresses')
-        .select('*')
-        .eq('customer_id', customerId);
-        
-      if (addressesError) {
-        throw new Error(`Error fetching service addresses: ${addressesError.message}`);
-      }
-      
-      // Transform service addresses to match our app's format
-      const serviceAddresses: ServiceAddress[] = serviceAddressesData.map(addr => ({
-        id: addr.id,
-        address: `${addr.address_line1 || ''} ${addr.address_line2 || ''}, ${addr.city || ''}, ${addr.state || ''} ${addr.zip || ''}`.trim(),
-        isPrimary: addr.location_code === 'primary' || false,
-        notes: addr.name || ''
-      }));
-      
-      // Get primary contact info if available
-      let email = '';
-      let phone = '';
-      
-      const { data: contactsData } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('customer_id', customerId);
-        
-      if (contactsData && contactsData.length > 0) {
-        const primaryContact = contactsData.find(c => c.is_primary) || contactsData[0];
-        email = primaryContact.email || '';
-        phone = primaryContact.phone || '';
-      }
-      
-      // Create combined customer object
-      const fullCustomer: Customer = {
-        id: customerData.id,
-        name: customerData.name || 'Unknown',
-        email: email,
-        phone: phone,
-        address: serviceAddresses.find(addr => addr.isPrimary)?.address || '',
-        billAddress: customerData.billing_address_line1 || '',
-        billCity: customerData.billing_city || '',
-        serviceAddresses: serviceAddresses,
-        type: (customerData.status?.includes('commercial') ? 'commercial' : 'residential') as Customer["type"],
-        status: (customerData.status as Customer["status"]) || "active",
-        createdAt: customerData.created_at || new Date().toISOString(),
-        lastService: ""  // No direct mapping for this field
-      };
-      
-      setSelectedCustomer(fullCustomer);
+      // Use the local customer data as we already have it
+      setSelectedCustomer(localCustomer);
       setDetailsOpen(true);
     } catch (error) {
       console.error("Error fetching customer details:", error);

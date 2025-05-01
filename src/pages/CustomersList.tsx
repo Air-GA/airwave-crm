@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -90,11 +91,20 @@ const CustomersList = () => {
   };
   
   const handleRefresh = async () => {
-    await fetchCustomers();
-    toast({
-      title: "Refreshed",
-      description: "Customer data has been refreshed.",
-    });
+    try {
+      await fetchCustomers();
+      toast({
+        title: "Refreshed",
+        description: "Customer data has been refreshed.",
+      });
+    } catch (error) {
+      console.error("Error refreshing customers:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh customer data. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

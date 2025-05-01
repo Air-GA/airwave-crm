@@ -2,11 +2,11 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
-import { syncThreeCustomers, getStaticCustomers } from "@/services/customerSyncService";
+import { syncThreeCustomers } from "@/services/customerSyncService";
 import { useToast } from "@/hooks/use-toast";
 
 interface SyncThreeCustomersButtonProps {
-  onSyncComplete: () => void;  // Changed from onSuccess to onSyncComplete for consistency
+  onSyncComplete: () => void;
 }
 
 export const SyncThreeCustomersButton = ({
@@ -37,13 +37,7 @@ export const SyncThreeCustomersButton = ({
         variant: "destructive",
       });
       
-      // Fall back to static data notification
-      toast({
-        title: "Using Static Data",
-        description: "Displaying static residential customer data as a fallback.",
-      });
-      
-      // Still call onSyncComplete to refresh the UI with static data
+      // Still call onSyncComplete to refresh the UI with available data
       onSyncComplete();
     } finally {
       setIsSyncing(false);
