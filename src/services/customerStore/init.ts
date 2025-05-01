@@ -1,9 +1,8 @@
 
-import { formatCustomerData } from "./formatters";
 import { useCustomerStore } from "./store";
 import { fetchCustomers } from "./api";
 
-// Initialize the store with empty data instead of mockData
+// Initialize the store with empty data
 export const initializeCustomerStore = () => {
   const { setCustomers } = useCustomerStore.getState();
   setCustomers([]);
@@ -13,6 +12,6 @@ export const initializeCustomerStore = () => {
 export const updateCustomersList = () => {
   // Initialize the store when the app starts
   initializeCustomerStore();
-  // Fetch customers when needed
+  // Fetch customers from Supabase
   fetchCustomers();
 };

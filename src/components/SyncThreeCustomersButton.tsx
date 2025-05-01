@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
-import { syncThreeCustomers, getStaticCustomers } from "@/services/customerSyncService";
+import { syncThreeCustomers } from "@/services/customerSyncService";
 import { useToast } from "@/hooks/use-toast";
 
 interface SyncThreeCustomersButtonProps {
@@ -33,18 +33,9 @@ export const SyncThreeCustomersButton = ({
         title: "Sync Failed",
         description: error instanceof Error 
           ? error.message 
-          : "Failed to sync residential customers. Using static data instead.",
+          : "Failed to sync residential customers.",
         variant: "destructive",
       });
-      
-      // Fall back to static data notification
-      toast({
-        title: "Using Static Data",
-        description: "Displaying static residential customer data as a fallback.",
-      });
-      
-      // Still call onSyncComplete to refresh the UI with static data
-      onSyncComplete();
     } finally {
       setIsSyncing(false);
     }
