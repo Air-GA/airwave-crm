@@ -88,12 +88,6 @@ const Customers = () => {
   // Check if user can add customers
   const canAddCustomer = !permissions?.canViewOnlyAssociatedCustomers && userRole !== 'customer';
   
-  // Handle refresh data
-  const handleRefreshData = () => {
-    fetchCustomers();
-    toast.success("Customer data refreshed");
-  };
-  
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -139,7 +133,6 @@ const Customers = () => {
             userRole={userRole}
             onAddCustomer={() => setShowAddCustomerDialog(true)}
             canAddCustomer={canAddCustomer}
-            onRefresh={handleRefreshData}
           />
         )}
         
