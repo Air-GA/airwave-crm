@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,16 +9,31 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { dashboardStats, performanceMetrics, workOrders } from "@/data/mockData";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Calendar, Clipboard, DollarSign, Package, Timer, Users, Download, RefreshCw } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { useWorkOrderStore } from "@/services/workOrderStore";
-import { useToast } from "@/components/ui/use-toast";
+import { useCustomerStore } from "@/services/customerStore";
+import { fetchCustomers } from "@/services/customerStore";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { toast } = useToast();
-  const { workOrders: storeWorkOrders } = useWorkOrderStore();
+  const { workOrders } = useWorkOrderStore();
+  const { customers } = useCustomerStore();
+  
+  // Fetch customers on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchCustomers();
+      } catch (error) {
+        console.error("Failed to load customer data:", error);
+      }
+    };
+    
+    loadData();
+  }, []);
   
   const revenueData = [
     {
@@ -135,7 +149,7 @@ const Index = () => {
   ];
 
   // Get latest work orders from store
-  const latestWorkOrders = storeWorkOrders.slice(0, 5).map(order => ({
+  const latestWorkOrders = workOrders.slice(0, 5).map(order => ({
     workOrderNumber: `#${order.id.substring(0, 4)}`,
     customerName: order.customerName,
     date: new Date(order.scheduledDate).toISOString().split('T')[0],
@@ -181,11 +195,21 @@ const Index = () => {
     },
   ];
 
-  const handleRefreshData = () => {
-    toast({
-      title: "Dashboard Refreshed",
-      description: "Latest data has been loaded",
-    });
+  const handleRefreshData = async () => {
+    try {
+      await fetchCustomers();
+      toast({
+        title: "Dashboard Refreshed",
+        description: "Latest data has been loaded",
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh dashboard data",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -220,7 +244,7 @@ const Index = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalWorkOrders}</div>
+              <div className="text-2xl font-bold">{workOrders.length}</div>
               <p className="text-sm text-muted-foreground">
                 +19% from last month
               </p>
@@ -234,7 +258,7 @@ const Index = () => {
               <Clipboard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{storeWorkOrders.filter(order => order.status !== 'completed' && order.status !== 'cancelled').length}</div>
+              <div className="text-2xl font-bold">{workOrders.filter(order => order.status !== 'completed' && order.status !== 'cancelled').length}</div>
               <p className="text-sm text-muted-foreground">
                 +7% from last month
               </p>
@@ -248,7 +272,7 @@ const Index = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.activeCustomers}</div>
+              <div className="text-2xl font-bold">{customers.length}</div>
               <p className="text-sm text-muted-foreground">
                 +23% from last month
               </p>
@@ -380,31 +404,37 @@ const Index = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {latestWorkOrders?.map((workOrder) => (
-                      <tr
-                        key={workOrder.workOrderNumber}
-                        className="hover:bg-muted/50"
-                      >
-                        <td className="border-b p-4 pl-8">
-                          {workOrder.workOrderNumber}
-                        </td>
-                        <td className="border-b p-4">{workOrder.customerName}</td>
-                        <td className="border-b p-4">{workOrder.date}</td>
-                        <td className="border-b p-4 pr-8">
-                          <Badge 
-                            className={`${
-                              workOrder.status === 'completed' ? 'bg-green-500' : 
-                              workOrder.status === 'in-progress' ? 'bg-blue-500' : 
-                              workOrder.status === 'pending' ? 'bg-yellow-500' : 
-                              workOrder.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-500'
-                            }`}
-                          >
-                            {workOrder.status === 'in-progress' ? 'In Progress' : 
-                             workOrder.status.charAt(0).toUpperCase() + workOrder.status.slice(1)}
-                          </Badge>
-                        </td>
+                    {latestWorkOrders.length > 0 ? (
+                      latestWorkOrders.map((workOrder) => (
+                        <tr
+                          key={workOrder.workOrderNumber}
+                          className="hover:bg-muted/50"
+                        >
+                          <td className="border-b p-4 pl-8">
+                            {workOrder.workOrderNumber}
+                          </td>
+                          <td className="border-b p-4">{workOrder.customerName}</td>
+                          <td className="border-b p-4">{workOrder.date}</td>
+                          <td className="border-b p-4 pr-8">
+                            <Badge 
+                              className={`${
+                                workOrder.status === 'completed' ? 'bg-green-500' : 
+                                workOrder.status === 'in-progress' ? 'bg-blue-500' : 
+                                workOrder.status === 'pending' ? 'bg-yellow-500' : 
+                                workOrder.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-500'
+                              }`}
+                            >
+                              {workOrder.status === 'in-progress' ? 'In Progress' : 
+                               workOrder.status.charAt(0).toUpperCase() + workOrder.status.slice(1)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="text-center py-4">No work orders available</td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>

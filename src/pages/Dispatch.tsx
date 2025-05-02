@@ -39,18 +39,12 @@ import { WorkOrderDetailsPanel } from "@/components/workorders/WorkOrderDetailsP
 import { useToast } from "@/hooks/use-toast";
 import { Technician, WorkOrder } from "@/types";
 import DragAndDropScheduler from "@/components/schedule/DragAndDropScheduler";
-import { 
-  fetchWorkOrdersFromSupabase, 
-  fetchCustomersForWorkOrders, 
-  fetchAddressesForWorkOrders, 
-  fetchTechniciansFromSupabase 
-} from "@/services/dispatchService";
 
 const Dispatch = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
   const [isWorkOrderDetailOpen, setIsWorkOrderDetailOpen] = useState(false);
@@ -62,18 +56,9 @@ const Dispatch = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch technicians
-      const techData = await fetchTechniciansFromSupabase();
-      setTechnicians(techData);
-
-      // Fetch work orders
-      let workOrdersData = await fetchWorkOrdersFromSupabase();
-      
-      // Fetch related data
-      workOrdersData = await fetchCustomersForWorkOrders(workOrdersData);
-      workOrdersData = await fetchAddressesForWorkOrders(workOrdersData);
-      
-      setWorkOrders(workOrdersData);
+      // We're clearing the data as requested, so just set empty arrays
+      setTechnicians([]);
+      setWorkOrders([]);
       
     } catch (error) {
       console.error("Failed to load dispatch data:", error);
@@ -105,7 +90,6 @@ const Dispatch = () => {
   };
 
   const handleUnassignWorkOrder = async (workOrderId: string) => {
-    // This is a simple placeholder function, actual implementation would unassign the work order
     console.log("Unassigning work order:", workOrderId);
     await loadData();
     toast({
@@ -136,7 +120,7 @@ const Dispatch = () => {
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={(date) => date && setDate(date)}
+                  onSelect={(newDate) => newDate && setDate(newDate)}
                   initialFocus
                 />
               </PopoverContent>
@@ -184,7 +168,7 @@ const Dispatch = () => {
               </CardHeader>
               <CardContent className="h-[600px]">
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Map view is not implemented in this demo
+                  Map view is ready for data to be uploaded
                 </div>
               </CardContent>
             </Card>

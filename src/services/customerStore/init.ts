@@ -1,6 +1,4 @@
 
-import { customers as initialCustomers } from "@/data/mockData";
-import { formatCustomerData } from "./formatters";
 import { useCustomerStore } from "./store";
 import { fetchCustomers } from "./api";
 

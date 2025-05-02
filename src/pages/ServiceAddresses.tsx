@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Search, Building2, User, FileText, Plus, MapPinOff } from "lucide-react";
@@ -25,12 +24,13 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { Customer, ServiceAddress } from "@/types";
+import { useCustomerStore, fetchCustomers } from "@/services/customerStore";
 
 interface ServiceAddressWithCustomer {
   id: string;
@@ -96,69 +96,63 @@ const ServiceAddresses = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { customers, isLoading: customersLoading } = useCustomerStore();
 
-  const { data: addresses, isLoading, error, refetch } = useQuery({
-    queryKey: ["service-addresses"],
-    queryFn: async () => {
+  // Fetch customers data on component mount
+  useEffect(() => {
+    const loadCustomers = async () => {
       try {
-        const { data: addressesData, error: addressesError } = await supabase.client
-          .from("service_addresses")
-          .select("*")
-          .order("address");
-
-        if (addressesError) {
-          throw new Error(addressesError.message);
-        }
-
-        const { data: customersData, error: customersError } = await supabase.client
-          .from("customers")
-          .select("id, name, type")
-          .eq("type", "residential");
-
-        if (customersError) {
-          throw new Error(customersError.message);
-        }
-
-        if (!addressesData || addressesData.length === 0) {
-          console.log("No service addresses found in database, using mock data");
-          return mockServiceAddresses;
-        }
-
-        const enrichedAddresses = addressesData.map((address) => {
-          const customer = customersData.find((c) => c.id === address.customer_id);
-          return {
-            ...address,
-            customer_name: customer?.name || "Unknown Customer",
-            customer_type: customer?.type || "unknown",
-          };
-        });
-
-        return enrichedAddresses as ServiceAddressWithCustomer[];
+        await fetchCustomers();
       } catch (error) {
-        console.error("Error fetching addresses:", error);
-        return mockServiceAddresses;
+        console.error("Failed to load customers:", error);
+        toast({
+          title: "Error fetching customers",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
       }
-    },
-  });
+    };
+    
+    loadCustomers();
+  }, [toast]);
 
-  const { data: customers } = useQuery({
-    queryKey: ["residential-customers"],
-    queryFn: async () => {
-      const { data, error } = await supabase.client
-        .from("customers")
-        .select("*")
-        .eq("type", "residential")
-        .order("name");
-
-      if (error) {
-        throw new Error(error.message);
+  // Convert customers data to service addresses format
+  const convertToServiceAddresses = (customers: Customer[]): ServiceAddressWithCustomer[] => {
+    const addresses: ServiceAddressWithCustomer[] = [];
+    
+    customers.forEach(customer => {
+      if (customer.serviceAddresses && customer.serviceAddresses.length > 0) {
+        customer.serviceAddresses.forEach(sa => {
+          addresses.push({
+            id: sa.id || `addr-${Math.random().toString(36).slice(2, 9)}`,
+            address: sa.address,
+            customer_id: customer.id,
+            is_primary: sa.isPrimary,
+            notes: sa.notes || null,
+            customer_name: customer.name,
+            customer_type: customer.type || 'residential'
+          });
+        });
+      } else if (customer.address) {
+        // If no service addresses but has main address
+        addresses.push({
+          id: `addr-${Math.random().toString(36).slice(2, 9)}`,
+          address: customer.address,
+          customer_id: customer.id,
+          is_primary: true,
+          notes: null,
+          customer_name: customer.name,
+          customer_type: customer.type || 'residential'
+        });
       }
-      
-      return data || [];
-    },
-  });
+    });
+    
+    return addresses;
+  };
 
-  const filteredAddresses = addresses?.filter((addr) =>
+  const serviceAddresses = convertToServiceAddresses(customers);
+  
+  const filteredAddresses = serviceAddresses.filter((addr) =>
     addr.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
     addr.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (addr.notes && addr.notes.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -167,16 +161,6 @@ const ServiceAddresses = () => {
   const handleCreateWorkOrder = (address: ServiceAddressWithCustomer) => {
     navigate(`/work-orders/create?customerId=${address.customer_id}&customerName=${encodeURIComponent(address.customer_name || '')}&customerAddress=${encodeURIComponent(address.address)}`);
   };
-
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error fetching service addresses",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
 
   const AddServiceAddressForm = () => {
     const form = useForm({
@@ -205,7 +189,7 @@ const ServiceAddresses = () => {
         });
 
         setShowAddAddressDialog(false);
-        refetch();
+        fetchCustomers(); // Refresh the data
       } catch (error: any) {
         toast({
           title: "Error adding service address",
@@ -352,7 +336,7 @@ const ServiceAddresses = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading ? (
+                  {customersLoading ? (
                     Array.from({ length: 5 }).map((_, index) => (
                       <TableRow key={index}>
                         <TableCell><Skeleton className="h-6 w-[250px]" /></TableCell>
