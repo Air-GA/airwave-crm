@@ -15,6 +15,7 @@ import {
   getCustomerById,
   initializeCustomerStore
 } from "@/services/customerStore";
+import { toast } from "sonner";
 
 const CustomersList = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,7 +23,7 @@ const CustomersList = () => {
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   // Get data from the customer store
   const { filteredCustomers, isLoading, setSearchFilter, selectedCustomerId, setSelectedCustomerId } = useCustomerStore();
@@ -35,36 +36,26 @@ const CustomersList = () => {
         // Initialize with an empty store
         initializeCustomerStore();
         
-        toast({
-          title: "Loading Customers",
-          description: "Fetching your 20,000+ customers from the database...",
-        });
+        toast("Loading Customers...");
+        console.log("Starting to fetch customers from Supabase...");
         
         // Then fetch from API
         const customers = await fetchCustomers();
+        
         if (customers.length === 0) {
-          toast({
-            title: "No Customers Found",
-            description: "No customers were found in the database.",
-          });
+          toast.error("No customers found. Please check your database connection.");
         } else {
-          toast({
-            title: "Customers Loaded",
-            description: `Successfully loaded ${customers.length} customers.`,
-          });
+          toast.success(`Successfully loaded ${customers.length.toLocaleString()} customers`);
+          console.log(`Successfully loaded ${customers.length} customers from Supabase`);
         }
       } catch (error) {
         console.error("Error loading customers:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load customers. Please check your connection.",
-          variant: "destructive",
-        });
+        toast.error("Failed to load customers: " + (error instanceof Error ? error.message : "Unknown error"));
       }
     };
     
     loadCustomers();
-  }, [toast]);
+  }, []);
   
   // When selectedCustomerId changes, load the customer details
   useEffect(() => {
@@ -82,16 +73,12 @@ const CustomersList = () => {
         }
       } catch (error) {
         console.error("Error loading customer details:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load customer details. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Failed to load customer details. Please try again.");
       }
     };
     
     loadCustomerDetails();
-  }, [selectedCustomerId, toast]);
+  }, [selectedCustomerId]);
 
   // Sync search query with the store
   useEffect(() => {
@@ -105,32 +92,19 @@ const CustomersList = () => {
   
   const handleCreateWorkOrder = (customer: Customer, serviceAddress?: string) => {
     console.log("Creating work order for", customer.name, "at address:", serviceAddress);
-    toast({
-      title: "Work Order",
-      description: `Creating work order for ${customer.name}`,
-    });
+    toast.success(`Creating work order for ${customer.name}`);
   };
   
   const handleRefresh = async () => {
     try {
-      toast({
-        title: "Refreshing",
-        description: "Fetching customer data...",
-      });
+      toast("Refreshing customer data...");
       
       await fetchCustomers();
       
-      toast({
-        title: "Refreshed",
-        description: `Loaded ${filteredCustomers.length} customers.`,
-      });
+      toast.success(`Loaded ${filteredCustomers.length.toLocaleString()} customers`);
     } catch (error) {
       console.error("Error refreshing customers:", error);
-      toast({
-        title: "Error",
-        description: "Failed to refresh customer data. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to refresh customer data: " + (error instanceof Error ? error.message : "Unknown error"));
     }
   };
 

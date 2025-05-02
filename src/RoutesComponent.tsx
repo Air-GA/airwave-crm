@@ -25,13 +25,14 @@ import { fetchCustomers } from './services/customerStore';
 const RoutesComponent = () => {
   useEffect(() => {
     // Initialize customer store when the app loads
-    fetchCustomers();
+    console.log("RoutesComponent: Initializing customer store");
+    fetchCustomers().catch(err => console.error("Error initializing customer store:", err));
   }, []);
 
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/customers" element={<Customers />} />
+      <Route path="/customers" element={<CustomersList />} />
       <Route path="/customers-list" element={<CustomersList />} />
       <Route path="/dispatch" element={<Dispatch />} />
       <Route path="/inventory" element={<Inventory />} />

@@ -61,6 +61,7 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
         });
       });
       
+      console.log(`Formatted ${formattedCustomers.length} customers to display`);
       setCustomers(formattedCustomers);
       return formattedCustomers;
     } else {

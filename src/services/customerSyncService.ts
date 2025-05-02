@@ -75,6 +75,7 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
       });
       
       setCustomers(formattedCustomers);
+      console.log(`Updated store with ${formattedCustomers.length} customers`);
     }
 
     return true;
