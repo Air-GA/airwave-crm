@@ -35,6 +35,11 @@ const CustomersList = () => {
         // Initialize with an empty store
         initializeCustomerStore();
         
+        toast({
+          title: "Loading Customers",
+          description: "Fetching your 20,000+ customers from the database...",
+        });
+        
         // Then fetch from API
         const customers = await fetchCustomers();
         if (customers.length === 0) {

@@ -41,7 +41,7 @@ export const CustomersToolbar = ({
       
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <span className="text-sm text-muted-foreground mr-2">
-          {customerCount > 0 ? `${customerCount} customers` : "No customers"}
+          {customerCount > 0 ? `${customerCount.toLocaleString()} customers` : "No customers"}
         </span>
       
         <Button 

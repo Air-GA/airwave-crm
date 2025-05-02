@@ -3,6 +3,7 @@ import { Customer } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { useCustomerStore } from "@/services/customerStore";
 import { formatCustomerData } from "./customerStore/formatters";
+import { toast } from "sonner";
 
 // Function to sync three sample residential customers to the database
 export const syncThreeCustomers = async (): Promise<boolean> => {
@@ -86,10 +87,13 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
 // Handle the sync button interactions
 export const handleSyncClick = async (): Promise<boolean> => {
   try {
+    toast("Syncing customers...");
     await syncThreeCustomers();
+    toast.success("Customer sync completed successfully");
     return true;
   } catch (error) {
     console.error("Sync failed:", error);
+    toast.error("Customer sync failed: " + (error instanceof Error ? error.message : "Unknown error"));
     return false;
   }
 };

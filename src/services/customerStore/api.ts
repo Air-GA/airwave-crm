@@ -14,7 +14,7 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     
     console.log("Fetching customers from Supabase...");
     
-    // Fetch from Supabase
+    // Fetch all customers from Supabase - pagination may be needed for 20k+ customers
     const { data, error } = await supabase
       .from("customers")
       .select("*, service_addresses(*), contacts(*)")
