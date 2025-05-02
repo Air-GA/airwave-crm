@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { MapPin, Search, Building2, User, FileText, Plus, MapPinOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 

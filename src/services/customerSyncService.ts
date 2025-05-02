@@ -1,125 +1,96 @@
 
-import { supabase } from "@/lib/supabase";
 import { Customer } from "@/types";
-import { useCustomerStore } from "@/services/customerStore/store";
-import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useCustomerStore } from "@/services/customerStore";
+import { customers as mockCustomers } from "@/data/mockData";
+import { formatCustomerData } from "./customerStore/formatters";
 
-// Function to sync three sample customers
-export const syncThreeCustomers = async (): Promise<void> => {
-  const { setCustomers, setIsLoading, setError } = useCustomerStore.getState();
-  
+// Function to sync three sample residential customers to the database
+export const syncThreeCustomers = async (): Promise<boolean> => {
   try {
-    setIsLoading(true);
-    setError(null);
-    
-    // Sample residential customers
-    const sampleCustomers: Customer[] = [
-      {
-        id: "sample-1",
-        name: "Johnson Family",
-        email: "johnsonf@example.com",
-        phone: "555-123-4567",
-        address: "123 Maple Street, Atlanta, GA",
-        type: "residential",
-        status: "active",
-        serviceAddresses: [
-          {
-            id: "sa-1",
-            address: "123 Maple Street, Atlanta, GA",
-            isPrimary: true,
-            notes: "Front door access code: 1234"
-          }
-        ],
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: "sample-2",
-        name: "Sarah Wilson",
-        email: "swilson@example.com",
-        phone: "555-987-6543",
-        address: "456 Oak Avenue, Marietta, GA",
-        type: "residential",
-        status: "active",
-        serviceAddresses: [
-          {
-            id: "sa-2",
-            address: "456 Oak Avenue, Marietta, GA",
-            isPrimary: true,
-            notes: ""
-          }
-        ],
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: "sample-3",
-        name: "Rodriguez Family",
-        email: "rodriguez@example.com",
-        phone: "555-789-0123",
-        address: "789 Pine Road, Alpharetta, GA",
-        type: "residential",
-        status: "active",
-        serviceAddresses: [
-          {
-            id: "sa-3",
-            address: "789 Pine Road, Alpharetta, GA",
-            isPrimary: true,
-            notes: "Beware of dog"
-          }
-        ],
-        createdAt: new Date().toISOString()
+    console.log("Starting sync of three sample residential customers");
+
+    const response = await fetch(`https://anofwxgkmwhwshdqxfzb.functions.supabase.co/sync-three-customers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabase.auth.anon_key}`
       }
-    ];
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error("Edge function error:", errorData);
+      throw new Error(`Failed to sync customers: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log("Sync result:", result);
     
-    // Try to save to Supabase if connected
-    try {
-      // For each customer, try to insert or update in Supabase
-      for (const customer of sampleCustomers) {
-        const { error } = await supabase.client.from("customers").upsert({
-          id: customer.id,
-          name: customer.name,
-          type: customer.type || 'residential',
-          status: customer.status || 'active',
-          created_at: customer.createdAt
-        }, { onConflict: 'id' });
-        
-        if (error) {
-          console.error("Error saving customer to Supabase:", error);
-        } else {
-          // Save service addresses
-          for (const serviceAddress of customer.serviceAddresses || []) {
-            await supabase.client.from("service_addresses").upsert({
-              id: serviceAddress.id,
-              customer_id: customer.id,
-              address_line1: serviceAddress.address,
-              name: serviceAddress.notes || null,
-              location_code: serviceAddress.isPrimary ? 'primary' : 'secondary'
-            }, { onConflict: 'id' });
-          }
-          
-          // Save contact info
-          await supabase.client.from("contacts").upsert({
-            id: `contact-${customer.id}`,
-            customer_id: customer.id,
-            name: customer.name,
-            email: customer.email,
-            phone: customer.phone,
-            is_primary: true
-          }, { onConflict: 'id' });
-        }
-      }
-    } catch (error) {
-      console.error("Error saving to Supabase:", error);
-      // Continue with local update even if Supabase fails
+    // Refresh the customer store after sync
+    const { setCustomers } = useCustomerStore.getState();
+    
+    // Get the updated customers from Supabase
+    const { data, error } = await supabase
+      .from("customers")
+      .select("*, service_addresses(*), contacts(*)");
+      
+    if (error) {
+      console.error("Error fetching updated customers:", error);
+      throw error;
     }
     
-    // Update the store
-    setCustomers(sampleCustomers);
-    
+    if (data && data.length > 0) {
+      // Format the customers from Supabase
+      const formattedCustomers = data.map(customer => {
+        // Find primary contact for email/phone
+        const primaryContact = customer.contacts?.find(c => c.is_primary === true) || customer.contacts?.[0];
+        
+        // Map service addresses to our format
+        const serviceAddresses = customer.service_addresses?.map(sa => ({
+          id: sa.id,
+          address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`.trim(),
+          isPrimary: sa.location_code === 'primary' || false,
+          notes: sa.name || ''
+        })) || [];
+        
+        // Generate a combined address string for the primary address
+        const addressStr = serviceAddresses.find(addr => addr.isPrimary)?.address || 
+                          serviceAddresses[0]?.address || '';
+                          
+        return formatCustomerData({
+          id: customer.id,
+          name: customer.name || "Unknown",
+          email: primaryContact?.email || "",
+          phone: primaryContact?.phone || "",
+          address: addressStr,
+          billAddress: customer.billing_address_line1 || "",
+          billCity: customer.billing_city || "",
+          serviceAddresses: serviceAddresses,
+          type: (customer.status?.includes('commercial') ? 'commercial' : 'residential'),
+          status: customer.status || "active",
+          createdAt: customer.created_at || new Date().toISOString(),
+          lastService: ""
+        });
+      });
+      
+      setCustomers(formattedCustomers);
+    }
+
+    return true;
   } catch (error) {
-    console.error("Error syncing customers:", error);
-    setError(error instanceof Error ? error.message : "Failed to sync customers");
+    console.error("Error syncing sample customers:", error);
     throw error;
-  } finally {
-    setIsLoading(false);
+  }
+};
+
+// Handle the sync button interactions
+export const handleSyncClick = async (): Promise<boolean> => {
+  try {
+    await syncThreeCustomers();
+    return true;
+  } catch (error) {
+    console.error("Sync failed:", error);
+    return false;
   }
 };

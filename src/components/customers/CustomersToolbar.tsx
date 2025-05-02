@@ -1,9 +1,18 @@
 
-import { RefreshCw } from "lucide-react";
+import React from "react";
 import { Button } from "@/components/ui/button";
+import { 
+  Search, 
+  Filter, 
+  RefreshCw, 
+  Grid, 
+  List
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { CustomerSearch } from "./CustomerSearch";
-import { CustomerFilters } from "./CustomerFilters";
 import { CustomersViewToggle } from "./CustomersViewToggle";
+import { SyncButton } from "../SyncButton";
+import { handleSyncClick } from "@/services/customerSyncService";
 
 interface CustomersToolbarProps {
   searchQuery: string;
@@ -12,6 +21,7 @@ interface CustomersToolbarProps {
   setViewMode: (mode: "grid" | "list") => void;
   onOpenFilters: () => void;
   onRefresh: () => void;
+  customerCount?: number;
 }
 
 export const CustomersToolbar = ({
@@ -21,23 +31,46 @@ export const CustomersToolbar = ({
   setViewMode,
   onOpenFilters,
   onRefresh,
+  customerCount = 0,
 }: CustomersToolbarProps) => {
   return (
-    <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
-      <CustomerSearch 
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />
-      <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end">
-        <CustomerFilters onOpenFilters={onOpenFilters} />
-        <CustomersViewToggle 
-          viewMode={viewMode}
-          setViewMode={setViewMode}
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="w-full sm:w-auto flex-1 relative">
+        <CustomerSearch 
+          value={searchQuery} 
+          onChange={(e) => setSearchQuery(e.target.value)} 
+          placeholder="Search customers..." 
         />
+      </div>
+      
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <span className="text-sm text-muted-foreground mr-2">
+          {customerCount > 0 ? `${customerCount} customers` : "No customers"}
+        </span>
+      
+        <Button 
+          onClick={onOpenFilters}
+          variant="outline" 
+          size="sm"
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filters
+        </Button>
+        
+        <SyncButton
+          onSync={handleSyncClick}
+          label="Customers"
+        />
+        
+        <CustomersViewToggle 
+          viewMode={viewMode} 
+          onChange={setViewMode} 
+        />
+        
         <Button
-          variant="outline"
-          size="icon"
           onClick={onRefresh}
+          variant="ghost"
+          size="sm"
         >
           <RefreshCw className="h-4 w-4" />
           <span className="sr-only">Refresh</span>

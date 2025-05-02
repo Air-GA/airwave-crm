@@ -1,7 +1,7 @@
 
 import { Customer } from "@/types";
 import { customers as initialCustomers } from "@/data/mockData";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { formatCustomerData } from "./formatters";
 import { useCustomerStore } from "./store";
 
@@ -13,10 +13,13 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     setIsLoading(true);
     setError(null);
     
+    console.log("Fetching customers from Supabase...");
+    
     // Try to fetch from Supabase first
     const { data, error } = await supabase
       .from("customers")
-      .select("*, service_addresses(*), contacts(*)");
+      .select("*, service_addresses(*), contacts(*)")
+      .order('name');
       
     if (error) {
       console.error("Error fetching customers from Supabase:", error);
@@ -24,6 +27,8 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     }
     
     if (data && data.length > 0) {
+      console.log(`Retrieved ${data.length} customers from Supabase`);
+      
       // Format the customers from Supabase
       const formattedCustomers = data.map(customer => {
         // Find primary contact for email/phone
@@ -32,7 +37,7 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
         // Map service addresses to our format
         const serviceAddresses = customer.service_addresses?.map(sa => ({
           id: sa.id,
-          address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`,
+          address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`.trim(),
           isPrimary: sa.location_code === 'primary' || false,
           notes: sa.name || ''
         })) || [];
@@ -61,15 +66,16 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
       return formattedCustomers;
     }
     
-    // Fall back to mock data
-    console.log("No customers found in Supabase, using mock data");
+    // Fall back to mock data if no customers found in Supabase
+    console.log("No customers found in Supabase, falling back to mock data");
     const formattedCustomers = initialCustomers.map(formatCustomerData);
     setCustomers(formattedCustomers);
     return formattedCustomers;
     
   } catch (error) {
     console.error("Error in fetchCustomers:", error);
-    // Fall back to mock data
+    // Fall back to mock data on error
+    console.log("Error loading customers from Supabase, falling back to mock data");
     const formattedCustomers = initialCustomers.map(formatCustomerData);
     setCustomers(formattedCustomers);
     return formattedCustomers;
@@ -108,7 +114,7 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
       
       const serviceAddresses = data.service_addresses?.map(sa => ({
         id: sa.id,
-        address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`,
+        address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`.trim(),
         isPrimary: sa.location_code === 'primary' || false,
         notes: sa.name || ''
       })) || [];

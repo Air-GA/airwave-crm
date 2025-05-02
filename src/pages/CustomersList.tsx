@@ -12,7 +12,8 @@ import { CustomerDetails } from "@/components/customers/CustomerDetails";
 import { 
   useCustomerStore, 
   fetchCustomers, 
-  getCustomerById 
+  getCustomerById,
+  initializeCustomerStore
 } from "@/services/customerStore";
 
 const CustomersList = () => {
@@ -31,12 +32,16 @@ const CustomersList = () => {
   useEffect(() => {
     const loadCustomers = async () => {
       try {
+        // First initialize with mock data if needed
+        initializeCustomerStore();
+        
+        // Then fetch from API
         await fetchCustomers();
       } catch (error) {
         console.error("Error loading customers:", error);
         toast({
           title: "Error",
-          description: "Failed to load customers. Please try again.",
+          description: "Failed to load customers. Using local data instead.",
           variant: "destructive",
         });
       }
@@ -92,10 +97,16 @@ const CustomersList = () => {
   
   const handleRefresh = async () => {
     try {
+      toast({
+        title: "Refreshing",
+        description: "Fetching customer data...",
+      });
+      
       await fetchCustomers();
+      
       toast({
         title: "Refreshed",
-        description: "Customer data has been refreshed.",
+        description: `Loaded ${filteredCustomers.length} customers.`,
       });
     } catch (error) {
       console.error("Error refreshing customers:", error);
@@ -122,6 +133,7 @@ const CustomersList = () => {
           setViewMode={setViewMode}
           onOpenFilters={() => setFilterDialogOpen(true)}
           onRefresh={handleRefresh}
+          customerCount={filteredCustomers.length}
         />
 
         <CustomersContent 
