@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Search, Building2, User, FileText, Plus, MapPinOff } from "lucide-react";
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -41,54 +42,6 @@ interface ServiceAddressWithCustomer {
   customer_name?: string;
   customer_type?: string;
 }
-
-const mockServiceAddresses: ServiceAddressWithCustomer[] = [
-  {
-    id: "addr-1",
-    address: "123 Maple Street, Atlanta, GA",
-    customer_id: "1",
-    is_primary: true,
-    notes: "Front door code: 1234",
-    customer_name: "Johnson Family",
-    customer_type: "residential"
-  },
-  {
-    id: "addr-2",
-    address: "456 Oak Avenue, Marietta, GA",
-    customer_id: "3",
-    is_primary: true,
-    notes: null,
-    customer_name: "Sarah Wilson",
-    customer_type: "residential"
-  },
-  {
-    id: "addr-3",
-    address: "789 Pine Road, Alpharetta, GA",
-    customer_id: "5",
-    is_primary: true,
-    notes: "Beware of dog",
-    customer_name: "Thomas Family",
-    customer_type: "residential"
-  },
-  {
-    id: "addr-4",
-    address: "321 Elm Street, Duluth, GA",
-    customer_id: "6",
-    is_primary: false,
-    notes: "Rental property",
-    customer_name: "Johnson Family",
-    customer_type: "residential"
-  },
-  {
-    id: "addr-5",
-    address: "555 Magnolia Court, Roswell, GA",
-    customer_id: "7",
-    is_primary: true,
-    notes: "Gate code: 9876",
-    customer_name: "Rodriguez Family",
-    customer_type: "residential"
-  }
-];
 
 const ServiceAddresses = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -174,12 +127,14 @@ const ServiceAddresses = () => {
 
     const onSubmit = async (data: any) => {
       try {
-        const { error } = await supabase.client.from("service_addresses").insert({
-          customer_id: data.customerId,
-          address: data.address,
-          is_primary: data.isPrimary,
-          notes: data.notes || null,
-        });
+        const { error } = await supabase
+          .from("service_addresses")
+          .insert({
+            customer_id: data.customerId,
+            address: data.address,
+            is_primary: data.isPrimary,
+            notes: data.notes || null,
+          });
 
         if (error) throw error;
 

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getStaticCustomers } from "@/services/customerSyncService";
+import { useCustomerStore } from "@/services/customerStore/store";
 
 interface PurchaseOrderDialogProps {
   open: boolean;
@@ -24,7 +24,7 @@ export function PurchaseOrderDialog({
   const [selectedVendor, setSelectedVendor] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const { toast } = useToast();
-  const customers = getStaticCustomers();
+  const { customers } = useCustomerStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
