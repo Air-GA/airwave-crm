@@ -24,6 +24,8 @@ export const CustomerListView = ({
   onCustomerClick,
   onViewDetails
 }: CustomerListViewProps) => {
+  console.log("CustomerListView rendered with", customers.length, "customers");
+  
   return (
     <Card>
       <Table>
@@ -42,7 +44,10 @@ export const CustomerListView = ({
           {customers.map((customer) => (
             <TableRow 
               key={customer.id} 
-              onClick={() => onCustomerClick(customer.id)}
+              onClick={() => {
+                console.log("Customer row clicked:", customer.id);
+                onCustomerClick(customer.id);
+              }}
               className="cursor-pointer hover:bg-muted"
             >
               <TableCell>

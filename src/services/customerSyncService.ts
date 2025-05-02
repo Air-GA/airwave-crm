@@ -10,33 +10,39 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
   try {
     console.log("Starting sync of three sample residential customers");
 
-    const response = await supabase.functions.invoke('sync-three-customers', {
+    // Call the edge function to sync data
+    const { data, error } = await supabase.functions.invoke('sync-three-customers', {
       method: 'POST'
     });
     
-    if (!response.data || response.error) {
-      console.error("Edge function error:", response.error);
-      throw new Error(`Failed to sync customers: ${response.error?.message || 'Unknown error'}`);
+    if (error || !data) {
+      console.error("Edge function error:", error || "No data returned");
+      throw new Error(`Failed to sync customers: ${error?.message || 'Unknown error'}`);
     }
 
-    console.log("Sync result:", response.data);
+    console.log("Sync result:", data);
     
     // Refresh the customer store after sync
-    const { setCustomers } = useCustomerStore.getState();
+    const { setCustomers, setIsLoading } = useCustomerStore.getState();
+    
+    // Update loading state
+    setIsLoading(true);
     
     // Get the updated customers from Supabase
-    const { data, error } = await supabase
+    const { data: customersData, error: fetchError } = await supabase
       .from("customers")
       .select("*, service_addresses(*), contacts(*)");
       
-    if (error) {
-      console.error("Error fetching updated customers:", error);
-      throw error;
+    if (fetchError) {
+      console.error("Error fetching updated customers:", fetchError);
+      throw fetchError;
     }
     
-    if (data && data.length > 0) {
+    if (customersData && customersData.length > 0) {
+      console.log(`Retrieved ${customersData.length} customers from database after sync`);
+      
       // Format the customers from Supabase
-      const formattedCustomers = data.map(customer => {
+      const formattedCustomers = customersData.map(customer => {
         // Find primary contact for email/phone
         const primaryContact = customer.contacts?.find(c => c.is_primary === true) || customer.contacts?.[0];
         
@@ -70,6 +76,12 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
       
       setCustomers(formattedCustomers);
       console.log(`Updated store with ${formattedCustomers.length} customers`);
+      
+      setIsLoading(false);
+    } else {
+      console.log("No customers found after sync");
+      setCustomers([]);
+      setIsLoading(false);
     }
 
     return true;

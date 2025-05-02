@@ -23,6 +23,8 @@ export const CustomersContent = ({
   onAddCustomer,
   userRole = "admin",
 }: CustomersContentProps) => {
+  console.log("CustomersContent rendering with", customers.length, "customers, viewMode:", viewMode, "isLoading:", isLoading);
+
   if (isLoading) {
     return (
       <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : ""}>
@@ -35,7 +37,8 @@ export const CustomersContent = ({
     );
   }
 
-  if (customers.length === 0) {
+  if (!customers || customers.length === 0) {
+    console.log("No customers to display, showing empty state");
     return (
       <CustomerEmptyState 
         userRole={userRole}
@@ -45,6 +48,8 @@ export const CustomersContent = ({
     );
   }
 
+  console.log(`Rendering ${viewMode} view with ${customers.length} customers`);
+  
   return viewMode === "grid" ? (
     <CustomerGridView 
       customers={customers}
@@ -55,7 +60,7 @@ export const CustomersContent = ({
       customers={customers}
       onCustomerClick={onCustomerClick}
       onViewDetails={(customer) => {
-        // This is just a pass-through - the actual implementation is in CustomerGridView
+        console.log("View details clicked for customer:", customer.id);
         onCustomerClick(customer.id);
       }}
     />

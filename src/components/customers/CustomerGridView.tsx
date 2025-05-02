@@ -1,10 +1,9 @@
 
-import { Customer, ServiceAddress } from "@/types";
+import { Customer } from "@/types";
 import { CustomersGrid } from "./CustomersGrid";
 import { CustomerDetails } from "./CustomerDetails";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface CustomerGridViewProps {
   customers: Customer[];
@@ -15,7 +14,8 @@ export const CustomerGridView = ({ customers, onCustomerClick }: CustomerGridVie
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  
+  console.log("CustomerGridView rendered with", customers.length, "customers");
 
   const fetchFullCustomerDetails = async (customerId: string) => {
     try {
@@ -33,11 +33,7 @@ export const CustomerGridView = ({ customers, onCustomerClick }: CustomerGridVie
       setDetailsOpen(true);
     } catch (error) {
       console.error("Error fetching customer details:", error);
-      toast({
-        title: "Error",
-        description: `Could not load customer details: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
+      toast.error(`Could not load customer details: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +52,10 @@ export const CustomerGridView = ({ customers, onCustomerClick }: CustomerGridVie
     <>
       <CustomersGrid 
         customers={customers}
-        onCustomerClick={(customer) => onCustomerClick(customer.id)}
+        onCustomerClick={(customer) => {
+          console.log("Customer clicked in grid:", customer.id);
+          onCustomerClick(customer.id);
+        }}
         onViewDetails={handleViewDetails}
         onCreateWorkOrder={handleCreateWorkOrder}
         isLoading={isLoading}

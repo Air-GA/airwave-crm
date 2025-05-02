@@ -19,13 +19,13 @@ import Settings from './pages/Settings';
 import Timesheets from './pages/Timesheets';
 import Unauthorized from './pages/Unauthorized';
 import WorkOrders from './pages/WorkOrders';
-import { fetchCustomers } from './services/customerStore';
+import { initializeCustomerStore } from './services/customerStore';
 
 const RoutesComponent = () => {
   useEffect(() => {
     // Initialize customer store when the app loads
     console.log("RoutesComponent: Initializing customer store");
-    fetchCustomers().catch(err => console.error("Error initializing customer store:", err));
+    initializeCustomerStore();
   }, []);
 
   return (

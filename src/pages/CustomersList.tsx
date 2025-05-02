@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
-import { useToast } from "@/hooks/use-toast";
 import { Customer } from "@/types";
 import { AddCustomerDialog } from "@/components/customers/AddCustomerDialog";
 import { CustomerFilterDialog } from "@/components/customers/CustomerFilterDialog";
@@ -12,10 +11,10 @@ import { CustomerDetails } from "@/components/customers/CustomerDetails";
 import { 
   useCustomerStore, 
   fetchCustomers, 
-  getCustomerById,
-  initializeCustomerStore
+  getCustomerById
 } from "@/services/customerStore";
 import { toast } from "sonner";
+import { SyncThreeCustomersButton } from "@/components/SyncThreeCustomersButton";
 
 const CustomersList = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,30 +22,30 @@ const CustomersList = () => {
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const { toast: uiToast } = useToast();
 
   // Get data from the customer store
   const { filteredCustomers, isLoading, setSearchFilter, selectedCustomerId, setSelectedCustomerId } = useCustomerStore();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  
+  console.log("CustomersList rendering with", filteredCustomers.length, "filtered customers, isLoading:", isLoading);
 
   // Initialize on component mount - fetch actual Supabase data
   useEffect(() => {
     const loadCustomers = async () => {
       try {
-        // Initialize with an empty store
-        initializeCustomerStore();
+        console.log("Starting to fetch customers from Supabase...");
         
         toast("Loading Customers...");
-        console.log("Starting to fetch customers from Supabase...");
         
         // Then fetch from API
         const customers = await fetchCustomers();
         
+        console.log(`Fetched ${customers.length} customers from Supabase`);
+        
         if (customers.length === 0) {
-          toast.error("No customers found. Please check your database connection.");
+          toast.error("No customers found. Use the 'Sync 3 Sample Customers' button to add test data.");
         } else {
           toast.success(`Successfully loaded ${customers.length.toLocaleString()} customers`);
-          console.log(`Successfully loaded ${customers.length} customers from Supabase`);
         }
       } catch (error) {
         console.error("Error loading customers:", error);
@@ -108,13 +107,22 @@ const CustomersList = () => {
     }
   };
 
+  const handleSyncComplete = () => {
+    console.log("Sync completed, refreshing customers list");
+    handleRefresh();
+  };
+
   return (
     <MainLayout pageName="Customers">
       <div className="flex flex-col space-y-6">
         <CustomersHeader 
-          onAddCustomer={() => setShowAddDialog(true)}
-          onSyncComplete={handleRefresh}
+          onAddCustomer={() => setShowAddDialog(true)} 
+          onSyncComplete={handleSyncComplete}
         />
+
+        <div className="flex justify-center mb-4">
+          <SyncThreeCustomersButton onSyncComplete={handleSyncComplete} />
+        </div>
 
         <CustomersToolbar 
           searchQuery={searchQuery}

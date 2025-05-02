@@ -33,9 +33,30 @@ Deno.serve(async (req) => {
     
     // 1. Create customers
     const { data: customers, error: customerError } = await supabaseClient.from('customers').insert([
-      { name: 'John Smith', billing_address_line1: '123 Main St', billing_city: 'Springfield', billing_state: 'IL', billing_zip: '62704', status: 'active' },
-      { name: 'Jane Doe', billing_address_line1: '456 Elm St', billing_city: 'Shelbyville', billing_state: 'IL', billing_zip: '62565', status: 'active' },
-      { name: 'Bob Johnson', billing_address_line1: '789 Oak St', billing_city: 'Capital City', billing_state: 'IL', billing_zip: '62701', status: 'residential_active' }
+      { 
+        name: 'John Smith', 
+        billing_address_line1: '123 Main St', 
+        billing_city: 'Springfield', 
+        billing_state: 'IL', 
+        billing_zip: '62704', 
+        status: 'active' 
+      },
+      { 
+        name: 'Jane Doe', 
+        billing_address_line1: '456 Elm St', 
+        billing_city: 'Shelbyville', 
+        billing_state: 'IL', 
+        billing_zip: '62565', 
+        status: 'active' 
+      },
+      { 
+        name: 'Bob Johnson', 
+        billing_address_line1: '789 Oak St', 
+        billing_city: 'Capital City', 
+        billing_state: 'IL', 
+        billing_zip: '62701', 
+        status: 'residential_active' 
+      }
     ]).select();
     
     if (customerError) {
@@ -46,6 +67,8 @@ Deno.serve(async (req) => {
     if (!customers || customers.length === 0) {
       throw new Error("No customers were created");
     }
+
+    console.log(`Created ${customers.length} customers successfully`);
     
     // 2. Create service addresses for each customer
     const serviceAddresses = [];
@@ -58,34 +81,27 @@ Deno.serve(async (req) => {
           city: customer.billing_city,
           state: customer.billing_state,
           zip: customer.billing_zip,
-          location_code: 'primary' 
+          location_code: 'primary',
+          name: 'Primary Address'
         }
       );
     }
     
-    const { error: addressError } = await supabaseClient.from('service_addresses').insert(serviceAddresses);
+    const { data: addressesData, error: addressError } = await supabaseClient.from('service_addresses').insert(serviceAddresses).select();
     
     if (addressError) {
       console.error("Error inserting service addresses:", addressError);
       throw addressError;
     }
+
+    console.log(`Created ${addressesData?.length || 0} service addresses successfully`);
     
     // 3. Create contacts for each customer
-    const { data: serviceAddressesData, error: serviceAddressesError } = await supabaseClient
-      .from('service_addresses')
-      .select('*')
-      .in('customer_id', customers.map(c => c.id));
-    
-    if (serviceAddressesError) {
-      console.error("Error fetching service addresses:", serviceAddressesError);
-      throw serviceAddressesError;
-    }
-    
     const contacts = [];
     for (let i = 0; i < customers.length; i++) {
       contacts.push({
         customer_id: customers[i].id,
-        service_address_id: serviceAddressesData[i].id,
+        service_address_id: addressesData[i].id,
         name: customers[i].name,
         email: `${customers[i].name.toLowerCase().replace(' ', '.')}@example.com`,
         phone: `555-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -93,18 +109,22 @@ Deno.serve(async (req) => {
       });
     }
     
-    const { error: contactError } = await supabaseClient.from('contacts').insert(contacts);
+    const { data: contactsData, error: contactError } = await supabaseClient.from('contacts').insert(contacts).select();
     
     if (contactError) {
       console.error("Error inserting contacts:", contactError);
       throw contactError;
     }
+
+    console.log(`Created ${contactsData?.length || 0} contacts successfully`);
     
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Successfully created 3 sample customers with service addresses and contacts",
-        customers: customers.length
+        customers: customers.length,
+        serviceAddresses: addressesData?.length || 0,
+        contacts: contactsData?.length || 0
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

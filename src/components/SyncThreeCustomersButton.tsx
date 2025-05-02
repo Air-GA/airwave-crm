@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
 import { syncThreeCustomers } from "@/services/customerSyncService";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface SyncThreeCustomersButtonProps {
   onSyncComplete: () => void;
@@ -13,29 +13,21 @@ export const SyncThreeCustomersButton = ({
   onSyncComplete,
 }: SyncThreeCustomersButtonProps) => {
   const [isSyncing, setIsSyncing] = useState(false);
-  const { toast } = useToast();
 
   const handleSync = async () => {
     setIsSyncing(true);
     try {
       console.log("Starting residential customer sync...");
       await syncThreeCustomers();
-      toast({
-        title: "Sync Complete",
-        description: "Successfully synced residential sample customers.",
-      });
+      toast.success("Successfully synced sample customers.");
       onSyncComplete();
     } catch (error) {
       console.error("Error syncing residential customers:", error);
       
       // Show a detailed error message
-      toast({
-        title: "Sync Failed",
-        description: error instanceof Error 
-          ? error.message 
-          : "Failed to sync residential customers. Using static data instead.",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error 
+        ? error.message 
+        : "Failed to sync residential customers.");
       
       // Still call onSyncComplete to refresh the UI with available data
       onSyncComplete();
@@ -47,7 +39,7 @@ export const SyncThreeCustomersButton = ({
   return (
     <Button
       onClick={handleSync}
-      variant="outline"
+      variant="default"
       disabled={isSyncing}
       className="flex items-center gap-1"
     >
