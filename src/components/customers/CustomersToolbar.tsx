@@ -4,11 +4,8 @@ import { Button } from "@/components/ui/button";
 import { 
   Search, 
   Filter, 
-  RefreshCw, 
-  Grid, 
-  List
+  RefreshCw
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { CustomerSearch } from "./CustomerSearch";
 import { CustomersViewToggle } from "./CustomersViewToggle";
 import { SyncButton } from "../SyncButton";

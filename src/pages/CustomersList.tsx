@@ -28,20 +28,31 @@ const CustomersList = () => {
   const { filteredCustomers, isLoading, setSearchFilter, selectedCustomerId, setSelectedCustomerId } = useCustomerStore();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  // Initialize on component mount
+  // Initialize on component mount - fetch actual Supabase data
   useEffect(() => {
     const loadCustomers = async () => {
       try {
-        // First initialize with mock data if needed
+        // Initialize with an empty store
         initializeCustomerStore();
         
         // Then fetch from API
-        await fetchCustomers();
+        const customers = await fetchCustomers();
+        if (customers.length === 0) {
+          toast({
+            title: "No Customers Found",
+            description: "No customers were found in the database.",
+          });
+        } else {
+          toast({
+            title: "Customers Loaded",
+            description: `Successfully loaded ${customers.length} customers.`,
+          });
+        }
       } catch (error) {
         console.error("Error loading customers:", error);
         toast({
           title: "Error",
-          description: "Failed to load customers. Using local data instead.",
+          description: "Failed to load customers. Please check your connection.",
           variant: "destructive",
         });
       }

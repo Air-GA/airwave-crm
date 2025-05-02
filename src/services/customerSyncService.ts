@@ -2,7 +2,6 @@
 import { Customer } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { useCustomerStore } from "@/services/customerStore";
-import { customers as mockCustomers } from "@/data/mockData";
 import { formatCustomerData } from "./customerStore/formatters";
 
 // Function to sync three sample residential customers to the database
@@ -14,7 +13,7 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFub2Z3eGdrbXdod3NoZHF4ZnpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MTk0NDIsImV4cCI6MjA1OTE5NTQ0Mn0.MjL9maVqFkUOYodFD86qsct8OnSE9Uog10KMVmxZd8Q'}`
+        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFub2Z3eGdrbXdod3NoZHF4ZnpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MTk0NDIsImV4cCI6MjA1OTE5NTQ0Mn0.MjL9maVqFkUOYodFD86qsct8OnSE9Uog10KMVmxZd8Q`
       }
     });
 
