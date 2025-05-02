@@ -18,7 +18,8 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     const { data, error } = await supabase
       .from("customers")
       .select("*, service_addresses(*), contacts(*)")
-      .order('name');
+      .order('name')
+      .limit(1000); // Start with first 1000 for now
       
     if (error) {
       console.error("Error fetching customers from Supabase:", error);

@@ -2,7 +2,6 @@
 import React, { useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import CreateWorkOrder from './pages/CreateWorkOrder';
-import Customers from './pages/Customers';
 import CustomersList from './pages/CustomersList';
 import Dispatch from './pages/Dispatch';
 import Index from './pages/Index';

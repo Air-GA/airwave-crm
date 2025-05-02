@@ -10,22 +10,16 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
   try {
     console.log("Starting sync of three sample residential customers");
 
-    const response = await fetch(`https://anofwxgkmwhwshdqxfzb.functions.supabase.co/sync-three-customers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFub2Z3eGdrbXdod3NoZHF4ZnpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MTk0NDIsImV4cCI6MjA1OTE5NTQ0Mn0.MjL9maVqFkUOYodFD86qsct8OnSE9Uog10KMVmxZd8Q`
-      }
+    const response = await supabase.functions.invoke('sync-three-customers', {
+      method: 'POST'
     });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error("Edge function error:", errorData);
-      throw new Error(`Failed to sync customers: ${response.status} ${response.statusText}`);
+    
+    if (!response.data || response.error) {
+      console.error("Edge function error:", response.error);
+      throw new Error(`Failed to sync customers: ${response.error?.message || 'Unknown error'}`);
     }
 
-    const result = await response.json();
-    console.log("Sync result:", result);
+    console.log("Sync result:", response.data);
     
     // Refresh the customer store after sync
     const { setCustomers } = useCustomerStore.getState();
