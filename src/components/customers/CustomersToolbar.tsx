@@ -37,9 +37,8 @@ export const CustomersToolbar = ({
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
       <div className="w-full sm:w-auto flex-1 relative">
         <CustomerSearch 
-          value={searchQuery} 
-          onChange={(e) => setSearchQuery(e.target.value)} 
-          placeholder="Search customers..." 
+          searchQuery={searchQuery} 
+          setSearchQuery={setSearchQuery}
         />
       </div>
       
@@ -64,7 +63,7 @@ export const CustomersToolbar = ({
         
         <CustomersViewToggle 
           viewMode={viewMode} 
-          onChange={setViewMode} 
+          setViewMode={setViewMode} 
         />
         
         <Button

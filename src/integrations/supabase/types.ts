@@ -377,14 +377,17 @@ export type Database = {
           },
         ]
       }
-      inventory_items: {
+      inventory_parts: {
         Row: {
           category: string | null
+          catergory_name: string | null
           created_at: string | null
           description: string | null
           id: string
+          is_active: string | null
           location: string | null
           name: string
+          part_number: string | null
           quantity: number | null
           sku: string | null
           unit_price: number | null
@@ -392,11 +395,14 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          catergory_name?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
+          is_active?: string | null
           location?: string | null
           name: string
+          part_number?: string | null
           quantity?: number | null
           sku?: string | null
           unit_price?: number | null
@@ -404,11 +410,14 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          catergory_name?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
+          is_active?: string | null
           location?: string | null
           name?: string
+          part_number?: string | null
           quantity?: number | null
           sku?: string | null
           unit_price?: number | null
@@ -452,7 +461,7 @@ export type Database = {
             foreignKeyName: "inventory_transfers_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "inventory_parts"
             referencedColumns: ["id"]
           },
         ]
@@ -917,7 +926,7 @@ export type Database = {
             foreignKeyName: "work_order_items_inventory_item_id_fkey"
             columns: ["inventory_item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "inventory_parts"
             referencedColumns: ["id"]
           },
         ]
