@@ -1,33 +1,31 @@
 
-import { LayoutGrid, LayoutList } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Grid, List } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface CustomersViewToggleProps {
-  viewMode: string;
+  viewMode: "grid" | "list";
   setViewMode: (mode: "grid" | "list") => void;
 }
 
 export const CustomersViewToggle = ({ viewMode, setViewMode }: CustomersViewToggleProps) => {
   return (
-    <div className="border rounded-md flex">
-      <Button
-        variant={viewMode === "grid" ? "ghost" : "ghost"}
-        size="icon"
-        className={`rounded-r-none ${viewMode === "grid" ? "bg-muted" : ""}`}
-        onClick={() => setViewMode("grid")}
-      >
-        <LayoutGrid className="h-4 w-4" />
-        <span className="sr-only">Grid view</span>
-      </Button>
-      <Button
-        variant={viewMode === "list" ? "ghost" : "ghost"}
-        size="icon"
-        className={`rounded-l-none ${viewMode === "list" ? "bg-muted" : ""}`}
-        onClick={() => setViewMode("list")}
-      >
-        <LayoutList className="h-4 w-4" />
-        <span className="sr-only">List view</span>
-      </Button>
-    </div>
+    <ToggleGroup
+      type="single" 
+      variant="outline"
+      value={viewMode}
+      onValueChange={(value) => {
+        if (value) setViewMode(value as "grid" | "list");
+      }}
+      className="border rounded-md"
+    >
+      <ToggleGroupItem value="grid" className="data-[state=on]:bg-muted">
+        <Grid className="h-4 w-4" />
+        <span className="sr-only">Grid View</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="list" className="data-[state=on]:bg-muted">
+        <List className="h-4 w-4" />
+        <span className="sr-only">List View</span>
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 };
