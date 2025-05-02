@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,7 @@ export const ProfitRhinoSearch = () => {
 
   const handleAddToInventory = async (part: ProfitRhinoPart) => {
     try {
-      const { error } = await supabase.from("inventory_items").insert({
+      const { error } = await supabase.from("inventory_parts").insert({
         name: part.description || part.part_number,
         sku: part.part_number,
         category: part.category,

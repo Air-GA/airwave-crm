@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +54,7 @@ export function TransferForm({ items, onTransferComplete }: TransferFormProps) {
 
       // Update item location and quantity
       const { error: updateError } = await supabase
-        .from('inventory_items')
+        .from('inventory_parts')
         .update({
           location: data.toLocation,
           quantity: data.quantity

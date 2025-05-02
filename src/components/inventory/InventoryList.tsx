@@ -18,7 +18,7 @@ export const InventoryList = ({ onNavigateToPartsTab }: { onNavigateToPartsTab?:
     queryKey: ["inventory-items"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("inventory_items")
+        .from("inventory_parts")
         .select("*")
         .order("name");
       

@@ -6,6 +6,14 @@ import { Card } from "@/components/ui/card";
 import { TransferForm } from "./TransferForm";
 import { TransferHistory } from "./TransferHistory";
 
+// Define the inventory item type for better type safety
+interface InventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  location: string;
+}
+
 export function TransfersTab() {
   const [key, setKey] = useState(0);
   
@@ -13,12 +21,14 @@ export function TransfersTab() {
     queryKey: ["inventory-items"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("inventory_items")
+        .from("inventory_parts")
         .select("id, name, quantity, location")
         .order("name");
       
       if (error) throw error;
-      return data;
+      
+      // Explicitly cast the data to ensure it matches our expected type
+      return (data || []) as InventoryItem[];
     },
   });
 

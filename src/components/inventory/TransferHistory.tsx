@@ -19,7 +19,7 @@ export function TransferHistory() {
         .from("inventory_transfers")
         .select(`
           *,
-          inventory_items (
+          inventory_parts (
             name
           )
         `)
@@ -52,7 +52,7 @@ export function TransferHistory() {
             <TableCell>
               {format(new Date(transfer.created_at), "MMM d, yyyy")}
             </TableCell>
-            <TableCell>{transfer.inventory_items?.name}</TableCell>
+            <TableCell>{transfer.inventory_parts?.name}</TableCell>
             <TableCell className="capitalize">{transfer.from_location}</TableCell>
             <TableCell className="capitalize">{transfer.to_location}</TableCell>
             <TableCell>{transfer.quantity}</TableCell>
