@@ -2,6 +2,8 @@
 import { supabase } from "@/lib/supabase";
 import { useCustomerStore } from "@/services/customerStore";
 import { formatCustomerData } from "./customerStore/formatters";
+import { fetchCustomers } from "./customerStore";
+import { toast } from "sonner";
 
 // Function to sync three sample customers to the database
 export const syncThreeCustomers = async (): Promise<boolean> => {
@@ -91,5 +93,24 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
   } catch (error) {
     console.error("Error syncing sample customers:", error);
     throw error;
+  }
+};
+
+// Add the handleSyncClick function that was missing
+export const handleSyncClick = async (): Promise<boolean> => {
+  try {
+    console.log("Syncing customers data...");
+    toast("Syncing customers data...");
+    
+    // Fetch the latest customers from Supabase
+    const customers = await fetchCustomers();
+    
+    console.log(`Synced ${customers.length} customers`);
+    toast.success(`Successfully synced ${customers.length} customers`);
+    return true;
+  } catch (error) {
+    console.error("Error syncing customers:", error);
+    toast.error(error instanceof Error ? error.message : "Failed to sync customers");
+    return false;
   }
 };
