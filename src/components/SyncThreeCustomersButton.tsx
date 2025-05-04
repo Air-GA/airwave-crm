@@ -17,20 +17,13 @@ export const SyncThreeCustomersButton = ({
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      console.log("Starting residential customer sync...");
+      console.log("Starting customer sync...");
       await syncThreeCustomers();
-      toast.success("Successfully synced sample customers.");
+      toast.success("Successfully synced sample customers");
       onSyncComplete();
     } catch (error) {
-      console.error("Error syncing residential customers:", error);
-      
-      // Show a detailed error message
-      toast.error(error instanceof Error 
-        ? error.message 
-        : "Failed to sync residential customers.");
-      
-      // Still call onSyncComplete to refresh the UI with available data
-      onSyncComplete();
+      console.error("Error syncing customers:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to sync customers");
     } finally {
       setIsSyncing(false);
     }

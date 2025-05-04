@@ -27,25 +27,23 @@ const CustomersList = () => {
   const { filteredCustomers, isLoading, setSearchFilter, selectedCustomerId, setSelectedCustomerId } = useCustomerStore();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   
-  console.log("CustomersList rendering with", filteredCustomers.length, "filtered customers, isLoading:", isLoading);
+  console.log("CustomersList rendering with", filteredCustomers.length, "filtered customers");
 
-  // Initialize on component mount - fetch actual Supabase data
+  // Initialize on component mount - fetch data from Supabase
   useEffect(() => {
     const loadCustomers = async () => {
       try {
         console.log("Starting to fetch customers from Supabase...");
         
-        toast("Loading Customers...");
-        
-        // Then fetch from API
+        // Fetch from Supabase
         const customers = await fetchCustomers();
         
         console.log(`Fetched ${customers.length} customers from Supabase`);
         
         if (customers.length === 0) {
-          toast.error("No customers found. Use the 'Sync 3 Sample Customers' button to add test data.");
+          toast("No customers found. Use the 'Sync 3 Sample Customers' button to add test data.");
         } else {
-          toast.success(`Successfully loaded ${customers.length.toLocaleString()} customers`);
+          toast.success(`Successfully loaded ${customers.length} customers`);
         }
       } catch (error) {
         console.error("Error loading customers:", error);
@@ -97,10 +95,8 @@ const CustomersList = () => {
   const handleRefresh = async () => {
     try {
       toast("Refreshing customer data...");
-      
       await fetchCustomers();
-      
-      toast.success(`Loaded ${filteredCustomers.length.toLocaleString()} customers`);
+      toast.success("Customer data refreshed");
     } catch (error) {
       console.error("Error refreshing customers:", error);
       toast.error("Failed to refresh customer data: " + (error instanceof Error ? error.message : "Unknown error"));

@@ -1,23 +1,26 @@
 
-import { Customer } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { useCustomerStore } from "@/services/customerStore";
 import { formatCustomerData } from "./customerStore/formatters";
-import { toast } from "sonner";
 
-// Function to sync three sample residential customers to the database
+// Function to sync three sample customers to the database
 export const syncThreeCustomers = async (): Promise<boolean> => {
   try {
-    console.log("Starting sync of three sample residential customers");
+    console.log("Starting sync of three sample customers");
 
     // Call the edge function to sync data
     const { data, error } = await supabase.functions.invoke('sync-three-customers', {
       method: 'POST'
     });
     
-    if (error || !data) {
-      console.error("Edge function error:", error || "No data returned");
-      throw new Error(`Failed to sync customers: ${error?.message || 'Unknown error'}`);
+    if (error) {
+      console.error("Edge function error:", error);
+      throw new Error(`Failed to sync customers: ${error.message}`);
+    }
+
+    if (!data) {
+      console.error("No data returned from edge function");
+      throw new Error("No data returned from sync operation");
     }
 
     console.log("Sync result:", data);
@@ -88,19 +91,5 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
   } catch (error) {
     console.error("Error syncing sample customers:", error);
     throw error;
-  }
-};
-
-// Handle the sync button interactions
-export const handleSyncClick = async (): Promise<boolean> => {
-  try {
-    toast("Syncing customers...");
-    await syncThreeCustomers();
-    toast.success("Customer sync completed successfully");
-    return true;
-  } catch (error) {
-    console.error("Sync failed:", error);
-    toast.error("Customer sync failed: " + (error instanceof Error ? error.message : "Unknown error"));
-    return false;
   }
 };

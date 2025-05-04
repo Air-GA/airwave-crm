@@ -32,7 +32,6 @@ const RoutesComponent = () => {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/customers" element={<CustomersList />} />
-      <Route path="/customers-list" element={<CustomersList />} />
       <Route path="/dispatch" element={<Dispatch />} />
       <Route path="/inventory" element={<Inventory />} />
       <Route path="/invoices" element={<Invoices />} />

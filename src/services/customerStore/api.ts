@@ -14,62 +14,61 @@ export const fetchCustomers = async (): Promise<Customer[]> => {
     
     console.log("Fetching customers from Supabase...");
     
-    // Fetch all customers from Supabase - pagination may be needed for 20k+ customers
+    // Fetch all customers from Supabase
     const { data, error } = await supabase
       .from("customers")
       .select("*, service_addresses(*), contacts(*)")
-      .order('name')
-      .limit(1000); // Start with first 1000 for now
+      .order('name');
       
     if (error) {
       console.error("Error fetching customers from Supabase:", error);
       throw error;
     }
     
-    if (data && data.length > 0) {
-      console.log(`Retrieved ${data.length} customers from Supabase`);
-      
-      // Format the customers from Supabase
-      const formattedCustomers = data.map(customer => {
-        // Find primary contact for email/phone
-        const primaryContact = customer.contacts?.find(c => c.is_primary === true) || customer.contacts?.[0];
-        
-        // Map service addresses to our format
-        const serviceAddresses = customer.service_addresses?.map(sa => ({
-          id: sa.id,
-          address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`.trim(),
-          isPrimary: sa.location_code === 'primary' || false,
-          notes: sa.name || ''
-        })) || [];
-        
-        // Generate a combined address string for the primary address
-        const addressStr = serviceAddresses.find(addr => addr.isPrimary)?.address || 
-                          serviceAddresses[0]?.address || '';
-                          
-        return formatCustomerData({
-          id: customer.id,
-          name: customer.name || "Unknown",
-          email: primaryContact?.email || "",
-          phone: primaryContact?.phone || "",
-          address: addressStr,
-          billAddress: customer.billing_address_line1 || "",
-          billCity: customer.billing_city || "",
-          serviceAddresses: serviceAddresses,
-          type: (customer.status?.includes('commercial') ? 'commercial' : 'residential'),
-          status: customer.status || "active",
-          createdAt: customer.created_at || new Date().toISOString(),
-          lastService: ""
-        });
-      });
-      
-      console.log(`Formatted ${formattedCustomers.length} customers to display`);
-      setCustomers(formattedCustomers);
-      return formattedCustomers;
-    } else {
-      console.warn("No customers found in Supabase");
+    if (!data) {
+      console.log("No data returned from Supabase");
       setCustomers([]);
       return [];
     }
+    
+    console.log(`Retrieved ${data.length} customers from Supabase`);
+    
+    // Format the customers from Supabase
+    const formattedCustomers = data.map(customer => {
+      // Find primary contact for email/phone
+      const primaryContact = customer.contacts?.find(c => c.is_primary === true) || customer.contacts?.[0];
+      
+      // Map service addresses to our format
+      const serviceAddresses = customer.service_addresses?.map(sa => ({
+        id: sa.id,
+        address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`.trim(),
+        isPrimary: sa.location_code === 'primary' || false,
+        notes: sa.name || ''
+      })) || [];
+      
+      // Generate a combined address string for the primary address
+      const addressStr = serviceAddresses.find(addr => addr.isPrimary)?.address || 
+                        serviceAddresses[0]?.address || '';
+                        
+      return formatCustomerData({
+        id: customer.id,
+        name: customer.name || "Unknown",
+        email: primaryContact?.email || "",
+        phone: primaryContact?.phone || "",
+        address: addressStr,
+        billAddress: customer.billing_address_line1 || "",
+        billCity: customer.billing_city || "",
+        serviceAddresses: serviceAddresses,
+        type: (customer.status?.includes('commercial') ? 'commercial' : 'residential'),
+        status: customer.status || "active",
+        createdAt: customer.created_at || new Date().toISOString(),
+        lastService: ""
+      });
+    });
+    
+    console.log(`Formatted ${formattedCustomers.length} customers to display`);
+    setCustomers(formattedCustomers);
+    return formattedCustomers;
     
   } catch (error) {
     console.error("Error in fetchCustomers:", error);
