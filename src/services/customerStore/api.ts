@@ -1,3 +1,4 @@
+
 import { Customer } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { formatCustomerData } from "./formatters";
@@ -133,92 +134,6 @@ export const getCustomerById = async (id: string): Promise<Customer | null> => {
     return null;
   } catch (error) {
     console.error(`Error in getCustomerById for ID ${id}:`, error);
-    return null;
-  }
-};
-
-// Add a new customer to Supabase and update the store
-export const addCustomer = async (customer: Customer): Promise<Customer | null> => {
-  try {
-    console.log("Adding new customer to Supabase:", customer);
-    
-    // Format the customer data for Supabase
-    const customerData = {
-      id: customer.id,
-      name: customer.name,
-      billing_address_line1: customer.billAddress,
-      status: customer.type === 'commercial' ? 'commercial' : 'residential',
-      created_at: new Date().toISOString()
-    };
-    
-    // Insert the customer into Supabase
-    const { data: customerResult, error: customerError } = await supabase
-      .from("customers")
-      .insert(customerData)
-      .select("*")
-      .single();
-      
-    if (customerError) {
-      console.error("Error adding customer:", customerError);
-      throw customerError;
-    }
-    
-    console.log("Customer added successfully:", customerResult);
-    
-    // Create service addresses for the customer
-    if (customer.serviceAddresses && customer.serviceAddresses.length > 0) {
-      const serviceAddressPromises = customer.serviceAddresses.map(async (addr) => {
-        const { data: saData, error: saError } = await supabase
-          .from("service_addresses")
-          .insert({
-            customer_id: customer.id,
-            address_line1: addr.address,
-            location_code: addr.isPrimary ? 'primary' : 'secondary',
-            name: addr.notes || '',
-            created_at: new Date().toISOString()
-          })
-          .select("*");
-          
-        if (saError) {
-          console.error("Error adding service address:", saError);
-          throw saError;
-        }
-        
-        return saData;
-      });
-      
-      await Promise.all(serviceAddressPromises);
-      console.log("Service addresses added successfully");
-    }
-    
-    // Create a primary contact for the customer
-    if (customer.email || customer.phone) {
-      const { data: contactData, error: contactError } = await supabase
-        .from("contacts")
-        .insert({
-          customer_id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          is_primary: true,
-          created_at: new Date().toISOString()
-        })
-        .select("*");
-        
-      if (contactError) {
-        console.error("Error adding contact:", contactError);
-        throw contactError;
-      }
-      
-      console.log("Contact added successfully:", contactData);
-    }
-    
-    // Refresh the customer store
-    await fetchCustomers();
-    
-    return customer;
-  } catch (error) {
-    console.error("Error in addCustomer:", error);
     return null;
   }
 };

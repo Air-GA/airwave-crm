@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -24,7 +25,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { UserRound, Plus, Trash2 } from "lucide-react";
-import { addCustomer } from "@/services/customerStore/api";
 
 const serviceAddressSchema = z.object({
   id: z.string(),
@@ -112,7 +112,7 @@ export function AddCustomerDialog({
     form.reset(values);
   };
 
-  async function onSubmit(data: CustomerFormValues) {
+  function onSubmit(data: CustomerFormValues) {
     // Make sure one address is marked as primary
     const primaryAddress = data.serviceAddresses.find(addr => addr.isPrimary);
     if (!primaryAddress) {
@@ -120,9 +120,8 @@ export function AddCustomerDialog({
     }
 
     // Create a new customer with random ID if not specified
-    const customerId = uuidv4();
     const newCustomer = {
-      id: customerId,
+      id: uuidv4(),
       ...data,
       serviceAddress: data.serviceAddresses.find(addr => addr.isPrimary)?.address || data.serviceAddresses[0].address, // For backward compatibility
       type: "residential" as const, // Always set type as residential
@@ -130,36 +129,22 @@ export function AddCustomerDialog({
       createdAt: new Date().toISOString()
     };
     
-    try {
-      toast("Adding new customer...");
-      const savedCustomer = await addCustomer(newCustomer);
-      
-      if (savedCustomer) {
-        toast.success("Customer added successfully");
-        
-        if (onCustomerAdded) {
-          onCustomerAdded(savedCustomer);
-        }
-        
-        if (onSuccess) {
-          onSuccess();
-        }
-        
-        onOpenChange(false);
-        form.reset({
-          name: "",
-          email: "",
-          phone: "",
-          serviceAddresses: [{ id: uuidv4(), address: "", isPrimary: true, notes: "" }],
-          billAddress: ""
-        });
-      } else {
-        toast.error("Failed to add customer. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error adding customer:", error);
-      toast.error("Error adding customer: " + (error instanceof Error ? error.message : "Unknown error"));
+    if (onCustomerAdded) {
+      onCustomerAdded(newCustomer);
     }
+    
+    if (onSuccess) {
+      onSuccess();
+    }
+    
+    onOpenChange(false);
+    form.reset({
+      name: "",
+      email: "",
+      phone: "",
+      serviceAddresses: [{ id: uuidv4(), address: "", isPrimary: true, notes: "" }],
+      billAddress: ""
+    });
   }
 
   return (
