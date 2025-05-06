@@ -2,6 +2,7 @@
 import { supabase } from "@/lib/supabase";
 import { useCustomerStore } from "@/services/customerStore";
 import { formatCustomerData } from "./customerStore/formatters";
+import { toast } from "sonner";
 
 // Function to sync three sample customers to the database
 export const syncThreeCustomers = async (): Promise<boolean> => {
@@ -91,5 +92,80 @@ export const syncThreeCustomers = async (): Promise<boolean> => {
   } catch (error) {
     console.error("Error syncing sample customers:", error);
     throw error;
+  }
+};
+
+// Function to handle sync button click - this was missing
+export const handleSyncClick = async () => {
+  try {
+    console.log("Starting customer data synchronization");
+    toast("Syncing customer data...");
+    
+    // Get customers from Supabase
+    const { data: customersData, error } = await supabase
+      .from("customers")
+      .select("*, service_addresses(*), contacts(*)");
+      
+    if (error) {
+      console.error("Error fetching customers:", error);
+      toast.error("Failed to sync customers: " + error.message);
+      return false;
+    }
+    
+    const { setCustomers, setIsLoading } = useCustomerStore.getState();
+    
+    setIsLoading(true);
+    
+    if (customersData && customersData.length > 0) {
+      console.log(`Retrieved ${customersData.length} customers from database`);
+      
+      // Format the customers from Supabase
+      const formattedCustomers = customersData.map(customer => {
+        // Find primary contact for email/phone
+        const primaryContact = customer.contacts?.find(c => c.is_primary === true) || customer.contacts?.[0];
+        
+        // Map service addresses to our format
+        const serviceAddresses = customer.service_addresses?.map(sa => ({
+          id: sa.id,
+          address: `${sa.address_line1 || ''} ${sa.city || ''} ${sa.state || ''} ${sa.zip || ''}`.trim(),
+          isPrimary: sa.location_code === 'primary' || false,
+          notes: sa.name || ''
+        })) || [];
+        
+        // Generate a combined address string for the primary address
+        const addressStr = serviceAddresses.find(addr => addr.isPrimary)?.address || 
+                          serviceAddresses[0]?.address || '';
+                          
+        return formatCustomerData({
+          id: customer.id,
+          name: customer.name || "Unknown",
+          email: primaryContact?.email || "",
+          phone: primaryContact?.phone || "",
+          address: addressStr,
+          billAddress: customer.billing_address_line1 || "",
+          billCity: customer.billing_city || "",
+          serviceAddresses: serviceAddresses,
+          type: (customer.status?.includes('commercial') ? 'commercial' : 'residential'),
+          status: customer.status || "active",
+          createdAt: customer.created_at || new Date().toISOString(),
+          lastService: ""
+        });
+      });
+      
+      setCustomers(formattedCustomers);
+      setIsLoading(false);
+      toast.success(`Successfully synced ${formattedCustomers.length} customers`);
+      return true;
+    } else {
+      console.log("No customers found during sync");
+      setCustomers([]);
+      setIsLoading(false);
+      toast.warning("No customers found in database");
+      return true;
+    }
+  } catch (error) {
+    console.error("Error in handleSyncClick:", error);
+    toast.error("Failed to sync customers: " + (error instanceof Error ? error.message : "Unknown error"));
+    return false;
   }
 };
